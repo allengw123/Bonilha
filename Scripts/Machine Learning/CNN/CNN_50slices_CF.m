@@ -2,7 +2,7 @@
 clear
 clc
 
-githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
+githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
 cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
@@ -417,7 +417,7 @@ close all
 clc
 
 %%%%% Feature visualization
-tempnet=net.reg{1};
+
 analyzeNetwork(net.reg{1})
 
 controlimg_smooth=load_nii(controlbrain_smooth);
@@ -427,31 +427,45 @@ imgSize = imgSize(1:2);
 
 l=12 % ReLU
 
+vw = VideoWriter(fullfile('C:\Users\allen\Documents\GitHub\Bonilha','-Reconstruction.mp4'),'MPEG-4');
+open(vw);
 hFig = figure('Toolbar', 'none', 'Menu', 'none', 'WindowState', 'maximized'); 
 for s=28:85
     sgtitle(['Slice # ',num2str(s)])
-    pause(0.25)
-    subplot(2,1,1)
+    subplot(6,10,5)
     imagesc(controlimg_smooth.img(:,:,s))
-    subplot(2,1,2)
-    act = activations(tempnet,controlimg_smooth.img(:,:,s),l);
-    imagesc(sum(act,3))
+    title('Input image')
+    [~,I]=sort(cell2mat(acc.reg),'descend');
+    count=1;
+    for p=1:numel(net.reg)
+        tempnet=net.reg{p};
+        subplot(6,10,p+10)
+        act = activations(tempnet,controlimg_smooth.img(:,:,s),2);
+        imagesc(sum(act,3))
+        title(num2str(acc.reg{p}))
+        count=count+1;
+    end
+    drawnow
+    F = getframe(hFig);
+    writeVideo(vw,F);
+    writeVideo(vw,F);
+    writeVideo(vw,F);
 %     colormap jet
 %     cbar=colorbar;
 %     caxis([0 5000])
 end
-
-figure
-for s=28:2:85
-    nexttile
-    act = activations(tempnet,controlimg_smooth.img(:,:,s),l);
-    imagesc(sum(act,3));
-    title(sprintf('Slice # : %u',s))
-%     colormap jet
-%     cbar=colorbar;
-%     caxis([0 5000])
+close(vw)
+count=0;
+for a=[1 4 8 12]
+    figure
+    title(['Layer ',num2str(a)])
+    act = activations(tempnet,controlimg_smooth.img(:,:,s),a);
+    for i=1:size(act,3)
+        nexttile
+        imagesc(act(:,:,i));
+    end
+    count=count+32;
 end
-
 
 %     if s==1
 %         
