@@ -205,10 +205,16 @@ for m=1:2
         ep_tle_img{count1,1}=temp_img;
         ep_tle_age{count1,1}=tempage;
     end
-   
     
+%     % Reshape image matrix
+%     ep_tle_img=cat(1,ep_tle_img{:});
+%     ep_tle_img=cell2mat(ep_tle_img');
+%     ep_tle_img_reshape=reshape(ep_tle_img,113,137,1,[]);
+    
+    
+    %%
     % Permute
-    for iter=1:100
+    for iter=1
         
         display(['Running iteration ',num2str(iter)])
 
@@ -228,7 +234,7 @@ for m=1:2
         response_test =  categorical([ones(size(adniControl.testDataset,4),1);ones(size(epControl.testDataset,4),1);ones(size(adniAlz.testDataset,4),1)*2;ones(size(epTLE.testDataset,4),1)*3]);
         response_val =  categorical([ones(size(adniControl.valDataset,4),1);ones(size(epControl.valDataset,4),1);ones(size(adniAlz.valDataset,4),1)*2;ones(size(epTLE.valDataset,4),1)*3]);
         
-        % Obtain age labels
+        % Obtain age labels/ 
         quan = floor(quantile(cell2mat([adni_control_age;ep_control_age;adni_alz_age;ep_tle_age]),[0 0.33 0.66],'all'));
         
         response_CF_train=[adniControl.trainAge;epControl.trainAge;adniAlz.trainAge;epTLE.trainAge];
@@ -245,7 +251,7 @@ for m=1:2
         [net.reg{iter},acc.reg{iter},confmat.reg{iter},acc_CF.reg{iter},confmat_CF.reg{iter}]=runcnnFC(total_img_train,response_train,total_img_val,response_val,response_CF_train,response_CF_val,total_img_test,response_test,response_CF_test);
         [net.suff{iter},acc.shuff{iter},confmat.shuff{iter},acc_CF.shuff{iter},confmat_CF.shuff{iter}]=runcnnFC(total_img_train,response_train(randperm(numel(response_train),numel(response_train))),total_img_val,response_val(randperm(numel(response_val),numel(response_val))),response_CF_train(randperm(numel(response_CF_train),numel(response_CF_train))),response_CF_val(randperm(numel(response_CF_val),numel(response_CF_val))),total_img_test,response_test,response_CF_test);
     end
-    
+    %%
     save(fullfile(save_path,['CNN_',matter{m},'.mat']),'net','acc','confmat','acc_CF','confmat_CF','-v7.3')
 end
 %% Analyze network
@@ -411,7 +417,6 @@ for m=1:numel(matter)
         drawnow
         writeVideo(vw,getframe(fh));
     end
-    close(vw)
     
     disease={'control','alz','tle'};
     for a=1:numel(actimages)

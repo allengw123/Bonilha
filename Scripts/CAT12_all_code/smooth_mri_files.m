@@ -13,6 +13,10 @@
 %--------------------------------------------------------------------------
 % Inputs: 
 PatientData_folder = 'F:\PatientData\Cat12_segmented';
+Smooth_folder='F:\PatientData\smooth';mkdir(Smooth_folder)
+Thres_folder='F:\PatientData\thres';
+
+Threshold=0.2;
 %--------------------------------------------------------------------------
 
 %% Detect folder
@@ -23,59 +27,29 @@ for sf = 1:numel(subject_folders)
     tempsubfolder_path=fullfile(PatientData_folder,subject_folders{sf});
     tempsub_list={dir(tempsubfolder_path).name};
     tempsub_list=tempsub_list(~startsWith(tempsub_list,'.'));
-    for sbj = 1:numel(tempsub_list)
-        tempsub=tempsub_list
-        if f(i).isdir && ~startsWith(f(i).name,'.')
-        if startsWith(GG(j).name,'mwp') 
-            spm_smooth(fullfile(P,f(i).name,'mri',GG(j).name),...
-                fullfile(P,f(i).name,'mri',['smooth10' GG(j).name]),...
-                [10 10 10])
-                disp(i)
-
+    for m=1:2
+        if m==1
+            matter='GM';
+        else
+            matter='WM';
         end
-    end 
-end
-
-%% control group - smoothing the mwp1name.nii and mwp2name.nii files under mri folder  
-
-Mainfolder = location1;
-
-f = dir(Mainfolder);
-
-for i = 1:numel(f)
-    if f(i).isdir && ~startsWith(f(i).name,'.')
-        GG = dir(fullfile(Mainfolder,f(i).name, 'mri'));
-            for j = 1:numel(GG)
-                if startsWith(GG(j).name,'mwp') 
-                    spm_smooth(fullfile(Mainfolder,f(i).name,'mri',GG(j).name),...
-                        fullfile(Mainfolder,f(i).name,'mri',['smooth10' GG(j).name]),...
-                        [10 10 10])
-                        disp(i)
-                end
-            end
+        for sbj = 1:numel(tempsub_list)
+            
+            % Spm Smoothing
+            tempsub=tempsub_list{sbj};
+            tempsub_path=fullfile(tempsubfolder_path,tempsub,'mri',dir(fullfile(tempsubfolder_path,tempsub,'mri',['mwp',num2str(m),'*'])).name);
+            
+            disp(['Running ',matter,' Subject ',tempsub])
+            mkdir(fullfile(Smooth_folder,subject_folders{sf},tempsub))
+            spm_smooth(tempsub_path,...
+                fullfile(Smooth_folder,subject_folders{sf},tempsub,['smooth10_',matter,'_',tempsub,'.nii']),...
+                [10 10 10])
+            
+            % Thresholding
+            tempimg=load_nii(fullfile(Smooth_folder,subject_folders{sf},tempsub,['smooth10_',matter,'_',tempsub,'.nii']));
+            tempimg.img(tempimg.img<Threshold)=0;
+            mkdir(fullfile(Thres_folder,subject_folders{sf},tempsub))
+            save_nii(tempimg,fullfile(Thres_folder,subject_folders{sf},tempsub,['smooth10_',matter,'_',tempsub,'.nii']));
+        end
     end
 end
-
-%% patients group - smoothing the mwp1name.nii and mwp2name.nii files under mri folder 
-Mainfolder = location2;
-
-f = dir(Mainfolder);
-for i = 1:numel(f)
-    if startsWith(f(i).name,'left') || startsWith(f(i).name,'right')
-        G = dir(fullfile(Mainfolder,f(i).name));
-        for j = 1:numel(G)
-            if G(j).isdir && ~startsWith(G(j).name,'.')
-                GG = dir(fullfile(Mainfolder,f(i).name,G(j).name,'mri'));
-                for z = 1:numel(GG)
-                    if startsWith(GG(z).name,'mwp') 
-                    spm_smooth(fullfile(Mainfolder,f(i).name,G(j).name,'mri',GG(z).name),...
-                        fullfile(Mainfolder,f(i).name,G(j).name,'mri',['smooth10' GG(z).name]),...
-                        [10 10 10])
-                        disp(j)
-                    end
-                end
-            end
-        end 
-    end
-end
-
