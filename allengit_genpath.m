@@ -2,6 +2,11 @@ function allengit_genpath(gitpath,type)
 
 addpath(genpath(fullfile(gitpath,'Scripts')))
 
+if nargin<2
+    type='none';
+    disp('No specific analysis argument detected. No additional toolboxes will be added')
+end
+
 if strcmp(type,'imaging')
     addpath(genpath(fullfile(gitpath,'Toolbox','imaging')))
     
