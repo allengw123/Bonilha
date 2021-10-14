@@ -242,7 +242,7 @@ for comp=1:numel(compGroup)
 
         %%
         % Permute
-        for iter=1:50
+        for iter=1:100
 
             display(['Running iteration ',num2str(iter)])
 
@@ -515,13 +515,10 @@ net=trainNetwork(trainData,categorical(trainResponse),layers,options);
 YPred_test = classify(net,testDat);
 YTest = categorical(testRes);
 acc = sum(YPred_test == YTest)/numel(YTest);
-con = confusionmat(YTest,YPred_test);
-% figure;confusionchart(con,{'Adni_control','Tle_control','Alz','TLE'})
-% title(num2str(acc))
+[con.C, con.order]= confusionmat(YTest,YPred_test);
 
 
 % Test on CF response
-% figure
 groups=unique(CFtestRes);
 per=double(perms(groups));
 for p=1:size(per,1)
@@ -543,10 +540,12 @@ for p=1:size(per,1)
     
     
     acc_CF(p) = sum(YPred_test == YTest)/numel(YTest);
-    con_CF{p}=confusionmat(YTest,YPred_test);
-%     nexttile
-%     confusionchart(con_CF,{'Adni_control','Tle_control','Alz','TLE'})
-%     title(num2str(acc_CF(p)))
+    [con_CF.C{p},con_CF.order{p}]=confusionmat(YTest,YPred_test);
+    con_CF.perm{p}=[1 per(p,1);2 per(p,2)];
+    try
+        con_CF.perm{p}=[con_CF.perm{p};3 per(p,3)];
+    catch
+    end
 end
 end
 

@@ -242,7 +242,7 @@ for comp=1:numel(compGroup)
 
         %%
         % Permute
-        for iter=1:50
+        for iter=1:100
 
             display(['Running iteration ',num2str(iter)])
 
@@ -388,8 +388,8 @@ for comp=1:numel(compGroup)
             end
 
             %%%%%%%%%%%% Train the network
-            [net.reg{iter},acc.reg{iter},confmat.reg{iter},acc_CF.reg{iter},confmat_CF.reg{iter}]=runcnnFC(total_img_train,response_train,total_img_val,response_val,response_CF_train,response_CF_val,total_img_test,response_test,response_CF_test);
-            [net.suff{iter},acc.shuff{iter},confmat.shuff{iter},acc_CF.shuff{iter},confmat_CF.shuff{iter}]=runcnnFC(total_img_train,response_train(randperm(numel(response_train),numel(response_train))),total_img_val,response_val(randperm(numel(response_val),numel(response_val))),response_CF_train(randperm(numel(response_CF_train),numel(response_CF_train))),response_CF_val(randperm(numel(response_CF_val),numel(response_CF_val))),total_img_test,response_test,response_CF_test);
+            [net.reg{iter},acc.reg{iter},confmat.reg{iter},acc_CF.reg{iter},confmat_CF.reg{iter}]=runcnnFC(total_img_train,response_train,total_img_val,response_val,response_CF_train_categ,response_CF_val_categ,total_img_test,response_test,response_CF_test_categ);
+            [net.suff{iter},acc.shuff{iter},confmat.shuff{iter},acc_CF.shuff{iter},confmat_CF.shuff{iter}]=runcnnFC(total_img_train,response_train(randperm(numel(response_train),numel(response_train))),total_img_val,response_val(randperm(numel(response_val),numel(response_val))),response_CF_train_categ(randperm(numel(response_CF_train),numel(response_CF_train))),response_CF_val_categ(randperm(numel(response_CF_val),numel(response_CF_val))),total_img_test,response_test,response_CF_test_categ);
         end
         
         
@@ -430,7 +430,7 @@ layers = [
 options = trainingOptions('sgdm', ...  %stochastic gradient descent with momentum(SGDM) optimizer
     'InitialLearnRate',0.01, ...
     'MaxEpochs',30, ...  % Default is 30
-    'ValidationData',{valData,valResponse}, ...
+    'ValidationData',{valData,categorical(valResponse)}, ...
     'Verbose',false, ... %Indicator to display training progress information in the command window
     'Plots','none',...
     'Shuffle','every-epoch', ...
@@ -439,7 +439,7 @@ options = trainingOptions('sgdm', ...  %stochastic gradient descent with momentu
 optionsCF= trainingOptions('sgdm', ...  %stochastic gradient descent with momentum(SGDM) optimizer
     'InitialLearnRate',0.01, ...
     'MaxEpochs',30, ...  % Default is 30
-    'ValidationData',{valData,CFvalResponse}, ...
+    'ValidationData',{valData,categorical(CFvalResponse)}, ...
     'Verbose',false, ... %Indicator to display training progress information in the command window
     'Plots','none',...
     'Shuffle','every-epoch', ...
@@ -509,19 +509,16 @@ optionsCF= trainingOptions('sgdm', ...  %stochastic gradient descent with moment
 %% Train networks 
 
 %%%%%%% Train on regular data %%%%%
-net=trainNetwork(trainData,trainResponse,layers,options);
+net=trainNetwork(trainData,categorical(trainResponse),layers,options);
 
 % Test on regular response
 YPred_test = classify(net,testDat);
-YTest = testRes;
+YTest = categorical(testRes);
 acc = sum(YPred_test == YTest)/numel(YTest);
-con = confusionmat(YTest,YPred_test);
-% figure;confusionchart(con,{'Adni_control','Tle_control','Alz','TLE'})
-% title(num2str(acc))
+[con.C, con.order]= confusionmat(YTest,YPred_test);
 
 
 % Test on CF response
-% figure
 groups=unique(CFtestRes);
 per=double(perms(groups));
 for p=1:size(per,1)
@@ -532,10 +529,10 @@ for p=1:size(per,1)
     YTest = double(CFtestRes);
     YTest(double(CFtestRes)==1)=per(p,1);
     YTest(double(CFtestRes)==2)=per(p,2);
-    YTest(double(CFtestRes)==3)=per(p,3);
     
     try
-    YTest(double(CFtestRes)==4)=per(p,4);
+        YTest(double(CFtestRes)==3)=per(p,3);
+        YTest(double(CFtestRes)==4)=per(p,4);
     catch
     end
     
@@ -543,10 +540,7 @@ for p=1:size(per,1)
     
     
     acc_CF(p) = sum(YPred_test == YTest)/numel(YTest);
-    con_CF{p}=confusionmat(YTest,YPred_test);
-%     nexttile
-%     confusionchart(con_CF,{'Adni_control','Tle_control','Alz','TLE'})
-%     title(num2str(acc_CF(p)))
+    [con_CF.C{p},con_CF.order{p}]=confusionmat(YTest,YPred_test);
 end
 end
 
