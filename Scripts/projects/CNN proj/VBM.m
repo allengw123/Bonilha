@@ -213,6 +213,37 @@ for p=1:size(per,1)
     x2_nii_tStat=template_nii;
     x2_nii_tStat.img=x2{p}.tStat;
     save_nii(x2_nii_tStat,fullfile(fitlm_savepath,[comp{p},' --VOX-- tStat.nii']));
+    
+    % Threshold x1 at corrected pval (bonferroni)
+    outsideIdx=(x1_nii_tStat.img==mode(x1_nii_tStat.img,'all'));
+    
+    x1_nii_tStat.img(outsideIdx)=NaN;
+    x1_nii_pval.img(outsideIdx)=NaN;
+    
+    mc_pval=0.05/sum(outsideIdx,'all');
+    
+    ssIdx=(x1_nii_pval.img<=mc_pval);
+    x1_nii_pval.img(~ssIdx)=NaN;
+    x1_nii_tStat.img(~ssIdx)=NaN;
+    
+    save_nii(x1_nii_pval,fullfile(fitlm_savepath,[comp{p},' --AGE-- boncor_pval.nii']));
+    save_nii(x1_nii_tStat,fullfile(fitlm_savepath,[comp{p},' --AGE-- boncor_tStat.nii']));
+
+    % Threshold x2 at corrected pval (bonferroni)
+    outsideIdx=(x2_nii_tStat.img==mode(x2_nii_tStat.img,'all'));
+
+    x2_nii_tStat.img(outsideIdx)=NaN;
+    x2_nii_pval.img(outsideIdx)=NaN;
+
+    mc_pval=0.05/sum(outsideIdx,'all');
+
+    ssIdx=(x2_nii_pval.img<=mc_pval);
+    x2_nii_pval.img(~ssIdx)=NaN;
+    x2_nii_tStat.img(~ssIdx)=NaN;
+    
+    save_nii(x2_nii_pval,fullfile(fitlm_savepath,[comp{p},' --VOX-- boncor_pval.nii']));
+    save_nii(x2_nii_tStat,fullfile(fitlm_savepath,[comp{p},' --VOX-- boncor_tStat.nii']));
+
 end
 
 save(fullfile(fitlm_savepath,'fitlm_output.mat'),'x1','x2','comp')
