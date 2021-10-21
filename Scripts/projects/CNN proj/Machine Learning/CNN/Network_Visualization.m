@@ -1,83 +1,170 @@
-%% Analyze network
+%% Network Visualization
+clear
+clc
 
-%%%% Historgram of accuracy
+githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
+cd(githubpath)
+allengit_genpath(githubpath,'imaging')
+
+% Inputs:
+CNNoutput='C:\Users\allen\Box Sync\Desktop\Allen_Bonilha_EEG\Projects\ep_imaging_AI\CNN output';
+cd(CNNoutput)
+
+savepath=fullfile(CNNoutput,'Figures');mkdir(savepath);
+
+TCmat=load(fullfile(CNNoutput,'ep_control(1) tle(2) -GM-CNN.mat'));
+TCAmat=load(fullfile(CNNoutput,'ep_control(1) adni_control(1) tle(2) alz(3) CNN.mat'));
+
+%% Disease accuracy
+
+%%%% Historgram of accuracy (TLE v Control)
 figure('WindowState','maximized');
-figtitle=['CNN - middle 50 percent slices - Axial',' ',matter{m}];
+figtitle='TLE vs Healthy (100 models) - Disease prediction';
 sgtitle(figtitle)
 
-subplot(2,4,1)
-histogram(cell2mat(acc.reg),'BinWidth',0.05);
-xlim([0 1.2])
+subplot(2,2,1)
+histogram(cell2mat(TCmat.acc.reg),'BinWidth',0.025);
+xlim([0 1.01])
+ylim([0 100])
 xlabel('Accuracy')
 ylabel('# of models')
 title('CNN Reg Label')
 
-subplot(2,4,5)
+subplot(2,2,3)
 hold on
-histogram(cellfun(@(x) x(1,1)/sum(x(1,:),'all'),confmat.reg),'BinWidth',0.05);
-histogram(cellfun(@(x) x(2,2)/sum(x(2,:),'all'),confmat.reg),'BinWidth',0.05);
-histogram(cellfun(@(x) x(3,3)/sum(x(3,:),'all'),confmat.reg),'BinWidth',0.05);
-legend('control','alz','tle')
-xlim([0 1.2])
+histogram(cellfun(@(x) x.C(1,1)/sum(x.C(1,:),'all'),TCmat.confmat.reg),'BinWidth',0.025);
+histogram(cellfun(@(x) x.C(2,2)/sum(x.C(2,:),'all'),TCmat.confmat.reg),'BinWidth',0.025);
+xlim([0 1.01])
+ylim([0 100])
 xlabel('Accuracy')
 ylabel('# of models')
+legend('Control','TLE')
 
-subplot(2,4,2)
-histogram(cell2mat(acc.shuff),'BinWidth',0.05);
-xlim([0 1.2])
+subplot(2,2,2)
+histogram(cell2mat(TCmat.acc.shuff),'BinWidth',0.025);
+xlim([0 1.01])
+ylim([0 100])
 xlabel('Accuracy')
 ylabel('# of models')
-title('CNN Shuffle Label')
+title('CNN Shuffled Label')
 
-subplot(2,4,6)
+subplot(2,2,4)
 hold on
-histogram(cellfun(@(x) x(1,1)/sum(x(1,:),'all'),confmat.shuff),'BinWidth',0.05);
-histogram(cellfun(@(x) x(2,2)/sum(x(2,:),'all'),confmat.shuff),'BinWidth',0.05);
-histogram(cellfun(@(x) x(3,3)/sum(x(3,:),'all'),confmat.shuff),'BinWidth',0.05);
-legend('control','alz','tle')
+histogram(cellfun(@(x) x.C(1,1)/sum(x.C(1,:),'all'),TCmat.confmat.shuff),'BinWidth',0.025);
+histogram(cellfun(@(x) x.C(2,2)/sum(x.C(2,:),'all'),TCmat.confmat.shuff),'BinWidth',0.025);
+xlim([0 1.01])
+ylim([0 100])
 xlabel('Accuracy')
 ylabel('# of models')
-xlim([0 1.2])
+legend('Control','TLE')
+savefig(gcf,fullfile(savepath,figtitle));
 
 
-subplot(2,4,3)
-histogram(cellfun(@(x) mean(x),acc_CF.reg),'BinWidth',0.05);
-xlim([0 1.2])
+
+%%%% Historgram of accuracy (TLE v Control v Alz)
+figure('WindowState','maximized');
+figtitle='TLE vs Healthy vs Alz (100 models) - Disease prediction';
+sgtitle(figtitle)
+
+subplot(2,2,1)
+histogram(cell2mat(TCAmat.acc.reg),'BinWidth',0.025);
+xlim([0 1.01])
+ylim([0 100])
 xlabel('Accuracy')
 ylabel('# of models')
-title('CF Reg Label')
+title('CNN Reg Label')
 
-subplot(2,4,7)
+subplot(2,2,3)
 hold on
-histogram(cellfun(@(x) mean(cellfun(@(y) y(1,1)/sum(y(1,:),'all'),x),'all'),confmat_CF.reg),'BinWidth',0.05);
-histogram(cellfun(@(x) mean(cellfun(@(y) y(2,2)/sum(y(2,:),'all'),x),'all'),confmat_CF.reg),'BinWidth',0.05);
-histogram(cellfun(@(x) mean(cellfun(@(y) y(3,3)/sum(y(3,:),'all'),x),'all'),confmat_CF.reg),'BinWidth',0.05);
-legend('control','alz','tle')
+histogram(cellfun(@(x) x.C(1,1)/sum(x.C(1,:),'all'),TCAmat.confmat.reg),'BinWidth',0.025);
+histogram(cellfun(@(x) x.C(2,2)/sum(x.C(2,:),'all'),TCAmat.confmat.reg),'BinWidth',0.025);
+histogram(cellfun(@(x) x.C(3,3)/sum(x.C(3,:),'all'),TCAmat.confmat.reg),'BinWidth',0.025);
+xlim([0 1.01])
+ylim([0 100])
 xlabel('Accuracy')
 ylabel('# of models')
-xlim([0 1.2])
+legend('Control','TLE','Alz')
 
-subplot(2,4,4)
-histogram(cellfun(@(x) mean(x),acc_CF.shuff),'BinWidth',0.05);
-xlim([0 1.2])
+subplot(2,2,2)
+histogram(cell2mat(TCAmat.acc.shuff),'BinWidth',0.025);
+xlim([0 1.01])
+ylim([0 100])
 xlabel('Accuracy')
 ylabel('# of models')
-title('CF Shuffle Label')
+title('CNN Shuffled Label')
 
-subplot(2,4,8)
+subplot(2,2,4)
 hold on
-histogram(cellfun(@(x) mean(cellfun(@(y) y(1,1)/sum(y(1,:),'all'),x),'all'),confmat_CF.shuff),'BinWidth',0.05);
-histogram(cellfun(@(x) mean(cellfun(@(y) y(2,2)/sum(y(2,:),'all'),x),'all'),confmat_CF.shuff),'BinWidth',0.05);
-histogram(cellfun(@(x) mean(cellfun(@(y) y(3,3)/sum(y(3,:),'all'),x),'all'),confmat_CF.shuff),'BinWidth',0.05);
-legend('control','alz','tle')
+histogram(cellfun(@(x) x.C(1,1)/sum(x.C(1,:),'all'),TCAmat.confmat.shuff),'BinWidth',0.025);
+histogram(cellfun(@(x) x.C(2,2)/sum(x.C(2,:),'all'),TCAmat.confmat.shuff),'BinWidth',0.025);
+histogram(cellfun(@(x) x.C(3,3)/sum(x.C(3,:),'all'),TCAmat.confmat.shuff),'BinWidth',0.025);
+
+xlim([0 1.01])
+ylim([0 100])
 xlabel('Accuracy')
 ylabel('# of models')
-xlim([0 1.2])
+legend('Control','TLE','Alz')
+savefig(gcf,fullfile(savepath,figtitle));
 
-saveas(gcf,fullfile(save_path,figtitle));
-close all
-clc
 
+%% Confounding factor
+
+%%%% Historgram of accuracy (TLE v Control)
+figure('WindowState','maximized');
+figtitle='TLE vs Healthy (100 models) - Age prediction';
+sgtitle(figtitle)
+
+subplot(1,2,1)
+[maxAcc,maxIdx]=cellfun(@(x) max(x),TCmat.acc_CF.reg);
+histogram(maxAcc,'BinWidth',0.025);
+xlim([0 1.01])
+ylim([0 100])
+xlabel('Accuracy')
+ylabel('# of models')
+title('CNN Reg Label')
+
+subplot(1,2,2)
+[maxAcc,maxIdx]=cellfun(@(x) max(x),TCmat.acc_CF.shuff);
+histogram(maxAcc,'BinWidth',0.025);xlim([0 1.01])
+ylim([0 100])
+xlabel('Accuracy')
+ylabel('# of models')
+title('CNN Shuffled Label')
+savefig(gcf,fullfile(savepath,figtitle));
+
+
+
+%%%% Historgram of accuracy (TLE v Control v Alz)
+figure('WindowState','maximized');
+figtitle='TLE vs Healthy vs Alz (100 models) - Age prediction';
+sgtitle(figtitle)
+
+subplot(1,2,1)
+[maxAcc,maxIdx]=cellfun(@(x) max(x),TCAmat.acc_CF.reg);
+histogram(maxAcc,'BinWidth',0.025);
+xlim([0 1.01])
+ylim([0 100])
+xlabel('Accuracy')
+ylabel('# of models')
+title('CNN Reg Label')
+
+subplot(1,2,2)
+[maxAcc,maxIdx]=cellfun(@(x) max(x),TCAmat.acc_CF.shuff);
+histogram(maxAcc,'BinWidth',0.025);
+xlim([0 1.01])
+ylim([0 100])
+xlabel('Accuracy')
+ylabel('# of models')
+title('CNN Shuffled Label')
+
+savefig(gcf,fullfile(savepath,figtitle));
+
+
+
+
+
+
+%%
 %%%%% Feature visualization
 
 analyzeNetwork(net.reg{1})
