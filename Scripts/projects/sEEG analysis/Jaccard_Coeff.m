@@ -2,10 +2,13 @@ clear all
 close all
 clc
 
-Bonilha_start
+gitpath='C:\Users\allen\Documents\GitHub\Bonilha';
+cd(gitpath)
+
+allengit_genpath(gitpath)
 %% Define Variables
 
-datadir='C:\Users\allen\Box Sync\Desktop\Allen_Bonilha_EEG\Projects\sEEG project\PatientData';
+datadir='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\sEEG project\PatientData';
 
 % Create Functional analysis folder
 functionaldir=fullfile(datadir,'Analysis','Functional');
@@ -47,7 +50,7 @@ connectivitymat=nan(numel(master_electrode_labels),numel(master_electrode_labels
 
 % Phases
 phases={'Pre-Baseline','Pre-Trans','Post-Trans','Mid-Seiz','Late-Seiz','Early-Post','Late-Post'};
-
+1 3 4 5
 % Thesholds
 thres_name={'p66'};
 thres_val=[0.66];
@@ -57,6 +60,9 @@ freq_bands={'alpha_theta','beta','low_gamma','high_gamma'};
 
 % Measurments
 funcvars={'fa'};
+
+% Create plots
+plotfig=false;
 %% Find Jaccard similarity coefficient between functional and structural connectivity
 for sbj=1:numel(subjID)
     wrk_sbjID=subjID{sbj};
@@ -137,14 +143,7 @@ for sbj=1:numel(subjID)
             func_con.(freq_bands{freq})(:,:,:,i)=tempmat;
         end
     end
-% 
-%     figure;
-%     imagesc(tempconmat(:,:))
-%     set(gca,'XTick',1:numel(master_electrode_labels_grouped),'XTickLabel',master_electrode_labels_grouped,'XTickLabelRotation',90)
-%     set(gca,'YTick',1:numel(master_electrode_labels_grouped),'YTickLabel',master_electrode_labels_grouped)
-%     cb=colorbar;
-%     ylabel(cb,'FA')
-%     colormap('jet')
+    
     
     % Jaccard Idx
     for freq=1:numel(freq_bands)
@@ -157,6 +156,32 @@ for sbj=1:numel(subjID)
                         
                         tempfunc=funcmat;
                         tempstruct=structmat;
+                        if plotfig
+                            struc_img=figure('Position',[1483,658.333333333333,644,502.666666666667]);
+                            imagesc(tempstruct);
+                            set(gca,'xtick',[],'xticklabel',[],'ytick',[],'yticklabel',[])
+                            set(struc_img,'color',[1 1 1]);
+                            cb=colorbar;
+                            set(cb,'Ticks',[0 0.5 1],'FontSize',16,'Location','eastoutside')
+                            ylabel(cb,'Fractional Anisotropy (FA)','FontSize',16)
+                            axis('square')
+                            struc_ccm=customcolormap([0 1],{'#E28E40','#6E3908'});
+                            colormap(struc_ccm)
+                            caxis([0 1]);
+
+                            func_img=figure('Position',[1483,658.333333333333,644,502.666666666667]);
+                            imagesc(tempfunc);
+                            set(gca,'xtick',[],'xticklabel',[],'ytick',[],'yticklabel',[])
+                            set(func_img,'color',[1 1 1]);
+                            cb=colorbar;
+                            set(cb,'Ticks',[0 0.5 1],'FontSize',16,'Location','southoutside')
+                            ylabel(cb,'Beta Coherence','FontSize',16)
+                            axis('square')
+                            func_ccm=customcolormap([0 1],{'#4094E2','#063058'});
+                            colormap(func_ccm)
+                            caxis([0 1]);
+                        end
+
 
                         % Make diag nans for remove nan function
                         idx=logical(eye(size(tempfunc,2)));
@@ -186,9 +211,9 @@ for sbj=1:numel(subjID)
                         tempstruct=tempstruct(idx);
                         tempfunc=tempfunc(idx);
                         
-%                         % Rearrange matrix to square
-%                         tempfunc=reshape(tempfunc,[size(funcmat,1)-1,numel(tempfunc)/(size(funcmat,1)-1)]);
-%                         tempstruct=reshape(tempstruct,[size(structmat,1)-1,numel(tempstruct)/(size(structmat,1)-1)]);
+%                          % Rearrange matrix to square
+%                          tempfunc=reshape(tempfunc,size(funcmat,1)-1,[]);
+%                          tempstruct=reshape(tempstruct,[size(structmat,1)-1,numel(tempstruct)/(size(structmat,1)-1)]);
 
                         % check if nans exist
                         if logical(sum(isnan(tempstruct))) || logical(sum(isnan(tempfunc)))
@@ -235,9 +260,55 @@ for sbj=1:numel(subjID)
 
                         all_idx=unique([tempfunc_idx; tempstruct_idx]);
                         
-%                         tempfunc=tempfunc(tempfunc_idx);
-%                         tempstruct=tempstruct(tempstruct_idx);
-                        
+                                             
+                        if plotfig
+                            plotfunc=tempstruct(tempstruct_idx);
+                            plotstruc=tempfunc(tempfunc_idx);
+                            
+                            % Create vectorized plot
+                            figure('Position',[917,41.6666666666667,182,1319.33333333333]);
+                            set(gcf,'color',[1 1 1]);
+
+                            subplot(1,4,[1:3])
+                            plot(plotfunc,1:numel(plotfunc),'Color','#4094E2','LineWidth',2)
+                            yticklabels([]);
+                            yticks([])
+                            xlim([0.5 1])
+                            xticks([])
+                            tempx=get(gca,'XLim');
+
+                            subplot(1,4,4)
+                            imagesc(plotfunc)
+                            colormap(func_ccm)
+                            caxis([0 1])
+                            xlim(tempx)
+                            yticklabels([]);
+                            xticklabels([]);
+                            yticks([])
+                            xticks([])
+
+                            figure('Position',[917,41.6666666666667,182,1319.33333333333]);
+                            set(gcf,'color',[1 1 1]);
+                            
+                            subplot(1,4,[1:3])
+                            plot(plotstruc,1:numel(plotstruc),'Color','#E28E40','LineWidth',2)
+                            yticklabels([]);
+                            yticks([])
+                            xlim([0.5 1])
+                            xticks([])
+                            tempx=get(gca,'XLim');
+
+                            subplot(1,4,4)
+                            imagesc(plotstruc)
+                            colormap(struc_ccm)
+                            caxis([0 1])
+                            xlim(tempx)
+                            yticklabels([]);
+                            xticklabels([]);
+                            yticks([])
+                            xticks([])
+                        end
+                         
                         % Copy matrix for label
                         compstruct=tempstruct;
                         compfunc=tempfunc;
@@ -245,6 +316,49 @@ for sbj=1:numel(subjID)
                         % Binarize matricies
                         tempstruct=tempstruct>=tempstruc_min;
                         tempfunc=tempfunc>=tempfunc_min;
+                        
+                        if plotfig
+                            
+                            figure('Position',[917,41.6666666666667,182,1319.33333333333]);
+                            set(gcf,'color',[1 1 1]);
+                            subplot(1,2,1)
+                            plot(tempfunc,1:numel(tempfunc),'Color','#4094E2','LineWidth',2)
+                            yticklabels([]);
+                            yticks([])
+                            xlim([0.5 1])
+                            xticks([])
+                            tempx=get(gca,'XLim');
+
+                            subplot(1,2,2)
+                            imagesc(tempfunc)
+                            colormap(func_ccm)
+                            caxis([0 1])
+                            xlim(tempx)
+                            yticklabels([]);
+                            xticklabels([]);
+                            yticks([])
+                            xticks([])
+
+                            figure('Position',[917,41.6666666666667,182,1319.33333333333]);
+                            set(gcf,'color',[1 1 1]);
+                            subplot(1,2,1)
+                            plot(tempstruct,1:numel(tempstruct),'Color','#E28E40','LineWidth',2)
+                            yticklabels([]);
+                            yticks([])
+                            xlim([0.5 1])
+                            xticks([])
+                            tempx=get(gca,'XLim');
+
+                            subplot(1,2,2)
+                            imagesc(tempstruct)
+                            colormap(struc_ccm)
+                            caxis([0 1])
+                            xlim(tempx)
+                            yticklabels([]);
+                            xticklabels([]);
+                            yticks([])
+                            xticks([])
+                        end
 
                         % Calculate Jaccard Coeff
                         tempfunc=tempfunc(all_idx);
@@ -328,9 +442,9 @@ for fv=1:numel(funcvars)
                 hold on
                 
                 if resp==1
-                    wkdat=wkdat(1:end-2);
+                    wkdat=wkdat(1:end-3);
                 elseif resp==2
-                    wkdat=wkdat(end-1:end);
+                    wkdat=wkdat(end-2:end);
                 end
                 
                 % Bar Mean
@@ -423,9 +537,9 @@ for fv=1:numel(funcvars)
                 title([freq_bands{band}]);
                 switch band+(resp-1)*4
                     case 4
-                        legend([scat{:}],active_sbj(1:end-2),'Orientation','horizontal')
+                        legend([scat{:}],active_sbj(1:end-3),'Orientation','horizontal')
                     case 8
-                        legend([scat{:}],active_sbj(end-1:end),'Orientation','horizontal')
+                        legend([scat{:}],active_sbj(end-2:end),'Orientation','horizontal')
                 end
             end
         end
@@ -589,8 +703,8 @@ tempdat=figdat.beta.p66.fa;
 
 
 % Assume each clip independent
-respdat=cell2mat(tempdat(1:7));
-nonrespdat=cell2mat(tempdat(8:9));
+respdat=cell2mat(tempdat(1:6));
+nonrespdat=cell2mat(tempdat(7:9));
 
 % Normalize to baseline
 for r=1:size(respdat,1)
@@ -606,6 +720,9 @@ for r=1:size(nonrespdat,1)
         nonrespnorm(r,c)=nonrespdat(r,c)-tempbl;
     end
 end
+% 
+% x=respnorm(:,[1 3 4 5])
+% x=nonrespnorm(:,[1 3 4 5])
 
 % Calculate phase difference
 respdatdiff=[];
@@ -771,6 +888,6 @@ regdat=[];
 for s=1:numel(fn)
     sbjnum=extractAfter(fn{s},'_');
     sbjdat=vertcat(jacdat.(fn{s}).fa{:});
-    earlyjac=[ones(size(sbjdat,1),1)*str2num(sbjnum) sbjdat(:,3)];
+    jac=[ones(size(sbjdat,1),1)*str2num(sbjnum) sbjdat(:,3)];
     regdat=vertcat(regdat,earlyjac);
 end

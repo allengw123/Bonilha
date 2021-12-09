@@ -7,6 +7,8 @@ if nargin<2
     disp('No specific analysis argument detected. No additional toolboxes will be added')
 end
 
+addpath(genpath(fullfile(gitpath,'Functions')));
+
 if strcmp(type,'imaging')
     addpath(genpath(fullfile(gitpath,'Toolbox','imaging')))
     

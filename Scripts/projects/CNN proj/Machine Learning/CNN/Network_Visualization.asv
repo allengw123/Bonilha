@@ -237,7 +237,19 @@ set(gcf,'color','w');
 figtitle='TLE vs Healthy vs Alz (100 models) - Age prediction';
 sgtitle(figtitle)
 
-
+hold on
+histogram(cell2mat(TCAmat.acc.reg),'BinWidth',0.025);
+histogram(cell2mat(TCAmat.acc.shuff),'BinWidth',0.025,'FaceColor','#631CB3');
+xlim([0 1.01])
+ylim([0 100])
+xlabel('Accuracy')
+ylabel('# of models')
+xticks([0:0.2:1])
+% title('CNN Reg Label')
+axis square
+pbaspect([1 2 1]) 
+a = get(gca,'XTickLabel');
+set(gca,'XTickLabel',a,'FontName','Times','fontsize',18)
 
 hold on
 [maxAcc,maxIdx]=cellfun(@(x) max(x),TCAmat.acc_CF.reg);
@@ -249,11 +261,7 @@ xlim([0 1.01])
 ylim([0 100])
 xlabel('Accuracy')
 ylabel('# of models')
-axis square
-pbaspect([1 2 1]) 
-xticks([0:0.2:1])
-a = get(gca,'XTickLabel');
-set(gca,'XTickLabel',a,'FontName','Times','fontsize',18)
+title('CNN Reg Label')
 
 subplot(1,2,2)
 [maxAcc,maxIdx]=cellfun(@(x) max(x),TCAmat.acc_CF.shuff);
@@ -269,44 +277,6 @@ savefig(gcf,fullfile(savepath,figtitle));
 
 
 
-figure('WindowState','maximized');
-set(gcf,'color','w');
-hold on
-[maxAcc,maxIdx]=cellfun(@(x) max(x),TCAmat.acc_CF.reg);
-tempconf=TCAmat.confmat_CF.reg;  
-for i=1:numel(TCAmat.confmat_CF.reg)
-    tempconf{i}.C=tempconf{i}.C{maxIdx(i)}
-    
-conf_stat=conf_analysis(TCAmat.confmat.reg);
-histogram(conf_stat.Precision{1},'BinWidth',0.025,'FaceColor','g');
-histogram(conf_stat.Precision{2},'BinWidth',0.025);
-histogram(conf_stat.Precision{3},'BinWidth',0.025);
-xlim([0 1.01])
-ylim([0 100])
-xlabel('Precision')
-ylabel('# of models')
-xticks([0:0.2:1])
-axis square
-a = get(gca,'XTickLabel');
-set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-% legend('Control','TLE','Alz')
-
-
-figure('WindowState','maximized');
-set(gcf,'color','w');
-hold on
-histogram(conf_stat.Recall{1},'BinWidth',0.025,'FaceColor','g');
-histogram(conf_stat.Recall{2},'BinWidth',0.025);
-histogram(conf_stat.Recall{3},'BinWidth',0.025);
-xlim([0 1.01])
-ylim([0 100])
-xlabel('Recall')
-ylabel('# of models')
-xticks([0:0.2:1])
-axis square
-a = get(gca,'XTickLabel');
-set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-legend('Control','TLE','Alz','Orientation','horizontal')
 
 
 %%

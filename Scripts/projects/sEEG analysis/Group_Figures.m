@@ -6,9 +6,8 @@ gitpath='C:\Users\allen\Documents\GitHub\Bonilha';
 cd(gitpath)
 allengit_genpath(gitpath)
 %% Insert Info
-datadir='C:\Users\allen\Box Sync\Desktop\Allen_Bonilha_EEG\Projects\sEEG project\PatientData';
-
-analysisdir='C:\Users\allen\Box Sync\Desktop\Allen_Bonilha_EEG\Projects\sEEG project\PatientData\Analysis';
+datadir='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\sEEG project\PatientData';
+analysisdir=fullfile(datadir,'Analysis');
 
 Patient_ID={dir(fullfile(datadir,'Patient *')).name};
 
@@ -17,8 +16,8 @@ trials_label={'pre-baseline','Baseline','Early','Mid','Late'};
 
 bandname = {'beta'};    
 
-resp={'P001','P002','P003','P006','P009','P012','P013'};
-nonresp={'P502','P503'};
+resp={'P002','P003','P006','P009','P012','P013'};
+nonresp={'P501','P502','P503'};
 
 % Define electrodes
 master_electrode={'LA','LAH','LAI','LLF','LMF','LPH','LPI','RA','RAH','RAI','RLF','RMF','RPH','RPI'};
@@ -174,34 +173,26 @@ mean_nonresp_struct=mean(nonresp_struct,3,'omitnan');
 for i=2:5
     figure
     imagesc(mean_resp_coh(:,:,i),[0 1]);
+    set(gcf,'color',[1 1 1]);
     c=colorbar;
-    ylabel(c,'Beta coherence','fontsize',8);
-    c.FontSize = 12;
-    colormap bone;
-    xlabel('Regions','fontsize',10);
-    ylabel('Regions','fontsize',10);
-    set(gca,'XTick',1:length(master_electrode_labels),'XTickLabel',master_electrode_labels,'fontsize',8.5,'TickLabelInterpreter','none');
-    set(gca,'YTick',1:length(master_electrode_labels),'YTickLabel',master_electrode_labels,'fontsize',8.5,'XTickLabelRotation',90,'TickLabelInterpreter','none');
+    func_ccm=customcolormap([0 1],{'#4094E2','#063058'});
+    colormap(func_ccm)
+    ylabel(c,'Beta coherence','fontsize',12);
     title(['Responders - ',trials_label{i}])
-    t=get(gca,'title');
-    saveas(gcf,fullfile('C:\Users\allen\Google Drive\School\MUSC\Lab\Bonilha\sEEG paper\Figures\Coherence',t.String),'eps')
+    axis('square')
 end
 
 % Create nonresponsive figure
 for i=2:5
     figure
     imagesc(mean_nonresp_coh(:,:,i),[0 1]);
+    set(gcf,'color',[1 1 1]);
     c=colorbar;
-    ylabel(c,'Beta coherence','fontsize',8);
-    c.FontSize = 12;
-    colormap bone;
-    xlabel('Regions','fontsize',10);
-    ylabel('Regions','fontsize',10);
-    set(gca,'XTick',1:length(master_electrode_labels),'XTickLabel',master_electrode_labels,'fontsize',8.5,'TickLabelInterpreter','none');
-    set(gca,'YTick',1:length(master_electrode_labels),'YTickLabel',master_electrode_labels,'fontsize',8.5,'XTickLabelRotation',90,'TickLabelInterpreter','none');
-    title(['Non Responders - ',trials_label{i}])
-    t=get(gca,'title');
-    saveas(gcf,fullfile('C:\Users\allen\Google Drive\School\MUSC\Lab\Bonilha\sEEG paper\Figures\Coherence',t.String),'eps')
+    func_ccm=customcolormap([0 1],{'#4094E2','#063058'});
+    colormap(func_ccm)
+    ylabel(c,'Beta coherence','fontsize',12);
+    title(['Non-Responders - ',trials_label{i}])
+    axis('square')
 end
 
 %% Electrode Group Figures (clips)
@@ -209,27 +200,27 @@ end
 % Create responsive figure
 figure
 imagesc(resp_electrode(:,:,1),[0 35]);
-c=colorbar;
-ylabel(c,'Number of Electrodes','fontsize',8);
-c.FontSize = 12;
-colormap bone;
-xlabel('Regions','fontsize',10);
-ylabel('Regions','fontsize',10);
-set(gca,'XTick',1:length(master_electrode_labels),'XTickLabel',master_electrode_labels,'fontsize',8.5,'TickLabelInterpreter','none');
-set(gca,'YTick',1:length(master_electrode_labels),'YTickLabel',master_electrode_labels,'fontsize',8.5,'XTickLabelRotation',90,'TickLabelInterpreter','none');
+set(gca,'xtick',[],'xticklabel',[],'ytick',[],'yticklabel',[])
+set(gcf,'color',[1 1 1]);
+cb=colorbar;
+set(cb,'Ticks',[0 35],'FontSize',16,'Location','southoutside')
+ylabel(cb,'Clips','FontSize',16)
+axis('square')
+ccm=customcolormap([0 1],{'#33B585','#00613E'});
+colormap(ccm)
 title('Responders')
 
 % Create nonresponsive figure
 figure
 imagesc(nonresp_electrode(:,:,1),[0 35]);
-c=colorbar;
-ylabel(c,'Electrodes','fontsize',8);
-c.FontSize = 12;
-colormap bone;
-xlabel('Regions','fontsize',10);
-ylabel('Regions','fontsize',10);
-set(gca,'XTick',1:length(master_electrode_labels),'XTickLabel',master_electrode_labels,'fontsize',8.5,'TickLabelInterpreter','none');
-set(gca,'YTick',1:length(master_electrode_labels),'YTickLabel',master_electrode_labels,'fontsize',8.5,'XTickLabelRotation',90,'TickLabelInterpreter','none');
+set(gca,'xtick',[],'xticklabel',[],'ytick',[],'yticklabel',[])
+set(gcf,'color',[1 1 1]);
+cb=colorbar;
+set(cb,'Ticks',[0 35],'FontSize',16,'Location','southoutside')
+ylabel(cb,'Clips','FontSize',16)
+axis('square')
+ccm=customcolormap([0 1],{'#33B585','#00613E'});
+colormap(ccm)
 title('Non Responders')
 
 
@@ -266,26 +257,28 @@ title('Non Responders')
 
 % Create responsive figure
 figure
-imagesc(mean_resp_struct,[0 0.5]);
-c=colorbar;
-ylabel(c,'Mean Fractional Anisotropy','fontsize',8);
-c.FontSize = 12;
-colormap gray;
-xlabel('Regions','fontsize',10);
-ylabel('Regions','fontsize',10);
-set(gca,'XTick',1:length(master_electrode_labels),'XTickLabel',master_electrode_labels,'fontsize',8.5,'TickLabelInterpreter','none');
-set(gca,'YTick',1:length(master_electrode_labels),'YTickLabel',master_electrode_labels,'fontsize',8.5,'XTickLabelRotation',90,'TickLabelInterpreter','none');
+imagesc(mean_resp_struct,[0 1]);
+set(gca,'xtick',[],'xticklabel',[],'ytick',[],'yticklabel',[])
+set(gcf,'color',[1 1 1]);
+cb=colorbar;
+set(cb,'Ticks',[0 0.5 1],'FontSize',16,'Location','southoutside')
+ylabel(cb,'Fractional Anisotropy','FontSize',16)
+axis('square')
+struc_ccm=customcolormap([0 1],{'#E28E40','#6E3908'});
+colormap(struc_ccm)
+caxis([0 1]);
 title('Responders')
 
 % Create nonresponsive figure
 figure
-imagesc(mean_nonresp_struct,[0 0.5]);
-c=colorbar;
-ylabel(c,'Mean Fractional Anisotropy','fontsize',8);
-c.FontSize = 12;
-colormap gray;
-xlabel('Regions','fontsize',10);
-ylabel('Regions','fontsize',10);
-set(gca,'XTick',1:length(master_electrode_labels),'XTickLabel',master_electrode_labels,'fontsize',8.5,'TickLabelInterpreter','none');
-set(gca,'YTick',1:length(master_electrode_labels),'YTickLabel',master_electrode_labels,'fontsize',8.5,'XTickLabelRotation',90,'TickLabelInterpreter','none');
+imagesc(mean_nonresp_struct,[0 1]);
+set(gca,'xtick',[],'xticklabel',[],'ytick',[],'yticklabel',[])
+set(gcf,'color',[1 1 1]);
+cb=colorbar;
+set(cb,'Ticks',[0 0.5 1],'FontSize',16,'Location','southoutside')
+ylabel(cb,'Fractional Anisotropy','FontSize',16)
+axis('square')
+struc_ccm=customcolormap([0 1],{'#E28E40','#6E3908'});
+colormap(struc_ccm)
+caxis([0 1]);
 title('Non Responders')

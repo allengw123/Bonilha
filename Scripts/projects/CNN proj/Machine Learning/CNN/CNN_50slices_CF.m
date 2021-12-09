@@ -2,7 +2,7 @@
 clear
 clc
 
-githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
+githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
 cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
@@ -213,7 +213,7 @@ for m=1:numel(matter)
                 while cont==false
                     
                     display(['Running iteration ',num2str(iter)])
-                    
+                    trainPercent,testPercent,valPercent,inputage)
                     % Permute datasets
                     adni_control = orgCNNinput(adni_control_img,0.6,0.25,0.15,adni_control_age);
                     ep_control = orgCNNinput(ep_control_img,0.6,0.25,0.15,ep_control_age);
@@ -447,6 +447,10 @@ for p=1:size(per,1)
     
     try
         YTest(double(CFtestRes)==3)=per(p,3);
+    catch
+    end
+    
+    try
         YTest(double(CFtestRes)==4)=per(p,4);
     catch
     end
