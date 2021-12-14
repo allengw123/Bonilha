@@ -382,6 +382,7 @@ end
 %         end
 %     end
 % end
+
 function [output]=conf_analysis(conf)
 
 nGroups=numel(conf{1}.order);
