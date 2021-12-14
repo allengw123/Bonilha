@@ -391,7 +391,7 @@ end
 
 
 analyzeNetwork(TCAmat.net.reg{1})
-
+s
 act = activations(tempnet,controlimg_smooth.img(:,:,s),2);
 
 %%
