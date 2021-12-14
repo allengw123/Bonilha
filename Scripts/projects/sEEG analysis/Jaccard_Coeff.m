@@ -50,7 +50,6 @@ connectivitymat=nan(numel(master_electrode_labels),numel(master_electrode_labels
 
 % Phases
 phases={'Pre-Baseline','Pre-Trans','Post-Trans','Mid-Seiz','Late-Seiz','Early-Post','Late-Post'};
-1 3 4 5
 % Thesholds
 thres_name={'p66'};
 thres_val=[0.66];
@@ -316,6 +315,10 @@ for sbj=1:numel(subjID)
                         % Binarize matricies
                         tempstruct=tempstruct>=tempstruc_min;
                         tempfunc=tempfunc>=tempfunc_min;
+
+                        % Calculate Jaccard Coeff
+                        tempfunc=tempfunc(all_idx);
+                        tempstruct=tempstruct(all_idx);
                         
                         if plotfig
                             
@@ -359,10 +362,6 @@ for sbj=1:numel(subjID)
                             yticks([])
                             xticks([])
                         end
-
-                        % Calculate Jaccard Coeff
-                        tempfunc=tempfunc(all_idx);
-                        tempstruct=tempstruct(all_idx);
 %                         snapnow;
 
                         jac_coeff.(freq_bands{freq}).(thres_name{thres}).(['sbj_',extractAfter(wrk_sbjID,'Patient ')]).(funcvars{fv}){clip}(phas)=jaccard(tempfunc,tempstruct);
