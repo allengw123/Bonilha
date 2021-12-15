@@ -213,7 +213,7 @@ for m=1:numel(matter)
                 while cont==false
                     
                     display(['Running iteration ',num2str(iter)])
-                    trainPercent,testPercent,valPercent,inputage)
+
                     % Permute datasets
                     adni_control = orgCNNinput(adni_control_img,0.6,0.25,0.15,adni_control_age);
                     ep_control = orgCNNinput(ep_control_img,0.6,0.25,0.15,ep_control_age);
@@ -297,12 +297,12 @@ for m=1:numel(matter)
                         response.testAge_categ=categorical(sum(response.testAge_categ,2));
                         response.valAge_categ=categorical(sum(response.valAge_categ,2));
                     end
-                    
+                    %%
                     %%%%%%%%%%%% Train the network
                     [net.reg{iter},acc.reg{iter},confmat.reg{iter},acc_CF.reg{iter},confmat_CF.reg{iter}]=runcnnFC(total_img_train,response_train,total_img_val,response_val,response.trainAge_categ,response.valAge_categ,total_img_test,response_test,response.testAge_categ);
                     [net.suff{iter},acc.shuff{iter},confmat.shuff{iter},acc_CF.shuff{iter},confmat_CF.shuff{iter}]=runcnnFC(total_img_train,response_train(randperm(numel(response_train),numel(response_train))),total_img_val,response_val(randperm(numel(response_val),numel(response_val))),response.trainAge_categ(randperm(numel(response.trainAge),numel(response.trainAge))),response.valAge_categ(randperm(numel(response.valAge),numel(response.valAge))),total_img_test,response_test,response.testAge_categ);
                     
-                    
+                    %%
                     
                     save(fullfile(save_path,[compName,'-',matter{m},'-CNN.mat']),'net','acc','confmat','acc_CF','confmat_CF','-v7.3')
                 end
