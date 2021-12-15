@@ -213,7 +213,7 @@ for m=1:numel(matter)
                 while cont==false
                     
                     display(['Running iteration ',num2str(iter)])
-
+                    trainPercent,testPercent,valPercent,inputage)
                     % Permute datasets
                     adni_control = orgCNNinput(adni_control_img,0.6,0.25,0.15,adni_control_age);
                     ep_control = orgCNNinput(ep_control_img,0.6,0.25,0.15,ep_control_age);
@@ -511,3 +511,8 @@ output.valAge=vertcat(output.valAge{:});
 output.trainAge=repmat(trainAge',58,1);
 output.trainAge=vertcat(output.trainAge{:});
 end
+
+
+
+
+

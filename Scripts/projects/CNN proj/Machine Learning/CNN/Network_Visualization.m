@@ -276,7 +276,7 @@ hold on
 tempconf=TCAmat.confmat_CF.reg;  
 for i=1:numel(TCAmat.confmat_CF.reg)
     tempconf{i}.C=tempconf{i}.C{maxIdx(i)}
-end
+    
 conf_stat=conf_analysis(TCAmat.confmat.reg);
 histogram(conf_stat.Precision{1},'BinWidth',0.025,'FaceColor','g');
 histogram(conf_stat.Precision{2},'BinWidth',0.025);
@@ -310,91 +310,79 @@ legend('Control','TLE','Alz','Orientation','horizontal')
 
 
 %%
-
-% look for Alz nifti files
-Alzfiles={dir(fullfile(SmoothThres,'Alz\ADNI_Alz_nifti','*','*.nii')).name}';
-
-% look for TLE nifti files
-tlefiles={dir(fullfile(SmoothThres,'TLE','*','*','*.nii')).name}';
-
-
-% look for control nifti files
-controlfiles={dir(fullfile(SmoothThres,'Controls','*','*','*.nii')).name}';
-controlfiles_adni=controlfiles(contains(controlfiles,'ADNI'));
-controlfiles_ep=controlfiles(~contains(controlfiles,'ADNI'));
-
-%%%%%%%%%%%%%% Load adni control %%%%%%%%%%%%%%%%%%
-tempdata=controlfiles_adni(strcmp(extractBetween(controlfiles_adni,'smooth10_','_ADNI'),matter{m}));
-adni_control_img=[];
-adni_control_age=[];
-count1=0;
-disp('Loading adni control subjects and extracting 50 slices')
-for con=1:numel(tempdata)
-    
-    % Find image ID
-    tempIN=extractBetween(tempdata{con},'_I','.nii');
-    
-    % Load Image
-    temp=load_nii(tempdata{con});
-    count2=1;
-    for i=28:85
-        temp_img{count2,1}=temp.img(:,:,i);
-        count2=count2+1;
-    end
-    adni_control_img{count1,1}=temp_img;
-    adni_control_age{count1,1}=tempage;
-end
-
-%%%%%%%%%%%%%% Load ep control %%%%%%%%%%%%%%%%%%
-tempdata=controlfiles_ep(strcmp(extractBetween(controlfiles_ep,'smooth10_','_'),matter{m}));
-ep_control_img=[];
-ep_control_age=[];
-count1=0;
-disp('Loading tle control subjects and extracting 50 slices')
-for con=1:numel(tempdata)
-    
-    % Find image ID
-    tempIN=extractBetween(tempdata{con},[matter{m},'_'],'.nii');
-    
-    % Load image
-    temp=load_nii(tempdata{con});
-    count2=1;
-    for i=28:85
-        temp_img{count2,1}=temp.img(:,:,i);
-        count2=count2+1;
-    end
-    ep_control_img{count1,1}=temp_img;
-    ep_control_age{count1,1}=tempage;
-end
-
-%%%%%%%%%%%%%% Load adni Alz %%%%%%%%%%%%%%%%%%
-tempdata=Alzfiles(strcmp(extractBetween(Alzfiles,'smooth10_','_ADNI'),matter{m}));
-adni_alz_img=[];
-adni_alz_age=[];
-count1=0;
-disp('Loading adni alz subjects and extracting 50 slices')
-for con=1:numel(tempdata)
-    
-    % Find image number
-    tempIN=extractBetween(tempdata{con},'_I','.nii');
-    
-    % Load image
-    temp=load_nii(tempdata{con});
-    count2=1;
-    for i=28:85
-        temp_img{count2,1}=temp.img(:,:,i);
-        count2=count2+1;
-    end
-    adni_alz_img{count1,1}=temp_img;
-    adni_alz_age{count1,1}=tempage;
-end
-
+%%%%% Feature visualization
 
 analyzeNetwork(TCAmat.net.reg{1})
-s
-act = activations(tempnet,controlimg_smooth.img(:,:,s),2);
 
-%%
+controlimg_smooth=load_nii(controlbrain_smooth);
+controlimg=load_nii(controlbrain_gm);
+imgSize = size(controlimg_smooth.img);
+imgSize = imgSize(1:2);
+
+l=12 % ReLU
+
+vw = VideoWriter(fullfile('C:\Users\allen\Documents\GitHub\Bonilha','-Reconstruction.mp4'),'MPEG-4');
+open(vw);
+hFig = figure('Toolbar', 'none', 'Menu', 'none', 'WindowState', 'maximized');
+for s=28:85
+    sgtitle(['Slice # ',num2str(s)])
+    subplot(6,10,5)
+    imagesc(controlimg_smooth.img(:,:,s))
+    title('Input image')
+    [~,I]=sort(cell2mat(acc.reg),'descend');
+    count=1;
+    for p=1:numel(net.reg)
+        tempnet=net.reg{p};
+        subplot(6,10,p+10)
+        act = activations(tempnet,controlimg_smooth.img(:,:,s),2);
+        imagesc(sum(act,3))
+        title(num2str(acc.reg{p}))
+        count=count+1;
+    end
+    drawnow
+    F = getframe(hFig);
+    writeVideo(vw,F);
+    writeVideo(vw,F);
+    writeVideo(vw,F);
+    %     colormap jet
+    %     cbar=colorbar;
+    %     caxis([0 5000])
+end
+close(vw)
+count=0;
+for a=[1 4 8 12]
+    figure
+    title(['Layer ',num2str(a)])
+    act = activations(tempnet,controlimg_smooth.img(:,:,s),a);
+    for i=1:size(act,3)
+        nexttile
+        imagesc(act(:,:,i));
+    end
+    count=count+32;
+end
+
+%     if s==1
+%
+%         con_h=nexttile;
+%         imshow(controlimg.img(:,:,s),'InitialMagnification','fit','Parent',con_h)
+%         title(con_h,'Original image')
+%         for a=1:numel(act)
+%             img = imtile(mat2gray(act{a}),'GridSize',[6 6]);
+%             h(a)=nexttile;
+%             imshow(img,'InitialMagnification','fit','Parent',h(a));
+%             title(h(a),['Net ',num2str(a),' - Accuracy ',num2str(accuracy_val(a))])
+%         end
+%     else
+%         imshow(controlimg.img(:,:,s),'InitialMagnification','fit','Parent',con_h)
+%         title(con_h,'Original image')
+%         for a=1:numel(act)
+%             img = imtile(mat2gray(act{a}),'GridSize',[6 6]);
+%             imshow(img,'InitialMagnification','fit','Parent',h(a));
+%             title(h(a),['Net ',num2str(a),' - Accuracy ',num2str(accuracy_val(a))])
+%         end
+%     end
+% end
+
 function [output]=conf_analysis(conf)
 
 nGroups=numel(conf{1}.order);

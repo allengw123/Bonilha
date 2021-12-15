@@ -16,8 +16,8 @@ trials_label={'pre-baseline','Baseline','Early','Mid','Late'};
 
 bandname = {'beta'};    
 
-resp={'P001','P002','P003','P006','P009','P012','P013'};
-nonresp={'P502','P503'};
+resp={'P002','P003','P006','P009','P012','P013'};
+nonresp={'P501','P502','P503'};
 
 % Define electrodes
 master_electrode={'LA','LAH','LAI','LLF','LMF','LPH','LPI','RA','RAH','RAI','RLF','RMF','RPH','RPI'};
@@ -223,7 +223,6 @@ ccm=customcolormap([0 1],{'#33B585','#00613E'});
 colormap(ccm)
 title('Non Responders')
 
-export=nonresp_electrode(:,:,1)
 
 
 %% Electrode Group Figures (subject)
