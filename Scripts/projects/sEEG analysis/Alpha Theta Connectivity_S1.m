@@ -3,10 +3,9 @@ clear all
 close all
 clc
 
-Bonilha_start
-ft_defaults
-
-
+gitpath='C:\Users\allen\Documents\GitHub\Bonilha';
+cd(gitpath)
+allengit_genpath(gitpath,'imaging')
 %% Subject/Trial info
 
 datadir='C:\Users\allen\Box Sync\Desktop\Allen_Bonilha_EEG\Projects\sEEG project\PatientData';

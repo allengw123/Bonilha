@@ -16,8 +16,8 @@ trials_label={'pre-baseline','Baseline','Early','Mid','Late'};
 
 bandname = {'beta'};    
 
-resp={'P002','P003','P006','P009','P012','P013'};
-nonresp={'P501','P502','P503'};
+resp={'P001','P002','P003','P006','P009','P012','P013'};
+nonresp={'P502','P503'};
 
 % Define electrodes
 master_electrode={'LA','LAH','LAI','LLF','LMF','LPH','LPI','RA','RAH','RAI','RLF','RMF','RPH','RPI'};
@@ -68,7 +68,7 @@ for m=1:numel(Patient_ID)
         for q=1:numel(seizure_mat)
             coh_comb_temp=load(fullfile(matdir,seizure_mat{q}));
             coh_comb_temp=eval(['coh_comb_temp.',char(fieldnames(coh_comb_temp))]);
-            coh_comb_seizure(:,:,:,q)=coh_comb_temp(:,:,1:5);
+            coh_comb_seizure(:,:,:,q)=coh_comb_temp(:,:,[1 3 4 5]);
         end
 %         
 %         for i=1:size(coh_comb_seizure,3)
@@ -170,7 +170,7 @@ mean_nonresp_struct=mean(nonresp_struct,3,'omitnan');
 %% Coherence Group Figures
 
 % Create responsive figure
-for i=2:5
+for i=1:4
     figure
     imagesc(mean_resp_coh(:,:,i),[0 1]);
     set(gcf,'color',[1 1 1]);
@@ -180,10 +180,13 @@ for i=2:5
     ylabel(c,'Beta coherence','fontsize',12);
     title(['Responders - ',trials_label{i}])
     axis('square')
+    meancoh=mean(mean_resp_coh(:,:,i),'all','omitnan');
+    stdcoh=std(mean_resp_coh(:,:,i),[],'all','omitnan');
+    disp(['Mean is ', num2str(meancoh),'. STD is ',num2str(stdcoh)])
 end
 
 % Create nonresponsive figure
-for i=2:5
+for i=1:4
     figure
     imagesc(mean_nonresp_coh(:,:,i),[0 1]);
     set(gcf,'color',[1 1 1]);
@@ -193,6 +196,9 @@ for i=2:5
     ylabel(c,'Beta coherence','fontsize',12);
     title(['Non-Responders - ',trials_label{i}])
     axis('square')
+    meancoh=mean(mean_nonresp_coh(:,:,i),'all','omitnan');
+    stdcoh=std(mean_nonresp_coh(:,:,i),[],'all','omitnan');
+    disp(['Mean is ', num2str(meancoh),'. STD is ',num2str(stdcoh)])
 end
 
 %% Electrode Group Figures (clips)
@@ -268,6 +274,9 @@ struc_ccm=customcolormap([0 1],{'#E28E40','#6E3908'});
 colormap(struc_ccm)
 caxis([0 1]);
 title('Responders')
+meanfa=mean(mean_resp_struct,'all','omitnan');
+stdfa=std(mean_resp_struct,[],'all','omitnan');
+disp(['Mean is ', num2str(meanfa),'. STD is ',num2str(stdfa)])
 
 % Create nonresponsive figure
 figure
@@ -282,3 +291,6 @@ struc_ccm=customcolormap([0 1],{'#E28E40','#6E3908'});
 colormap(struc_ccm)
 caxis([0 1]);
 title('Non Responders')
+meanfa=mean(mean_nonresp_struct,'all','omitnan');
+stdfa=std(mean_nonresp_struct,[],'all','omitnan');
+disp(['Mean is ', num2str(meanfa),'. STD is ',num2str(stdfa)])

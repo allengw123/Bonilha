@@ -50,7 +50,6 @@ connectivitymat=nan(numel(master_electrode_labels),numel(master_electrode_labels
 
 % Phases
 phases={'Pre-Baseline','Pre-Trans','Post-Trans','Mid-Seiz','Late-Seiz','Early-Post','Late-Post'};
-1 3 4 5
 % Thesholds
 thres_name={'p66'};
 thres_val=[0.66];

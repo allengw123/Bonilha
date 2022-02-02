@@ -18,5 +18,28 @@ if strcmp(type,'imaging')
     spm
     close all
     clc
+elseif strcmp(type,'EEG')
+    disp('Adding EEG Toolboxes')
+    addpath(genpath(fullfile(gitpath,'Toolbox','EEG')))   
+
+    % EEGlab
+    rmpath(genpath(fullfile(gitpath,'Toolbox','EEG','eeglab2021.1')))
+    addpath(fullfile(gitpath,'Toolbox','EEG','eeglab2021.1'))
+    eeglab
+    close all
+    
+    %%% Manually add biosig plugin, automatic addition from eeglab DOES NOT
+    %%% WORK?!
+    cd(dir(which('biosig_installer')).folder);
+    biosig_installer
+    cd(gitpath)
+    
+    % FieldTrip
+    rmpath(genpath(fullfile(gitpath,'Toolbox','EEG','fieldtrip-20200607')))
+    addpath(fullfile(gitpath,'Toolbox','EEG','fieldtrip-20200607'))
+    ft_defaults
+    addpath(fullfile(gitpath,'Toolbox','EEG','fieldtrip-20200607','external','spm12'))
+    addpath(fullfile(gitpath,'Toolbox','EEG','fieldtrip-20200607','external','bsmart'))
 end
+
 end

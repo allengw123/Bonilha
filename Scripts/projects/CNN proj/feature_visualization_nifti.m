@@ -1,3 +1,6 @@
+clear all
+clc
+
 gitPath='C:\Users\allen\Documents\GitHub\Bonilha';
 
 cd(gitPath)
@@ -48,9 +51,12 @@ for i=1:numel(files)
     save_nii(temp,['TOP_',files{i}]);
 end
 
-%% Create Histogram of TOP means
+%% Create Histogram of means
 aal_regions=readtable(fullfile(dataPath,'aal','aal regions.xlsx'));
 xmlFiles={dir(fullfile(dataPath,'*.xlsx')).name};
+TLE_Regions=sort([35;41;33;42;74;72;67;34;25;36;40;31;71;78;73;37;38;21;68;22]);
+
+vectdat=[];
 
 for d=1:numel(xmlFiles)
     tempxml=readtable(fullfile(dataPath,xmlFiles{d}));
@@ -69,23 +75,50 @@ for d=1:numel(xmlFiles)
         end
     end
     
-    figure('Units','normalized','Position',[0 0 .33 1],'Name',extractBefore(xmlFiles{d},'.xlsx'));
+%     figure('Units','normalized','Position',[0 0 .33 1],'Name',extractBefore(xmlFiles{d},'.xlsx'));
+    figure('Name',extractBefore(xmlFiles{d},'.xlsx'));
     set(gcf,'color','w');
-    barh(bardata)
+    bar(bardata(TLE_Regions))
     set(gca,'box','off')
-    yticks(10:10:numel(bardata))
-    ylim([0 numel(bardata)+1])
-    xlim([0 0.5])
+    xticks(1:20)
+    ylim([0 0.4])
+    xticklabels(TLE_Regions);
     
-    [sortDat,idx]=sort(bardata,'descend');
+    hold on
+    y=bardata(TLE_Regions);
+    x=1:20;
+    lengthX=length(x);
     
-    % Identify top 5 relationship
-    for i=1:5
-       text(sortDat(i)+0.02,idx(i),aal_regions.Structure{aal_regions.Index==idx(i)},'Interpreter','none')
-       disp(aal_regions.Structure{aal_regions.Index==idx(i)})
-    end
+    samplingRateIncrease = 10;
+    newXSamplePoints = linspace(min(x), max(x), lengthX * samplingRateIncrease);
+    smoothedY = spline(x, y, newXSamplePoints);
+
+    ySmooth = newXSamplePoints;
+    xSmooth = smoothedY;
+
+    plot(newXSamplePoints, smoothedY);
+    
+    xlabel('AAL Atlas Regions')
+    ylabel('Mean Activation')
+    
+    vectdat=[vectdat y];
 end
 
+comp=nchoosek(xmlFiles,2);
+figure
+for c=1:size(comp,1)
+    
+    v1=vectdat(:,strcmp(comp{c,1},xmlFiles));
+    v2=vectdat(:,strcmp(comp{c,2},xmlFiles));
+    
+    n1=mat2gray(v1);
+    n2=mat2gray(v2);
+    D  = norm(n1 - n2);
+    
+    nexttile
+    plot(1:numel(n1),n1,'r-',1:numel(n2),n2,'b-')
+    title([extractBefore(comp{c,1},'.xlsx'),'(R) vs ',extractBefore(comp{c,2},'.xlsx'),'(B) (',num2str(D),')'])
+end
 %% Create Histogram of TOP means (normalized)
 aal_regions=readtable(fullfile(dataPath,'aal','aal regions.xlsx'));
 xmlFiles={dir(fullfile(dataPath,'*.xlsx')).name};
