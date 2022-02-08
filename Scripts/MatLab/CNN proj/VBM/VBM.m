@@ -1,4 +1,4 @@
- %% This script is used to run an Independent (two-sample) t-test using the 
+ s %% This script is used to run an Independent (two-sample) t-test using the 
 % modified smoothed files from the VBM analysis of CAT12 (grey matter).
 %--------------------------------------------------------------------------
 % Notes: 
