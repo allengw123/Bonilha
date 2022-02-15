@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+from scipy import ndimage
+
 
 # Extract nifti files and parse
 def extractNifti(input):
@@ -32,7 +34,7 @@ def NormalizeData(data):
 
 
 def PreprocImg(input):
-    imgs = [nib.load(file).get_fdata() for file in input]
+    imgs = [nib.load(file).get_fdata().astype(np.float32) for file in input]
     imgs = NormalizeData(np.stack(imgs,axis=3))
     imgs = np.expand_dims(imgs,axis=4)
     return imgs
@@ -95,6 +97,36 @@ def get_model(width, height, depth):
     model = keras.Model(inputs, outputs, name="3dcnn")
     return model
 
+
+def rotate(volume):
+    """Rotate the volume by a few degrees"""
+
+    def scipy_rotate(volume):
+        # define some rotation angles
+        angles = [-20, -10, -5, 5, 10, 20]
+        # pick angles at random
+        angle = random.choice(angles)
+        # rotate volume
+        volume = ndimage.rotate(volume, angle, reshape=False)
+        return volume
+
+    augmented_volume = tf.numpy_function(scipy_rotate, [volume], tf.float32)
+    return augmented_volume
+
+
+def train_preprocessing(volume, label):
+    """Process training data by rotating and adding a channel."""
+    # Rotate volume
+    volume = rotate(volume)
+    volume = tf.expand_dims(volume, axis=3)
+    return volume, label
+
+
+def validation_preprocessing(volume, label):
+    """Process validation data by only adding a channel."""
+    volume = tf.expand_dims(volume, axis=3)
+
+    return volume, label
 #%%
 # eliminate error notifications
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
@@ -118,7 +150,7 @@ for i in range(iterations):
     RTLEinput = CNNinput(extractNifti(RTLEdir))  # 1
     Healthyinput = CNNinput(extractNifti(Healthydir))  # 2
     
-    # Pepare CNN input
+    # Pepare x y data
     train_images = np.concatenate(
         [LTLEinput.testingImg, RTLEinput.testingImg, Healthyinput.testingImg],axis=3).transpose((3,0,1,2,4))
     train_labels = np.concatenate([np.zeros(LTLEinput.testingImg.shape[3]),  np.ones(RTLEinput.testingImg.shape[3]), np.ones(
@@ -134,6 +166,17 @@ for i in range(iterations):
     test_labels = np.concatenate([np.zeros(LTLEinput.testingImg.shape[3]), np.ones(RTLEinput.testingImg.shape[3]), np.ones(
         Healthyinput.testingImg.shape[3])*2])
     
+    # Define data loaders
+    train_loader = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
+    validation_loader = tf.data.Dataset.from_tensor_slices((validation_images, validation_labels))
+    
+    # Preproc dataset
+    batch_size = 2
+
+    train_dataset = train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(batch_size).prefetch(1)
+    validation_dataset = validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(batch_size).prefetch(1)
+    
+    # Prepare Model
     model=get_model(113,137,113)
     
     loss = keras.losses.SparseCategoricalCrossentropy()
@@ -141,14 +184,12 @@ for i in range(iterations):
     metrics = ["accuracy"]
     
     model.compile(optimizer=optim, loss=loss, metrics=metrics)
-    
-    batch_size = 10
     epoch = 30
     
-    #%% Run CNN model
+    ############ Run CNN model
     
     # Train Model
-    model.fit(train_images, train_labels, epochs=epoch, batch_size=batch_size, verbose=2,validation_data=(validation_images,validation_labels),shuffle=True)
+    model.fit(train_dataset, epochs=epoch, batch_size=batch_size, verbose=2,validation_data=validation_dataset,shuffle=True)
     
     # Test Model
     accuracy.append(model.evaluate(test_images, test_labels, batch_size=batch_size, verbose=2))
