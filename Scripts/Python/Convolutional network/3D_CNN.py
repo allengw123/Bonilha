@@ -18,7 +18,6 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from scipy import ndimage
 
-
 # Extract nifti files and parse
 def extractNifti(input):
     output = []
@@ -95,6 +94,16 @@ def get_model(width=128, height=128, depth=64):
 
     # Define the model.
     model = keras.Model(inputs, outputs, name="3dcnn")
+    
+    # Compile model.
+    initial_learning_rate = 0.0001
+    lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+        initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True)
+    model.compile(
+        loss=keras.losses.SparseCategoricalCrossentropy(),
+        optimizer=keras.optimizers.Adam(learning_rate=lr_schedule),
+        metrics=["acc"],)
+    
     return model
 
 
@@ -129,6 +138,36 @@ def validation_preprocessing(volume, label):
 
     return volume, label
 
+ 
+
+class confusionMat:
+    def __init__(self, prediction_labels,test_labels):
+        self.predictions = prediction_labels
+        self.labels = test_labels        
+        self.metrics = {}
+       
+        for diseases in disease_labels:
+            
+            disease_val = disease_labels[diseases]
+            TP = sum(np.logical_and(prediction_labels==disease_val,test_labels==disease_val))
+            TN = sum(np.logical_and(prediction_labels!=disease_val,test_labels!=disease_val))
+            FN = sum(np.logical_and(prediction_labels!=disease_val,test_labels==disease_val)) 
+            FP = sum(np.logical_and(prediction_labels==labels,test_labels!=disease_val))
+            Acc = (TP+TN)/(TP+TN+FP+FN)
+            Sensitivity = TP/(TP+FN)
+            Precision = TP/(TP+FP)
+            
+            self.metrics.update({diseases:{"TP":TP,"TN":TN,"FP":FP,"Acc":Acc,'Sensitivity':Sensitivity,"Precision":Precision}})
+            
+def shuffle_array(input):
+    np.random.shuffle(input)
+    return input
+
+
+                    
+        
+
+
 #%%
 # eliminate error notifications
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
@@ -144,8 +183,13 @@ RTLEdir = os.path.join(datadir, 'TLE','TLE','EP_RTLE_nifti')
 matter = 'GM'
 ratio = [60, 15, 35]
 iterations = 10
+disease_labels = {"LTLE":0,"RTLE":1,"Healthy":2}
 
-accuracy=[]
+
+conMat=[]
+ShuffconMat=[]
+TrueModels=[]
+ShuffModels=[]
 for i in range(iterations):
     # Prepare disease specific CNN input
     LTLEinput = CNNinput(extractNifti(LTLEdir))  # 0
@@ -171,43 +215,50 @@ for i in range(iterations):
     # Define data loaders
     train_loader = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
     validation_loader = tf.data.Dataset.from_tensor_slices((validation_images, validation_labels))
+    
+    Shuff_train_loader = tf.data.Dataset.from_tensor_slices((train_images,shuffle_array(train_labels)))
+    Shuff_validation_loader = tf.data.Dataset.from_tensor_slices((validation_images,shuffle_array(validation_labels)))
+    
 
     # Preproc dataset
     batch_size = 2
 
     train_dataset = train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(batch_size).prefetch(2)
-    validation_dataset = validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(batch_size).prefetch(2)
+    validation_dataset = validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(batch_size).prefetch(batch_size)
     
-
+    Shuff_train_dataset = Shuff_train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(batch_size).prefetch(2)
+    Shuff_validation_dataset = Shuff_validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(batch_size).prefetch(batch_size)
     
-    data = train_dataset.take(1)
-    images, labels = list(data)[0]
-    images = images.numpy()
-    image = images[0]
-    print("Dimension of the CT scan is:", image.shape)
-    plt.imshow(np.squeeze(image[:, :, 20]), cmap="gray")
+    
+    # data = train_dataset.take(1)
+    # images, labels = list(data)[0]
+    # images = images.numpy()
+    # image = images[0]
+    # print("Dimension of the CT scan is:", image.shape)
+    # plt.imshow(np.squeeze(image[:, :, 20]), cmap="gray")
     
     # Prepare Model
     model=get_model(113,137,113)
-    
-    # Compile model.
-    initial_learning_rate = 0.0001
-    lr_schedule = keras.optimizers.schedules.ExponentialDecay(
-        initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True)
-    model.compile(
-        loss=keras.losses.SparseCategoricalCrossentropy(),
-        optimizer=keras.optimizers.Adam(learning_rate=lr_schedule),
-        metrics=["acc"],)
-
     epoch = 30
     
     ############ Run CNN model
     
     # Train Model
-    model.fit(train_dataset, epochs=epoch, verbose=2,validation_data=validation_dataset,shuffle=True)
+    TrueModels.append = model.fit(train_dataset, epochs=epoch, verbose=2,validation_data=validation_dataset,shuffle=True)
     
     # Test Model
-    accuracy.append(model.evaluate(test_images, test_labels, batch_size=batch_size, verbose=2))
+    prediction_weights = model.predict(test_images)
+    prediction_labels= np.argmax(prediction_weights,axis=1)
+    
+    conMat.append(confusionMat(prediction_labels,test_labels))
+    
+    # Train Shuffle Model
+
+     
+    # Test Shuffle Model
+    prediction_weights = model.predict(test_images)
+    prediction_labels= np.argmax(prediction_weights,axis=1)
+     
+    ShuffconMat.append(confusionMat(prediction_labels,test_labels))
     
 
-plt.plot([x[1] for x in accuracy])
