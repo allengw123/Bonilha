@@ -202,8 +202,8 @@ for i in range(iterations):
     
     # Pepare x y data
     train_images = np.concatenate(
-        [LTLEinput.testingImg, RTLEinput.testingImg],axis=3).transpose((3,0,1,2))
-    train_labels = np.concatenate([np.zeros(LTLEinput.testingImg.shape[3]),  np.ones(RTLEinput.testingImg.shape[3])])
+        [LTLEinput.trainingImg, RTLEinput.trainingImg],axis=3).transpose((3,0,1,2))
+    train_labels = np.concatenate([np.zeros(LTLEinput.trainingImg.shape[3]),  np.ones(RTLEinput.trainingImg.shape[3])])
     
     validation_images = np.concatenate(
         [LTLEinput.validationImg, RTLEinput.validationImg],axis=3).transpose((3,0,1,2))
