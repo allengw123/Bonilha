@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Feb 10 09:58:17 2022
+Created on Fri Feb 18 13:51:27 2022
 
 @author: allen
 """
+
 #%% Functions
 
 # Import modules
@@ -23,8 +24,8 @@ def extractNifti(input):
     output = []
     for root, dirs, files in os.walk(input):
         if len(files) > 0:
-            output.append(os.path.join(
-                root, [x for x in files if 'GM' in x][0]))
+           [output.append(os.path.join(
+                root,x)) for x in files]
     return output
 
 
@@ -116,9 +117,9 @@ def rotate(volume):
         angles = [-20, -10, -5, 5, 10, 20]
         
         # rotate volume
-        volume = ndimage.rotate(volume,angle=random.choice(angles),reshape=False)
-        volume = ndimage.rotate(volume,angle=random.choice(angles),axes=(1,3),reshape=False)
-        volume = ndimage.rotate(volume,angle=random.choice(angles),axes=(2,3),reshape=False)
+        volume = ndimage.rotate(volume,angle=random.choice(angles),axes=(0,1),reshape=False)
+        volume = ndimage.rotate(volume,angle=random.choice(angles),axes=(1,2),reshape=False)
+        volume = ndimage.rotate(volume,angle=random.choice(angles),axes=(0,2),reshape=False)
         
         return volume
 
@@ -176,16 +177,15 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
 # Data path
 datadir=r'C:\Users\allen\Desktop\datadir'
-Healthydir = os.path.join(datadir, 'Control')
-LTLEdir = os.path.join(datadir, 'TLE','TLE','EP_LTLE_nifti')
-RTLEdir = os.path.join(datadir, 'TLE','TLE','EP_RTLE_nifti')
+LTLEdir = os.path.join(datadir,'zscoreLTLE')
+RTLEdir = os.path.join(datadir,'zscoreRTLE')
 
 
 # Define parameters
 matter = 'GM'
 ratio = [60, 15, 35]
 iterations = 5
-disease_labels = {"LTLE":0,"RTLE":1,"Healthy":2}
+disease_labels = {"LTLE":0,"RTLE":1}
 
 
 conMat=[]
@@ -199,23 +199,19 @@ for i in range(iterations):
     # Prepare disease specific CNN input
     LTLEinput = CNNinput(extractNifti(LTLEdir))  # 0
     RTLEinput = CNNinput(extractNifti(RTLEdir))  # 1
-    Healthyinput = CNNinput(extractNifti(Healthydir))  # 2
     
     # Pepare x y data
     train_images = np.concatenate(
-        [LTLEinput.testingImg, RTLEinput.testingImg, Healthyinput.testingImg],axis=3).transpose((3,0,1,2))
-    train_labels = np.concatenate([np.zeros(LTLEinput.testingImg.shape[3]),  np.ones(RTLEinput.testingImg.shape[3]), np.ones(
-        Healthyinput.testingImg.shape[3])*2])
+        [LTLEinput.testingImg, RTLEinput.testingImg],axis=3).transpose((3,0,1,2))
+    train_labels = np.concatenate([np.zeros(LTLEinput.testingImg.shape[3]),  np.ones(RTLEinput.testingImg.shape[3])])
     
     validation_images = np.concatenate(
-        [LTLEinput.validationImg, RTLEinput.validationImg, Healthyinput.validationImg],axis=3).transpose((3,0,1,2))
-    validation_labels = np.concatenate([np.zeros(LTLEinput.validationImg.shape[3]), np.ones(RTLEinput.validationImg.shape[3]), np.ones(
-        Healthyinput.validationImg.shape[3])*2])
+        [LTLEinput.validationImg, RTLEinput.validationImg],axis=3).transpose((3,0,1,2))
+    validation_labels = np.concatenate([np.zeros(LTLEinput.validationImg.shape[3]), np.ones(RTLEinput.validationImg.shape[3])])
     
     test_images = np.concatenate(
-        [LTLEinput.testingImg, RTLEinput.testingImg, Healthyinput.testingImg],axis=3).transpose((3,0,1,2))
-    test_labels = np.concatenate([np.zeros(LTLEinput.testingImg.shape[3]), np.ones(RTLEinput.testingImg.shape[3]), np.ones(
-        Healthyinput.testingImg.shape[3])*2])
+        [LTLEinput.testingImg, RTLEinput.testingImg],axis=3).transpose((3,0,1,2))
+    test_labels = np.concatenate([np.zeros(LTLEinput.testingImg.shape[3]), np.ones(RTLEinput.testingImg.shape[3])])
     
     # Define data loaders
     train_loader = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
@@ -268,4 +264,5 @@ for i in range(iterations):
      
     ShuffconMat.append(confusionMat(prediction_labels,test_labels))
     
+
 
