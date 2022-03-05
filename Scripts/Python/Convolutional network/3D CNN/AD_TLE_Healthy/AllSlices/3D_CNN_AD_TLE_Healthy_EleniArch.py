@@ -2,15 +2,10 @@
 """
 Created on Fri Feb 25 11:09:08 2022
 
-@author: bonilha
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Feb 10 09:58:17 2022
-
 @author: allen
 """
+
+#163/163 - 409s - loss: 0.9521 - accuracy: 0.5583 - val_loss: 0.9670 - val_accuracy: 0.5610 - 409s/epoch - 3s/step
 #%% Functions
 
 # Import modules
@@ -76,59 +71,51 @@ def get_model(width=128, height=128, depth=64):
     """Build a 3D convolutional neural network model."""
 
     inputs = keras.Input((width, height, depth, 1))
-
-    x = layers.Conv3D(filters=64, kernel_size=3, activation="relu")(inputs)
-    x = layers.MaxPool3D(pool_size=2)(x)
+    
+    x = layers.Conv3D(filters=8, kernel_size=3,padding='same')(inputs)
     x = layers.BatchNormalization()(x)
-
-    x = layers.Conv3D(filters=64, kernel_size=3, activation="relu")(x)
-    x = layers.MaxPool3D(pool_size=2)(x)
+    x = layers.ReLU()(x)
+    x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
+    
+    x = layers.Conv3D(filters=16, kernel_size=3,padding='same')(x)
     x = layers.BatchNormalization()(x)
-
-    x = layers.Conv3D(filters=128, kernel_size=3, activation="relu")(x)
-    x = layers.MaxPool3D(pool_size=2)(x)
+    x = layers.ReLU()(x)
+    x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
+    
+    x = layers.Conv3D(filters=32, kernel_size=3,padding='same')(x)
     x = layers.BatchNormalization()(x)
-
-    x = layers.Conv3D(filters=256, kernel_size=3, activation="relu")(x)
-    x = layers.MaxPool3D(pool_size=2)(x)
-    x = layers.BatchNormalization()(x)
-
-    x = layers.GlobalAveragePooling3D()(x)
-    x = layers.Dense(units=512, activation="relu")(x)
-    x = layers.Dropout(0.3)(x)
-
-    outputs = layers.Dense(units=3, activation="sigmoid")(x)
+    x = layers.ReLU()(x)
+    x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
+    
+    x = layers.Flatten()(x)
+    
+    outputs = layers.Dense(units=3)(x)
 
     # Define the model.
     model = keras.Model(inputs, outputs, name="3dcnn")
     
     # Compile model.
-    initial_learning_rate = 0.0001
-    lr_schedule = keras.optimizers.schedules.ExponentialDecay(
-        initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True)
     model.compile(
-        loss=keras.losses.SparseCategoricalCrossentropy(),
-        optimizer=keras.optimizers.Adam(learning_rate=lr_schedule),
-        metrics=["acc"],)
+        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        optimizer=keras.optimizers.SGD(learning_rate=0.01, momentum=0.09),
+        metrics=["accuracy"])
     
     return model
 
 
+def scipy_rotate(volume):
+    # define some rotation angles
+    angles = [-20, -10, -5, 5, 10, 20]
+    
+    # rotate volume
+    volume = ndimage.rotate(volume,angle=random.choice(angles),axes=(0,1),reshape=False)
+    volume = ndimage.rotate(volume,angle=random.choice(angles),axes=(0,2),reshape=False)
+    volume = ndimage.rotate(volume,angle=random.choice(angles),axes=(1,2),reshape=False)
+    
+    return volume
 
 def rotate(volume):
     """Rotate the volume by a few degrees"""
-
-    def scipy_rotate(volume):
-        # define some rotation angles
-        angles = [-20, -10, -5, 5, 10, 20]
-        
-        # rotate volume
-        volume = ndimage.rotate(volume,angle=random.choice(angles),axes=(0,1),reshape=False)
-        volume = ndimage.rotate(volume,angle=random.choice(angles),axes=(0,2),reshape=False)
-        volume = ndimage.rotate(volume,angle=random.choice(angles),axes=(1,2),reshape=False)
-        
-        return volume
-
     augmented_volume = tf.numpy_function(scipy_rotate, [volume], tf.float32)
     return augmented_volume
 
@@ -186,8 +173,8 @@ def save_model(path, model):
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
 # Data path
-# datadir=r'C:\Users\allen\Desktop\datadir'
-datadir=r'F:\PatientData\thres'
+datadir=r'C:\Users\allen\Desktop\datadir'
+# datadir=r'F:\PatientData\thres'
 Healthydir = os.path.join(datadir, 'Control')
 ADdir = os.path.join(datadir, 'Alz','ADNI_Alz_nifti')
 TLEdir = os.path.join(datadir, 'TLE')
@@ -230,31 +217,31 @@ for i in range(iterations):
         Healthyinput.testingImg.shape[3])*2])
     
     # Define data loaders
-    train_loader = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
-    validation_loader = tf.data.Dataset.from_tensor_slices((validation_images, validation_labels))
-    
-    Shuff_train_loader = tf.data.Dataset.from_tensor_slices((train_images,shuffle_array(train_labels)))
-    Shuff_validation_loader = tf.data.Dataset.from_tensor_slices((validation_images,shuffle_array(validation_labels)))
-    
+    with tf.device('/CPU:0'):
+        train_loader = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
+        validation_loader = tf.data.Dataset.from_tensor_slices((validation_images, validation_labels))
+        
+        Shuff_train_loader = tf.data.Dataset.from_tensor_slices((train_images,shuffle_array(train_labels)))
+        Shuff_validation_loader = tf.data.Dataset.from_tensor_slices((validation_images,shuffle_array(validation_labels)))
+        
 
     # Preproc dataset
     batch_size = 2
-
-    train_dataset = train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(batch_size).prefetch(2)
+    train_dataset = train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(batch_size).prefetch(batch_size)
     validation_dataset = validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(batch_size).prefetch(batch_size)
-    
-    Shuff_train_dataset = Shuff_train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(batch_size).prefetch(2)
+  
+    Shuff_train_dataset = Shuff_train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(batch_size).prefetch(batch_size)
     Shuff_validation_dataset = Shuff_validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(batch_size).prefetch(batch_size)
     
     
-    data = train_dataset.take(1)
-    images, labels = list(data)[0]
-    images = images.numpy()
-    image = images[0]
-    print("Dimension of the CT scan is:", image.shape)
-    plt.imshow(np.squeeze(image[:, :, 40]), cmap="gray")
-    plt.imshow(np.squeeze(image[:, 60, :]), cmap="gray")
-    plt.imshow(np.squeeze(image[60, :, :]), cmap="gray")
+    # data = train_dataset.take(1)
+    # images, labels = list(data)[0]
+    # images = images.numpy()
+    # image = images[0]
+    # print("Dimension of the CT scan is:", image.shape)
+    # plt.imshow(np.squeeze(image[:, :, 40]), cmap="gray")
+    # plt.imshow(np.squeeze(image[:, 60, :]), cmap="gray")
+    # plt.imshow(np.squeeze(image[60, :, :]), cmap="gray")
 
     
     # Prepare Model
