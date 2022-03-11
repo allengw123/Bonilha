@@ -126,38 +126,3 @@ for v_filename, disease, label in files:
         writer.write(data_point.SerializeToString())
         writer.close()
     print("   Dimension Check     ", correct_dim_log)
-
-
-##############################################################
-#  TEST: Reconstruct images from outfile and compare to originals
-#  Make sure the line `original_images.append((v_np, l_np))` is uncommented above
-##############################################################
-#reconstructed_images = []
-
-#record_iterator = tf.python_io.tf_record_iterator(path=outfile)
-
-#for string_record in record_iterator:
-    
-#	example = tf.train.Example()
-#	example.ParseFromString(string_record)
-    
-#	x_dim = int(example.features.feature['x_dim'].int64_list.value[0])    
-#	y_dim = int(example.features.feature['y_dim'].int64_list.value[0])
-#	z_dim = int(example.features.feature['z_dim'].int64_list.value[0])    
-#	image_raw = (example.features.feature['image_raw'].bytes_list.value[0])    
-#	label_raw = (example.features.feature['label_raw'].bytes_list.value[0])
-    
-#	img_1d = np.fromstring(image_raw, dtype=np.uint16)
-#	reconstructed_img = img_1d.reshape((x_dim, y_dim, z_dim))
-    
-#	label_1d = np.fromstring(label_raw, dtype=np.uint16)
-#	reconstructed_label = label_1d.reshape((x_dim, y_dim, z_dim))
-    
-#	reconstructed_images.append((reconstructed_img, reconstructed_label))
-
-#for original_pair, reconstructed_pair in zip(original_images, reconstructed_images):
-    
-#    img_pair_to_compare, annotation_pair_to_compare = zip(original_pair,
-#                                                         reconstructed_pair)
-#    print(np.allclose(*img_pair_to_compare))
-#    print(np.allclose(*annotation_pair_to_compare))
