@@ -1,22 +1,20 @@
 clear all
 clc
 
-gitPath='C:\Users\allen\Documents\GitHub\Bonilha';
+% gitPath = 'C:\Users\allen\Documents\GitHub\Bonilha';
+gitPath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
 
 cd(gitPath)
 allengit_genpath(gitPath,'imaging')
 
-dataPath='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output\featureWeights';
+dataPath='F:\CNN output\Feature Analysis\Occlusion_smallstride';
 cd(dataPath)
 files={dir(fullfile(dataPath,'*.nii')).name};
-example=load_nii('EXAMPLE.nii');
+example=load_nii('F:\CNN output\Feature Analysis\Example.nii');
 
 %% Create feature weight niftis
 for i=1:numel(files)
-    if strcmp(files{i},'EXAMPLE.nii')
-        continue
-    end
-    
+
     nifti=load_nii(files{i});
     temp=example;
     
@@ -24,14 +22,6 @@ for i=1:numel(files)
     for l=1:size(nifti.img,3)
         nifti.img(:,:,l)=mat2gray(nifti.img(:,:,l));
     end
-    
-    % Add row dimension
-    row=mean(nifti.img(56:57,:,:),1);
-    nifti.img=cat(1,nifti.img(1:56,:,:),row,nifti.img(57:end,:,:));
-    
-    % Add col dimension
-    col=mean(nifti.img(:,68:69,:),2);
-    nifti.img=single(cat(2,nifti.img(:,1:68,:),col,nifti.img(:,69:end,:)));
     
     % Save full brain
     temp.img=nifti.img;
@@ -103,6 +93,12 @@ for d=1:numel(xmlFiles)
     ylabel('Mean Activation')
     
     vectdat=[vectdat y];
+    
+    m=mean(bardata);
+    s=std(bardata);
+    
+    disp([extractBefore(xmlFiles{d},'.xlsx'),' m=',num2str(m),' s=',num2str(s)]) 
+    
 end
 
 comp=nchoosek(xmlFiles,2);
@@ -179,6 +175,11 @@ for d=1:numel(xmlFiles)
     ylabel('Mean Activation')
     
     vectdat=[vectdat y];
+    
+    m=mean(bardata);
+    s=std(bardata);
+    
+    disp([extractBefore(xmlFiles{d},'.xlsx'),' m=',num2str(m),' s=',num2str(s)]) 
 end
 
 
@@ -186,7 +187,7 @@ comp=nchoosek(xmlFiles,2);
 figure
 for c=1:size(comp,1)
     
-    v1=sort(vectdat(:,strcmp(comp{c,1},xmlFiles)));
+    v1=vectdat(:,strcmp(comp{c,1},xmlFiles));
     v2=vectdat(:,strcmp(comp{c,2},xmlFiles));
     
     n1=mat2gray(v1);

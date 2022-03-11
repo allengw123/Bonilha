@@ -2,7 +2,8 @@
 clear
 clc
 
-githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
+% githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
+githubpath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
 cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
@@ -300,6 +301,7 @@ for m=1:numel(matter)
                     %%
                     %%%%%%%%%%%% Train the network
                     [net.reg{iter},acc.reg{iter},confmat.reg{iter},acc_CF.reg{iter},confmat_CF.reg{iter}]=runcnnFC(total_img_train,response_train,total_img_val,response_val,response.trainAge_categ,response.valAge_categ,total_img_test,response_test,response.testAge_categ);
+                    %%
                     [net.suff{iter},acc.shuff{iter},confmat.shuff{iter},acc_CF.shuff{iter},confmat_CF.shuff{iter}]=runcnnFC(total_img_train,response_train(randperm(numel(response_train),numel(response_train))),total_img_val,response_val(randperm(numel(response_val),numel(response_val))),response.trainAge_categ(randperm(numel(response.trainAge),numel(response.trainAge))),response.valAge_categ(randperm(numel(response.valAge),numel(response.valAge))),total_img_test,response_test,response.testAge_categ);
                     
                     %%
