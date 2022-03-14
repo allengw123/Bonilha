@@ -54,7 +54,7 @@ def PreprocImg(input):
                         
             Augvol.append(temp_volume)
             
-    return Augvol
+    return np.stack(Augvol,axis=3)
 
 
 # Define CNN input class

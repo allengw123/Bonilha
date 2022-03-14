@@ -265,7 +265,8 @@ for i in range(iterations):
     model.fit(train_dataset, epochs=epoch, verbose=2,validation_data=validation_dataset,shuffle=True)
     
     # Test Model
-    prediction_weights = model.predict(test_images)
+    with tf.device('/CPU:0'):
+        prediction_weights = model.predict(test_images)
     prediction_labels= np.argmax(prediction_weights,axis=1)
     
     conMat.append(confusionMat(prediction_labels,test_labels))

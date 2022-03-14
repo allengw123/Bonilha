@@ -7,7 +7,7 @@ cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
 % Inputs:
-PatientData='F:\PatientData';
+PatientData='C:\Users\allen\Desktop\datadir';
 cd(PatientData)
 
 save_path='F:\CNN output';
