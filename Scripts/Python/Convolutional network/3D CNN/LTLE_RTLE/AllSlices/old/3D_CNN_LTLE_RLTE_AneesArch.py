@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar  4 13:32:00 2022
+Created on Thu Mar  3 11:19:16 2022
 
 @author: allen
 """
@@ -9,17 +9,23 @@ Created on Fri Mar  4 13:32:00 2022
 
 # Import modules
 import os
+import nibabel as nib
 import numpy as np
 import random
 import math
+import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+from scipy import ndimage
+from keras.callbacks import ModelCheckpoint
+from keras.models import Sequential, load_model
+
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 def fileParse(sbj_list,file_dir):
-    diseases = {'TLE','AD','Control'}    
+    diseases = {'LTLE','RTLE'}    
     sbj_list=list(sbj_list)
     file_list = os.listdir(file_dir)
     
@@ -29,12 +35,15 @@ def fileParse(sbj_list,file_dir):
     testingFiles= []  
     for d in diseases:
     
+        # Disease subject
+        dSbj_list = [x for x in sbj_list if d in x]
+        
         # length of files
-        nSbj = len(sbj_list)
-    
+        nSbj = len(dSbj_list)
+        
         # shuffle files
         rNums = random.sample(range(nSbj), nSbj)
-        subjects = [sbj_list[x] for x in rNums]
+        subjects = [dSbj_list[x] for x in rNums]
     
         # obtain index ratio
         trainingN = math.ceil(nSbj*ratio[0]/100)
@@ -43,8 +52,12 @@ def fileParse(sbj_list,file_dir):
         
         # Parse subjects based on ratio
         traingingSub = [subjects.pop(0) for x in range(trainingN)]
+        print(d," Training....",str(len(traingingSub)))
         valSub = [subjects.pop(0) for x in range(valN)]
+        print(d," Validation....",str(len(valSub)))
         testingSub = subjects
+        print(d," Testing....",str(len(testingSub)))
+
 
     
         # Obtain files
@@ -54,8 +67,6 @@ def fileParse(sbj_list,file_dir):
         
     
     return trainingFiles, validationFiles, testingFiles
-
-# Build a 3D convolutional neural network model
 def get_model(width=128, height=128, depth=64):
     """Build a 3D convolutional neural network model."""
 
@@ -123,16 +134,8 @@ class confusionMat:
             Sensitivity = TP/(TP+FN)
             Precision = TP/(TP+FP)
             
-            self.metrics.update({diseases:{"TP":TP,"TN":TN,"FP":FP,"Acc":Acc,'Sensitivity':Sensitivity,"Precision":Precision}})
+            self.metrics.update({diseases:{"TP":TP,"TN":TN,"FP":FP,"FN":FN,"Acc":Acc,'Sensitivity':Sensitivity,"Precision":Precision}})
             
-
-def save_model(path, model):
-    if not os.path.exists(path):
-        print('save directories...', flush=True)
-        os.makedirs(path)
-    model.save(path)
-                    
-
 def decode(serialized_example):
     # Decode examples stored in TFRecord
     # NOTE: make sure to specify the correct dimensions for the images
@@ -145,42 +148,25 @@ def decode(serialized_example):
     # NOTE: No need to cast these features, as they are already `tf.float32` values.
     return features['image'], features['label']
 
-def loadTFrecord(files,set_type,batchNum):
-    if set_type == 'train':
-        dataset = tf.data.TFRecordDataset(files).map(decode)
-        dataset = dataset.repeat()    
-        dataset = dataset.shuffle(2048, reshuffle_each_iteration=True)
-        dataset = dataset.batch(batchNum)
-        dataset = dataset.prefetch(buffer_size=AUTOTUNE)
-        
-        # dataset = tf.data.TFRecordDataset(files)
-    else:
-        dataset = tf.data.TFRecordDataset([x for x in files if 'ANGLES_0_0_0' in x]).map(decode)
-        dataset = dataset.shuffle(2048, reshuffle_each_iteration=True)
-        dataset = dataset.batch(batchNum)
-        dataset = dataset.prefetch(buffer_size=AUTOTUNE)
+def loadTFrecord(files,batchNum):
+    files = [x for x in files if 'ANGLES_0_0_0' in x]
+    print(str(len(files)) + ' ....Imported')
+    dataset = tf.data.TFRecordDataset(files).map(decode)
+    dataset = dataset.shuffle(2048, reshuffle_each_iteration=True)
+    dataset = dataset.batch(batchNum)
+    dataset = dataset.prefetch(buffer_size=AUTOTUNE)
 
     return dataset
 
 
+def save_model(path, model):
+    if not os.path.exists(path):
+        print('save directories...', flush=True)
+        os.makedirs(path)
+    model.save(path)
+                    
+        
 
-def storeSourceFile(Input):
-    
-    global gCount
-    # Increment gcount
-    gCount=+1
-    print('Gcount')
-    global SourceFile
-    
-    if gCount < 1:
-        
-        SourceFile=[]
-        SourceFile.append(Input)
-    else:
-        print('1')
-        # SourceFile.append(Input)
-        
-    
 
 #%%
 # eliminate error notifications
@@ -189,16 +175,21 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 # Data path
 # record_dir=r'F:\test\TFRecords'
 record_dir=r'F:\test\TFRecords_TEST'
+callback_outputfile = r'F:\test\my_best_model.epoch{epoch:02d}-loss{val_loss:.2f}.hdf5'
 
 # Define parameters
 matter = 'GM'
 ratio = [60, 15, 35]
 iterations = 5
-disease_labels = {"AD":0,"TLE":1,"Healthy":2}
+disease_labels = {"LTLE":0,"RTLE":1}
 
 
+conMat_final=[]
+conMat_best=[]
+ShuffconMat=[]
+TrueModels=[]
+ShuffModels=[]
 for i in range(iterations):
-    
     
     print('Running Iteration....'+str(i))
     
@@ -214,31 +205,62 @@ for i in range(iterations):
     
     # Load TFRecordDataset 
     batchSize = 20
-    NUM_SAMPLES = 10000
-    trainingDataset = loadTFrecord(trainingFiles,'train',batchSize)
-    validationDataset = loadTFrecord(validationFiles,'validation',batchSize)
-    testingDataset = loadTFrecord(testingFiles,'test',batchSize)
+    trainingDataset = loadTFrecord(trainingFiles,batchSize)
+    validationDataset = loadTFrecord(validationFiles,batchSize)
+    testingDataset = loadTFrecord(testingFiles,batchSize)
 
-    # iterator=iter(trainingDataset)
-    # nx = iterator.get_next()
-
+    
     # Prepare Model
-    gCount = 0
     model=get_model(113,137,113)
-    epoch = 30
+    epoch = 1000
+    checkpoint = ModelCheckpoint(filepath=callback_outputfile, 
+                             monitor='val_loss',
+                             verbose=1, 
+                             save_best_only=True,
+                             mode='min')
     
     ############ Run CNN model
     # Train Model
-    # with tf.device('/CPU:0'):
-    model.fit(trainingDataset,epochs=epoch, verbose=2,validation_data=validationDataset,shuffle=True,steps_per_epoch=NUM_SAMPLES/batchSize)
-
+    history = model.fit(trainingDataset,
+              epochs=epoch,
+              verbose=2,
+              validation_data=validationDataset,
+              shuffle=True,
+              callbacks=checkpoint)
+    
+    # Plot the training history
+    plt.plot(history.history['loss'], label='Training Loss')
+    plt.plot(history.history['val_loss'], label='Validation Loss')
+    plt.legend()
+    plt.xlabel('Epochs')
+    plt.ylabel('Mean Squared Error')
+    plt.savefig('model_training_history')
+    plt.show()
+    
+    #Load and evaluate the best model version
+    best_model = load_model( r'F:\test\models\Model 2\my_best_model.epoch87-loss0.26.hdf5')
+    
     # Test Model
-    prediction_weights = model.predict(testingDataset)
-    prediction_labels= np.argmax(prediction_weights,axis=1)
+    image_batch = iter(testingDataset)
     
-    conMat.append(confusionMat(prediction_labels,test_labels))
+    final_test_predictions = []
+    best_test_predictions = []
+    test_labels = []
+    for x in range(500):
+        print(x)
+        batch_image, batch_label = image_batch.next()
+        for input in range(batch_image.shape[0]):
+            img = batch_image[input].numpy()
+            label = batch_label[input].numpy()
+            test_labels.append(label)
+            final_test_predictions.append(np.argmax(model.predict(tf.expand_dims(img,axis=0)),axis=1)[0])
+            best_test_predictions.append(np.argmax(model.predict(tf.expand_dims(img,axis=0)),axis=1)[0])
+
     
-    model.save('Downloads')
+    conMat_final.append(confusionMat(np.array(final_test_predictions),np.array(test_labels)))
+    conMat_best.append(confusionMat(np.array(best_test_predictions),np.array(test_labels)))
+    
+    save_model(r'F:\test\models\Model 1\Model')
     
     # Train Shuffle Model
     model.fit(Shuff_train_dataset, epochs=epoch, verbose=2,validation_data=Shuff_validation_dataset,shuffle=True)
