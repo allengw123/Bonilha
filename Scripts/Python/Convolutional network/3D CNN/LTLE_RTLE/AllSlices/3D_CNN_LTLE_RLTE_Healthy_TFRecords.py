@@ -19,8 +19,9 @@ from tensorflow.keras import layers
 from keras.callbacks import ModelCheckpoint
 from keras.models import load_model
 import datetime
+import itertools
 
-
+# your code here    
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 def fileParse(sbj_list,file_dir):
@@ -167,6 +168,7 @@ def get_model(dimensions, arch):
     
     if not os.path.exists(os.path.join(model_save_folder,'callbacks')):
         os.mkdir(os.path.join(model_save_folder,'callbacks'))
+    
     callback_dir = os.path.join(os.path.join(model_save_folder,'callbacks'))
     callback_outputfile = os.path.join(callback_dir,'my_best_model.epoch{epoch:02d}-loss{val_loss:.2f}.hdf5')
     checkpoint = ModelCheckpoint(filepath=callback_outputfile, 
@@ -189,10 +191,31 @@ def decode(serialized_example):
     # NOTE: No need to cast these features, as they are already `tf.float32` values.
     return features['image'], features['label']
 
-def loadTFrecord(files,batchNum):
-    files = [x for x in files if 'ANGLES_0_0_0' in x]
-    print(str(len(files)) + ' ....Imported')
-    dataset = tf.data.TFRecordDataset(files).map(decode)
+def loadTFrecord(input_files, batchNum, set_type, augmentExpand=False, expandNum=0):
+    
+   
+    if set_type == 'training':
+        print('Augment Expand...',str(augmentExpand))
+        if augmentExpand:
+            
+            # Angles
+            angles = [-20, -10, 0 ,10, 20]
+            perm = list(itertools.product(angles,repeat=3))
+            random.shuffle(perm)
+            
+            out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+            for i in range(expandNum):
+                selected_angle = perm.pop()
+                print('Selecting rotation...',str(selected_angle))
+                out_files = out_files + [x for x in input_files if 'ANGLES_'+str(selected_angle[0])+'_'+str(selected_angle[1])+'_'+str(selected_angle[2]) in x]
+        else:
+            out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+        
+    else:
+        out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+            
+    print('Imported ',set_type,' file number....',str(len(out_files)))
+    dataset = tf.data.TFRecordDataset(out_files).map(decode)
     dataset = dataset.shuffle(2048, reshuffle_each_iteration=True)
     dataset = dataset.batch(batchNum)
     dataset = dataset.prefetch(buffer_size=AUTOTUNE)
@@ -203,18 +226,29 @@ def loadTFrecord(files,batchNum):
 def save_model(savepath, model, history):
     model.save(savepath)
     
-    plt.plot(history.history['loss'], label='Training Loss')
-    plt.plot(history.history['val_loss'], label='Validation Loss')
-    plt.legend()
-    plt.xlabel('Epochs')
-    plt.ylabel('Mean Squared Error')
-    plt.ylim((0,10))
-    plt.show()
-    plt.savefig(os.path.join(savepath,'model_training_history'))
-                    
-        
+    # summarize history for accuracy
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig(os.path.join(savepath,'model_training_history_accuracy.jpg'))
+    plt.show() 
 
-def confusionMat(predictions,labels,savepath):
+    
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.ylim((0,10))
+    plt.savefig(os.path.join(savepath,'model_training_history_loss.jpg'))
+    plt.show() 
+
+def confusionMat(predictions,labels,savepath,set_type):
     
     predictions = np.array(predictions)
     labels = np.array(labels)
@@ -230,10 +264,11 @@ def confusionMat(predictions,labels,savepath):
         Precision = TP/(TP+FP)
         F1 = 2*((Precision*Sensitivity)/(Precision+Sensitivity))
         
-        with open(os.path.join(savepath,key+' performance.txt'),'w') as f:
+        with open(os.path.join(savepath,set_type+'-'+ key+' performance.txt'),'w') as f:
             metrics = ['TP = ' + str(TP) + '\n',
                       'TN = ' + str(TN) + '\n', 
                       'FN = ' + str(FN) + '\n',
+                      'FP = ' + str(FP) + '\n',
                       'Acc = ' + str(Acc) + '\n',
                       'Sensitivity = ' + str(Sensitivity) + '\n',
                       'Precision = ' + str(Precision) + '\n',
@@ -248,8 +283,33 @@ def saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath):
                   'Epoch = ' + str(EPOCH) + '\n',
                   'Batch Size = ' + str(batchSize) + '\n',
                   'Script Name = ' + '3D_CNN_LTLE_RTLE_Healthy_TFRecord' + '\n',
+                  'Augment Argument = ' + str(Augment_arg) + '\n',
+                  'Augment Number = ' + str(Aug_Expand_Num) + '\n',
                   ]
         f.writelines(parameters)
+        
+def saveFileNames(trainingFiles, validationFiles ,testingFiles,savepath):
+    with open(os.path.join(savepath,'trainingSubjectNames.txt'),'w') as f:
+        trainingSet = set([x.split('_ANGLES_')[0] for x in trainingFiles])
+        f.writelines(trainingSet)
+        num_training_sbjs = len(trainingSet)
+        
+    with open(os.path.join(savepath,'validationSubjectNames.txt'),'w') as f:
+        validationSet = set([x.split('_ANGLES_')[0] for x in validationFiles])
+        f.writelines(validationSet)
+        num_val_sbjs = len(validationSet)
+        
+    with open(os.path.join(savepath,'testingSubjectNames.txt'),'w') as f:
+        testingSet = set([x.split('_ANGLES_')[0] for x in testingFiles])
+        f.writelines(testingSet)
+        num_testing_sbjs = len(testingSet)
+    
+    if not len(set.union(trainingSet, validationSet, testingSet)) == num_training_sbjs + num_val_sbjs + num_testing_sbjs:
+        raise ValueError('OVERLAP BETWEEN SETS')
+    else:
+        print('Overlap Check ... PASS')
+
+        
         
 #%%
 # eliminate error notifications
@@ -266,7 +326,9 @@ ratio = [60, 15, 35]
 iterations = 10
 disease_labels = {"LTLE":0,"RTLE":1,"Healthy":2}
 EPOCH = 1000
-RUNNING_ARCH = ['Eleni', 'Anees']
+RUNNING_ARCH = ['Anees', 'Eleni']
+Augment_arg = True
+Aug_Expand_Num = 10
 
 for i in range(iterations):
     
@@ -286,16 +348,18 @@ for i in range(iterations):
         # Obtain training/val/testing files
         trainingFiles, validationFiles ,testingFiles = fileParse(sbj_names,RECORD_DIR)
         
+        # Save file names
+        saveFileNames(trainingFiles, validationFiles ,testingFiles,savepath)
+
         # Load TFRecordDataset 
-        trainingDataset = loadTFrecord(trainingFiles,batchSize)
-        validationDataset = loadTFrecord(validationFiles,batchSize)
-        testingDataset = loadTFrecord(testingFiles,batchSize)
+        trainingDataset = loadTFrecord(trainingFiles,batchSize,'training',Augment_arg,Aug_Expand_Num)
+        validationDataset = loadTFrecord(validationFiles,batchSize,'validation')
+        testingDataset = loadTFrecord(testingFiles,batchSize,'testing')
     
         
     # =============================================================================
     #     ############ Run CNN model
     # =============================================================================
-        
         # Train Model
         history = model.fit(trainingDataset,
                   epochs=EPOCH,
@@ -331,9 +395,9 @@ for i in range(iterations):
                 print('End of Batch')
                 break
         
-        # Save Model Performance
-        confusionMat(final_test_predictions,test_labels,savepath)
-        confusionMat(best_test_predictions,test_labels,savepath)
+        # Save Model Performance`
+        confusionMat(final_test_predictions,test_labels,savepath,'final')
+        confusionMat(best_test_predictions,test_labels,savepath,'best')
         
         # Save Model Parematers
         saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath)

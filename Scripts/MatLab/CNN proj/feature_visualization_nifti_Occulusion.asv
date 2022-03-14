@@ -42,10 +42,10 @@ for i=1:numel(files)
 end
 
 %% Create Histogram of means of CNN
-dataPath='F:\CNN output\2D_CNN\Feature Analysis\Occlusion_smallstride';
-aal_regions=readtable('F:\CNN output\2D_CNN\Feature Analysis\aal.xlsx');
+dataPath='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output\featureWeights';
+aal_regions=readtable(fullfile(dataPath,'aal','aal regions.xlsx'));
 xmlFiles={dir(fullfile(dataPath,'*.xlsx')).name};
-TLE_Regions=sort([36,110,96,99,72,49,109,98,22,100,40,61,33,19,42,73,60,34,30,51]);
+TLE_Regions=sort([35;41;33;42;74;72;67;34;25;36;40;31;71;78;73;37;38;21;68;22]);
 
 vectdat=[];
 
