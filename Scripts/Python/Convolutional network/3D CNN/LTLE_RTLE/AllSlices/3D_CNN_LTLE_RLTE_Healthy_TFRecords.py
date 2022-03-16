@@ -20,6 +20,8 @@ from keras.callbacks import ModelCheckpoint
 from keras.models import load_model
 import datetime
 import itertools
+import time
+import pandas as pd
 
 # your code here    
 AUTOTUNE = tf.data.experimental.AUTOTUNE
@@ -72,7 +74,41 @@ def get_model(dimensions, arch):
     
     width, height, depth = dimensions
     print('Loading Model...', arch)
+    
     if arch == 'Eleni':
+        inputs = keras.Input((width, height, depth, 1))
+        
+        x = layers.Conv3D(filters=8, kernel_size=3,padding='same')(inputs)
+        x = layers.BatchNormalization()(x)
+        x = layers.ReLU()(x)
+        x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
+        
+        x = layers.Conv3D(filters=16, kernel_size=3,padding='same')(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.ReLU()(x)
+        x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
+        
+        x = layers.Conv3D(filters=32, kernel_size=3,padding='same')(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.ReLU()(x)
+        x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
+        
+        x = layers.Flatten()(x)
+        
+        outputs = layers.Dense(units=3)(x)
+
+        # Define the model.
+        model = keras.Model(inputs, outputs, name="3dcnn_Eleni")
+        
+        # Compile model.
+        model.compile(
+            loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            optimizer=keras.optimizers.SGD(learning_rate=0.01, momentum=0.09),
+            metrics=["accuracy"])
+        
+        batchSize = 20
+    
+    if arch == 'Zunair':
     
         inputs = keras.Input((width, height, depth, 1))
         
@@ -99,7 +135,7 @@ def get_model(dimensions, arch):
         outputs = layers.Dense(units=3, activation="sigmoid")(x)
         
         # Define the model.
-        model = keras.Model(inputs, outputs, name="3dcnn_Eleni")
+        model = keras.Model(inputs, outputs, name="3dcnn_Zunair")
         
         loss = keras.losses.SparseCategoricalCrossentropy()
         optim = keras.optimizers.SGD(learning_rate=0.01, momentum=0.09)
@@ -154,30 +190,46 @@ def get_model(dimensions, arch):
         
         batchSize = 20
         
-    if arch != 'Eleni' and arch != 'Anees':
-        raise ValueError('2nd Argument must be either "Eleni" or "Anees"')
+    if arch != 'Eleni' and arch != 'Anees' and arch !='Zunair':
+        raise ValueError('2nd Argument must be either "Eleni", "Zunair", or "Anees"')
         
     ct = datetime.datetime.now()
     if not (os.path.exists(os.path.join(MODEL_DIR, arch + '_arch'))):
         os.mkdir((os.path.join(MODEL_DIR, arch + '_arch')))
         
     model_save_folder = os.path.join(MODEL_DIR,arch + '_arch','Model_' + str(ct)).replace(':', '_').replace('_',':',1)
-    
     if not (os.path.exists(model_save_folder)):
         os.mkdir(model_save_folder)
     
-    if not os.path.exists(os.path.join(model_save_folder,'callbacks')):
-        os.mkdir(os.path.join(model_save_folder,'callbacks'))
+    callback_save_folder = os.path.join(model_save_folder,'callbacks')
+    if not os.path.exists(callback_save_folder):
+        os.mkdir(callback_save_folder)
+        
+    valLoss_save_folder = os.path.join(callback_save_folder,'Val_Loss')
+    if not os.path.exists(valLoss_save_folder):
+        os.mkdir(valLoss_save_folder)
     
-    callback_dir = os.path.join(os.path.join(model_save_folder,'callbacks'))
-    callback_outputfile = os.path.join(callback_dir,'my_best_model.epoch{epoch:02d}-loss{val_loss:.2f}.hdf5')
-    checkpoint = ModelCheckpoint(filepath=callback_outputfile, 
+    valAcc_save_folder = os.path.join(callback_save_folder,'Val_Acc')
+    if not os.path.exists(valAcc_save_folder):
+        os.mkdir(valAcc_save_folder)
+    
+    # Callback for Validation Loss
+    valLoss_outputfile = os.path.join(valLoss_save_folder,'my_best_valLoss_model.epoch{epoch:02d}-loss{val_loss:.2f}.hdf5')
+    valLoss_checkpoint = ModelCheckpoint(filepath=valLoss_outputfile, 
                              monitor='val_loss',
                              verbose=1, 
                              save_best_only=True,
                              mode='min')
     
-    return model, model_save_folder, checkpoint, batchSize
+    # Callback for Validation Accuracy
+    valAcc_outputfile = os.path.join(valAcc_save_folder,'my_best_valLoss_model.epoch{epoch:02d}-acc{val_accuracy:.2f}.hdf5')
+    valAcc_checkpoint = ModelCheckpoint(filepath=valAcc_outputfile, 
+                             monitor='val_accuracy',
+                             verbose=1, 
+                             save_best_only=True,
+                             mode='max')
+    
+    return model, model_save_folder, [valLoss_checkpoint, valAcc_checkpoint], batchSize, valLoss_save_folder, valAcc_save_folder
 
 def decode(serialized_example):
     # Decode examples stored in TFRecord
@@ -222,9 +274,18 @@ def loadTFrecord(input_files, batchNum, set_type, augmentExpand=False, expandNum
 
     return dataset
 
-
+    
 def save_model(savepath, model, history):
+    
     model.save(savepath)
+    
+    # convert the history.history dict to a pandas DataFrame:     
+    hist_df = pd.DataFrame(history.history) 
+    
+    # or save to csv: 
+    hist_csv_file = os.path.join(savepath,'history.csv')
+    with open(hist_csv_file, mode='w') as f:
+        hist_df.to_csv(f)
     
     # summarize history for accuracy
     plt.plot(history.history['accuracy'])
@@ -248,8 +309,9 @@ def save_model(savepath, model, history):
     plt.savefig(os.path.join(savepath,'model_training_history_loss.jpg'))
     plt.show() 
 
-def confusionMat(predictions,labels,savepath,set_type):
+def confusionMat(weights,predictions,labels,savepath,set_type):
     
+    weights = np.array(weights)
     predictions = np.array(predictions)
     labels = np.array(labels)
     
@@ -274,8 +336,11 @@ def confusionMat(predictions,labels,savepath,set_type):
                       'Precision = ' + str(Precision) + '\n',
                       'F1 Score = ' + str(F1)]
             f.writelines(metrics)
+    
+    with open(os.path.join(savepath,set_type+'weights.txt'),'w') as f:
+        f.writelines(str(weights))
             
-def saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath):
+def saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath,elapsed_time):
     with open(os.path.join(savepath,'parameters.txt'),'w') as f:
         parameters = ['Matter = ' + matter + '\n',
                   'Ratio = ' + str(ratio) + '\n', 
@@ -285,23 +350,27 @@ def saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath):
                   'Script Name = ' + '3D_CNN_LTLE_RTLE_Healthy_TFRecord' + '\n',
                   'Augment Argument = ' + str(Augment_arg) + '\n',
                   'Augment Number = ' + str(Aug_Expand_Num) + '\n',
+                  'Elapsed Time (h) = ' + str(elapsed_time/60/60) + '\n'
                   ]
         f.writelines(parameters)
         
 def saveFileNames(trainingFiles, validationFiles ,testingFiles,savepath):
     with open(os.path.join(savepath,'trainingSubjectNames.txt'),'w') as f:
         trainingSet = set([x.split('_ANGLES_')[0] for x in trainingFiles])
-        f.writelines(trainingSet)
+        trainingList = [x+'\n' for x in list(trainingSet)]
+        f.writelines(trainingList)
         num_training_sbjs = len(trainingSet)
         
     with open(os.path.join(savepath,'validationSubjectNames.txt'),'w') as f:
         validationSet = set([x.split('_ANGLES_')[0] for x in validationFiles])
-        f.writelines(validationSet)
+        validationList = [x+'\n' for x in list(validationSet)]
+        f.writelines(validationList)
         num_val_sbjs = len(validationSet)
         
     with open(os.path.join(savepath,'testingSubjectNames.txt'),'w') as f:
         testingSet = set([x.split('_ANGLES_')[0] for x in testingFiles])
-        f.writelines(testingSet)
+        testingList = [x+'\n' for x in list(testingSet)]
+        f.writelines(testingList)
         num_testing_sbjs = len(testingSet)
     
     if not len(set.union(trainingSet, validationSet, testingSet)) == num_training_sbjs + num_val_sbjs + num_testing_sbjs:
@@ -325,10 +394,10 @@ matter = 'GM'
 ratio = [60, 15, 35]
 iterations = 10
 disease_labels = {"LTLE":0,"RTLE":1,"Healthy":2}
-EPOCH = 1000
-RUNNING_ARCH = ['Anees', 'Eleni']
+EPOCH = 200
+RUNNING_ARCH = ['Anees', 'Eleni', 'Zunair']
 Augment_arg = True
-Aug_Expand_Num = 10
+Aug_Expand_Num = 20
 
 for i in range(iterations):
     
@@ -336,7 +405,7 @@ for i in range(iterations):
     
     for current_arch in RUNNING_ARCH:
         # Prepare Model
-        model, savepath, checkpoint, batchSize = get_model((113,137,113),current_arch)
+        model, savepath, checkpoint, batchSize, valLoss_path, valAcc_path = get_model((113,137,113),current_arch)
         
         # Find sbj files
         sbj_names = []
@@ -361,26 +430,39 @@ for i in range(iterations):
     #     ############ Run CNN model
     # =============================================================================
         # Train Model
+        tic = time.time()
         history = model.fit(trainingDataset,
                   epochs=EPOCH,
                   verbose=2,
                   validation_data=validationDataset,
                   shuffle=True,
                   callbacks=checkpoint)
-        
+        toc = time.time()
+
         # Save Model and training progress
         save_model(savepath, model, history)
         
         #Load and evaluate the best model version
-        best_model = os.listdir(os.path.join(savepath,'callbacks'))[-1]
-        best_model = load_model(os.path.join(savepath,'callbacks',best_model))
+        best_valLoss_model = os.listdir(os.path.join(valLoss_path))[-1]
+        best_valLoss_model = load_model(os.path.join(valLoss_path,best_valLoss_model))
+        
+        #Load and evaluate the best model version
+        best_valAcc_model = os.listdir(os.path.join(valAcc_path))[-1]
+        best_valAcc_model = load_model(os.path.join(valAcc_path,best_valAcc_model))
         
         # Test Model
         image_batch = iter(testingDataset)
         
+        final_test_weights = []
+        valLoss_test_weights = []
+        valAcc_test_weights = []
+        
         final_test_predictions = []
-        best_test_predictions = []
+        valLoss_test_predictions = []
+        valAcc_test_predictions = []
+        
         test_labels = []
+        
         for x in range(500):
             try:
                 batch_image, batch_label = image_batch.next()
@@ -388,19 +470,33 @@ for i in range(iterations):
                 for input in range(batch_image.shape[0]):
                     img = batch_image[input].numpy()
                     label = batch_label[input].numpy()
+                    
                     test_labels.append(label)
-                    final_test_predictions.append(np.argmax(model.predict(tf.expand_dims(img,axis=0)),axis=1)[0])
-                    best_test_predictions.append(np.argmax(model.predict(tf.expand_dims(img,axis=0)),axis=1)[0])
+                    
+                    ft_weights = model.predict(tf.expand_dims(img,axis=0))
+                    vl_weights = best_valLoss_model.predict(tf.expand_dims(img,axis=0))
+                    va_weights = best_valAcc_model.predict(tf.expand_dims(img,axis=0))
+
+                    final_test_weights.append(ft_weights)
+                    valLoss_test_weights.append(vl_weights)
+                    valAcc_test_weights.append(va_weights)
+                    
+                    final_test_predictions.append(np.argmax(ft_weights,axis=1)[0])
+                    valLoss_test_predictions.append(np.argmax(vl_weights,axis=1)[0])
+                    valAcc_test_predictions.append(np.argmax(va_weights,axis=1)[0])
             except:
                 print('End of Batch')
                 break
         
+        
         # Save Model Performance`
-        confusionMat(final_test_predictions,test_labels,savepath,'final')
-        confusionMat(best_test_predictions,test_labels,savepath,'best')
+        confusionMat(final_test_weights,final_test_predictions,test_labels,savepath,'final')
+        confusionMat(valLoss_test_weights,valLoss_test_predictions,test_labels,savepath,'valLoss')
+        confusionMat(valAcc_test_weights,valAcc_test_predictions,test_labels,savepath,'valAcc')
+
         
         # Save Model Parematers
-        saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath)
+        saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath,(tic-toc))
     
     # # Train Shuffle Model
     # model.fit(Shuff_train_dataset, epochs=epoch, verbose=2,validation_data=Shuff_validation_dataset,shuffle=True)
@@ -412,4 +508,5 @@ for i in range(iterations):
     # prediction_labels= np.argmax(prediction_weights,axis=1)
      
     # ShuffconMat.append(confusionMat(prediction_labels,test_labels))
+
     
