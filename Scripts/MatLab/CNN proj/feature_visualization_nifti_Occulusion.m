@@ -1,16 +1,19 @@
 clear all
 clc
 
-% gitPath = 'C:\Users\allen\Documents\GitHub\Bonilha';
-gitPath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
+gitPath = 'C:\Users\allen\Documents\GitHub\Bonilha';
+% gitPath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
 
 cd(gitPath)
 allengit_genpath(gitPath,'imaging')
 
-dataPath='F:\CNN output\2D_CNN\Feature Analysis\Occlusion_smallstride';
+% dataPath='F:\CNN output\2D_CNN\Feature Analysis\Occlusion_smallstride';
+dataPath='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\feature Visualization\Occlusion';
 cd(dataPath)
 files={dir(fullfile(dataPath,'*.nii')).name};
-example=load_nii('F:\CNN output\2D_CNN\Feature Analysis\Example.nii');
+% example=load_nii('F:\CNN output\2D_CNN\Feature Analysis\Example.nii');
+example=load_nii('C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\feature Visualization\Example.nii');
+
 
 %% Create feature weight niftis
 for i=1:numel(files)
@@ -42,8 +45,7 @@ for i=1:numel(files)
 end
 
 %% Create Histogram of means of CNN
-dataPath='F:\CNN output\2D_CNN\Feature Analysis\Occlusion_smallstride';
-aal_regions=readtable('F:\CNN output\2D_CNN\Feature Analysis\aal.xlsx');
+aal_regions=readtable(fullfile('C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\feature Visualization','aal.xlsx'));
 xmlFiles={dir(fullfile(dataPath,'*.xlsx')).name};
 TLE_Regions=sort([36,110,96,99,72,49,109,98,22,100,40,61,33,19,42,73,60,34,30,51]);
 
