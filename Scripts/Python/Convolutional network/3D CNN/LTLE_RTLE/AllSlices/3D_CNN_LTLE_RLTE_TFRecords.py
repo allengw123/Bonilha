@@ -28,15 +28,13 @@ from keras import backend as K
 AUTOTUNE = tf.data.experimental.AUTOTUNE
         
 def fileParse(sbj_list,file_dir):
-    diseases = {'LTLE','RTLE','Control'}    
     sbj_list=list(sbj_list)
     file_list = os.listdir(file_dir)
     
     trainingFiles = []
     validationFiles = []
     testingFiles= []  
-    for d in diseases:
-    
+    for d in disease_labels:
         # Disease subject
         dSbj_list = [x for x in sbj_list if d in x]
         
@@ -73,38 +71,48 @@ def get_model(dimensions, arch):
     print('Loading Model...', arch)
     
     if arch == 'Eleni':
-        inputs = keras.Input((width, height, depth, 1))
         
-        x = layers.Conv3D(filters=8, kernel_size=3, padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2))(inputs)
+        DU = 16
+        C1 = 16
+        C2 = 32
+        C3 = 32
+        LR = 0.001
+        DO = 0.2
+        
+        inputs = keras.Input((width, height, depth, 1))
+
+        x = layers.Conv3D(filters=C1, kernel_size=3, padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2))(inputs)
+        x = layers.BatchNormalization()(x)
+        x = layers.ReLU()(x)
+        x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
+        
+        x = layers.Conv3D(filters=C2, kernel_size=3, padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2))(inputs)
         x = layers.BatchNormalization()(x)
         x = layers.ReLU()(x)
         x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
 
-        x = layers.Conv3D(filters=16, kernel_size=3, padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2))(x)
-        x = layers.BatchNormalization()(x)
-        x = layers.ReLU()(x)
-        x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
-        
-        x = layers.Conv3D(filters=32, kernel_size=3 ,padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2))(x)
+        x = layers.Conv3D(filters=C3, kernel_size=3, padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2))(x)
         x = layers.BatchNormalization()(x)
         x = layers.ReLU()(x)
         x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
         
         x = layers.Flatten()(x)
+        x = layers.Dense(units=DU)(x)
         x = layers.Dropout(DO)(x)
-        outputs = layers.Dense(units=3)(x)
+        outputs = layers.Dense(units=2)(x)
         
         # Define the model.
         model = keras.Model(inputs, outputs, name="3dcnn_Eleni")
         
-        # Compile model.
+        # Compile model2.
         optimizer=keras.optimizers.SGD(learning_rate=LR, momentum=0.09)
         model.compile(
             loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
             optimizer=optimizer,
             metrics=["accuracy"]
         )
-        batchSize = 12
+        
+        batchSize = 2
 
     if arch == 'Zunair':
     
@@ -127,7 +135,7 @@ def get_model(dimensions, arch):
         x = layers.BatchNormalization()(x)
         
         x = layers.GlobalAveragePooling3D()(x)
-        x = layers.Dense(units=512, activation="relu")(x)
+        x = layers.Dense(units=256, activation="relu")(x)
         x = layers.Dropout(0.3)(x)
         
         outputs = layers.Dense(units=3, activation="sigmoid")(x)
@@ -150,34 +158,34 @@ def get_model(dimensions, arch):
     if arch == 'Anees':
         inputs = keras.Input((width, height, depth, 1))
         
-        x = layers.Conv3D(filters=64, kernel_size=5,strides=2,padding='valid')(inputs)
+        x = layers.Conv3D(filters=64, kernel_size=5,strides=2,padding='valid', kernel_regularizer=tf.keras.regularizers.l2(L2_1))(inputs)
         x = layers.BatchNormalization()(x)
         x = layers.ReLU()(x)
         x = layers.MaxPool3D(pool_size=3,strides=3)(x)
         
-        x = layers.Conv3D(filters=128, kernel_size=3,strides=1,padding='valid')(x)
+        x = layers.Conv3D(filters=128, kernel_size=3,strides=1,padding='valid', kernel_regularizer=tf.keras.regularizers.l2(L2_2))(x)
         x = layers.BatchNormalization()(x)
         x = layers.ReLU()(x)
         x = layers.MaxPool3D(pool_size=3,strides=3)(x)
         
-        x = layers.Conv3D(filters=192, kernel_size=3,strides=1,padding='same')(x)
+        x = layers.Conv3D(filters=192, kernel_size=3,strides=1,padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2_3))(x)
         x = layers.BatchNormalization()(x)
         x = layers.ReLU()(x)
         
-        x = layers.Conv3D(filters=192, kernel_size=3,strides=1,padding='same')(x)
+        x = layers.Conv3D(filters=192, kernel_size=3,strides=1,padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2_4))(x)
         x = layers.BatchNormalization()(x)
         x = layers.ReLU()(x)
         
-        x = layers.Conv3D(filters=128, kernel_size=3,strides=1,padding='same')(x)
+        x = layers.Conv3D(filters=128, kernel_size=3,strides=1,padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2_5))(x)
         x = layers.BatchNormalization()(x)
         x = layers.ReLU()(x)
         
         x = layers.MaxPool3D(pool_size=2,strides=3)(x)
         x = layers.Flatten()(x)
-        x = layers.Dropout(DO)(x)
-        x = layers.Dense(64)(x)
+        x = layers.Dropout(DO_1)(x)
+        x = layers.Dense(128, kernel_regularizer=tf.keras.regularizers.l2(L2_6))(x)
         x = layers.ReLU()(x)
-        x = layers.Dropout(DO)(x)
+        x = layers.Dropout(DO_2)(x)
         
         outputs = layers.Dense(3)(x)
         
@@ -186,7 +194,7 @@ def get_model(dimensions, arch):
         
         # Compile model
         optimizer=keras.optimizers.Adam(
-            learning_rate=0.001,
+            learning_rate=0.0001,
             beta_1=0.9,
             beta_2=0.999,
             epsilon=1e-08, 
@@ -197,7 +205,7 @@ def get_model(dimensions, arch):
             metrics=["accuracy"]
         )
         
-        batchSize = 20
+        batchSize = 1
         
     if arch != 'Eleni' and arch != 'Anees' and arch !='Zunair':
         raise ValueError('2nd Argument must be either "Eleni", "Zunair", or "Anees"')
@@ -270,7 +278,10 @@ def get_model(dimensions, arch):
     # Save model architecture
     model_Arch = model.get_config()
     with open(os.path.join(model_save_folder,'Arch.txt'), "w") as w:
-        w.writelines(str(model_Arch))
+        for l in model_Arch['layers']:
+            w.write(str(l['name'])+'\n')
+            for key,value in l['config'].items():
+                w.write('---'+key+' : '+str(value)+'\n')
     
     model_Op = model.optimizer.get_config()
     with open(os.path.join(model_save_folder,'Optimizer.txt'), "w") as w:
@@ -280,11 +291,11 @@ def get_model(dimensions, arch):
     ES_callback = tf.keras.callbacks.EarlyStopping(
         monitor="val_loss",
         min_delta=0.0001,
-        patience=15,
+        patience=50,
         verbose=2,
         mode="auto",
         baseline=None,
-        restore_best_weights=True,
+        restore_best_weights=False,
     )
     
     # Compile Callbacks
@@ -308,28 +319,25 @@ def decode(serialized_example):
     return features['image'], features['label']
 
 def loadTFrecord(input_files, batchNum, set_type, augmentExpand=False, expandNum=0):
-   
+    wk_angles = []
     if set_type == 'training':
         print('Augment Expand...',str(augmentExpand))
         if augmentExpand:
             
             # Angles
-            # angles = [-20, -10, 0 ,10, 20]
-            angles = [0 ,10]
+            angles =[-2, 0, 2]
             perm = list(itertools.product(angles,repeat=3))
             random.shuffle(perm)
             
             out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
-            # for i in range(expandNum):
-                # selected_angle = perm.pop()
-                # print('Selecting rotation...',str(selected_angle))
-                # out_files = out_files + [x for x in input_files if 'ANGLES_'+str(selected_angle[0])+'_'+str(selected_angle[1])+'_'+str(selected_angle[2]) in x]
-            out_files = out_files + [x for x in input_files if 'ANGLES_10_0_0' in x]
-            out_files = out_files + [x for x in input_files if 'ANGLES_0_10_0' in x]
-            out_files = out_files + [x for x in input_files if 'ANGLES_0_0_10' in x]
-
+            for i in range(expandNum):
+                selected_angle = perm.pop()
+                print('Selecting rotation...',str(selected_angle))
+                out_files = out_files + [x for x in input_files if 'ANGLES_'+str(selected_angle[0])+'_'+str(selected_angle[1])+'_'+str(selected_angle[2]) in x]
+            wk_angles.append(selected_angle)
         else:
             out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+            
         
     else:
         out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
@@ -340,7 +348,7 @@ def loadTFrecord(input_files, batchNum, set_type, augmentExpand=False, expandNum
     dataset = dataset.batch(batchNum)
     dataset = dataset.prefetch(buffer_size=AUTOTUNE)
 
-    return dataset
+    return dataset, wk_angles
 
 def save_model(savepath, model, history):
     
@@ -428,6 +436,8 @@ def saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath,elapsed_
             'ReduceOnPlateu Patience = ' + str(ROP_PATIENCE) + '\n'
         ]
         f.writelines(parameters)
+        for a in wk_angles:
+            f.write(str(a)+'\n')
         
 def saveFileNames(trainingFiles, validationFiles ,testingFiles,savepath):
     with open(os.path.join(savepath,'trainingSubjectNames.txt'),'w') as f:
@@ -461,8 +471,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
 # Data path
 # RECORD_DIR=r'F:\test\TFRecords'
-RECORD_DIR = r'F:\PatientData\TRRecords\LTLE_RTLE_Healthy_TFRecord'
-MODEL_DIR = r'F:\CNN output\3D_CNN\RTLE_LTLE_Healthy\AllSlices\models\Iter'
+RECORD_DIR = r'F:\PatientData\TRRecords\LTLE_RTLE_TFRecord_4'
+MODEL_DIR = r'F:\CNN output\3D_CNN\RTLE_LTLE\AllSlices'
 
 # Define parameters
 matter = 'GM'
@@ -470,17 +480,24 @@ ratio = [70, 20, 10]
 iterations = 1
 disease_labels = {
     "LTLE":0,
-    "RTLE":1,
-    "Healthy":2}
-EPOCH = 200
-RUNNING_ARCH = ['Eleni']
+    "RTLE":1
+    }
+EPOCH = 500
+RUNNING_ARCH = ['Anees']
 Augment_arg = False
 Aug_Expand_Num = 1
-LR = 0.01
-DO = 0.7
-L2 = 0.001
 ROP_PATIENCE = 5
-iterations = 10
+iterations = 1
+
+### Testing Parameters
+L2_1 = 0.001
+L2_2 = 0.0001
+L2_3 = 0.1
+L2_4 = 0.1
+L2_5 = 0.1
+L2_6 = 0.1
+DO_1 = 0.4
+DO_2 = 0.1
 
 for i in range(iterations):
     
@@ -505,9 +522,9 @@ for i in range(iterations):
         saveFileNames(trainingFiles, validationFiles ,testingFiles,savepath)
 
         # Load TFRecordDataset 
-        trainingDataset = loadTFrecord(trainingFiles,batchSize,'training',Augment_arg,Aug_Expand_Num)
-        validationDataset = loadTFrecord(validationFiles,batchSize,'validation')
-        testingDataset = loadTFrecord(testingFiles,batchSize,'testing')
+        trainingDataset, wk_angles = loadTFrecord(trainingFiles,batchSize,'training',Augment_arg,Aug_Expand_Num)
+        validationDataset, wk_angles  = loadTFrecord(validationFiles,batchSize,'validation')
+        testingDataset, wk_angles  = loadTFrecord(testingFiles,batchSize,'testing')
     
         # =============================================================================
         #     ############ Run CNN model
@@ -519,7 +536,8 @@ for i in range(iterations):
                   verbose=2,
                   validation_data=validationDataset,
                   shuffle=True,
-                  callbacks=checkpoint)
+                  callbacks=checkpoint,
+                  use_multiprocessing=True)
         toc = time.time()
 
         # Save Model and training progress
@@ -548,9 +566,6 @@ for i in range(iterations):
         
         for x in range(500):
             try:
-                x,y = image_batch.take(1)
-                [print(x) for x in image_batch.as_numpy_iterator()]
-                y = np.concatenate([y for x, y in image_batch], axis=0)
                 batch_image, batch_label = image_batch.next()
                 print('Testing Batch Number...',str(x))
                 for input in range(batch_image.shape[0]):

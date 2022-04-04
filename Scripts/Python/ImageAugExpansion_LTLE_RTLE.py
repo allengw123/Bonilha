@@ -52,7 +52,7 @@ def listfiles(folder):
 #%%
 # parse args
 data_dir = r'F:\PatientData\thres'
-out_dir  = r'F:\test\LTLE_RTLE_TFRecord'
+out_dir  = r'F:\PatientData\TRRecords\LTLE_RTLE_TFRecord_4'
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
     
@@ -83,7 +83,7 @@ for v_filename, disease, label in files:
     l_raw = label
     
     # Angles
-    angles =[-20, -10, 0 ,10, 20]
+    angles =[-4, -2, 0 ,2, 4]
     perm = list(itertools.product(angles,repeat=3))
     
     # Progress indicator
