@@ -2,12 +2,12 @@
 clear
 clc
 
-
 %Start local parpool
 parpool('local');
 
 %Assigning main folder: will look through all subfolders for matching files
-datafolder={'F:\Patient_Data\ADNI_PD_nifti','F:\Patient_Data\ADNI_CN_nifti'};
+datafolder='F:\PatientData\LargeSet_4_7\Cat12';
+diseasefolders = {dir(datafolder).name};
 
 %Reassiging common arbitrary variables
 n = parcluster('local');
@@ -20,19 +20,28 @@ nworkers = n.NumWorkers;
 location_tpm = 'C:\Users\bonilha\Documents\MATLAB\spm12\tpm\TPM.nii';
 location_shooting_tpm = 'C:\Users\bonilha\Documents\MATLAB\spm12\toolbox\cat12\templates_MNI152NLin2009cAsym\Template_0_GS.nii';
 
-for d=1:numel(datafolder)
-    disp(['Running...',datafolder{d}])
+for d=1:numel(diseasefolders)
+    
+    if strcmp(diseasefolders{d},'.') || strcmp(diseasefolders{d},'..')
+        continue
+    end
+    
+    disp(['Running...',diseasefolders{d}])
     tic
-    tempdat=datafolder{d};
-    subjects=dir(fullfile(tempdat,'ADNI*'));
+    tempdat=diseasefolders{d};
+    subjects=dir(fullfile(datafolder,tempdat,'*_*'));
+    disp(['Subject Detected...',num2str(numel(subjects))])
     
     i = 1;
     j = 1;
     k = 1;
+    clear matlabbatch
     while i <= length(subjects)
         for j = 1:nworkers
            if i <= length(subjects)
-            matlabbatch{j,k}.spm.tools.cat.estwrite.data = {fullfile(subjects(i).folder,subjects(i).name,[subjects(i).name,'.nii'])};
+            subfolder=dir(fullfile(subjects(i).folder,subjects(i).name,'T1','*n*'));
+            niftifile=fullfile(subfolder(1).folder,subfolder(1).name);
+            matlabbatch{j,k}.spm.tools.cat.estwrite.data = {niftifile};
             matlabbatch{j,k}.spm.tools.cat.estwrite.data_wmh = {''};
             matlabbatch{j,k}.spm.tools.cat.estwrite.nproc = 2;
             matlabbatch{j,k}.spm.tools.cat.estwrite.useprior = '';

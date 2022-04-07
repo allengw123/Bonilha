@@ -181,6 +181,36 @@ def get_model(dimensions, arch, K_Fold_num):
             loss=loss, 
             metrics=metrics
         )
+    elif arch == 'Eleni':
+        inputs = keras.Input((width, height, depth, 1))
+        
+        x = layers.Conv3D(filters=8, kernel_size=3,padding='same')(inputs)
+        x = layers.BatchNormalization()(x)
+        x = layers.ReLU()(x)
+        x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
+        
+        x = layers.Conv3D(filters=16, kernel_size=3,padding='same')(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.ReLU()(x)
+        x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
+        
+        x = layers.Conv3D(filters=32, kernel_size=3,padding='same')(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.ReLU()(x)
+        x = layers.MaxPool3D(pool_size=(2,2,2),strides=2)(x)
+        
+        x = layers.Flatten()(x)
+        
+        outputs = layers.Dense(units=3)(x)
+
+        # Define the model.
+        model = keras.Model(inputs, outputs, name="3dcnn_Eleni")
+        
+        # Compile model.
+        model.compile(
+            loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            optimizer=keras.optimizers.SGD(learning_rate=0.01, momentum=0.09),
+            metrics=["accuracy"])
         
     if arch != 'Eleni' and arch != 'Anees' and arch !='Zunair':
         raise ValueError('2nd Argument must be either "Eleni", "Zunair", or "Anees"')
@@ -481,20 +511,16 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
 # Data path
 # RECORD_DIR=r'F:\test\TFRecords'
-RECORD_DIR = r'F:\PatientData\TRRecords\LTLE_RTLE_TFRecord_4'
-MODEL_DIR = r'F:\CNN output\3D_CNN\RTLE_LTLE\AllSlices'
+RECORD_DIR = r'F:\PatientData\TFRecords\TLE_AD_Healthy_TFRecord'
+MODEL_DIR = r'F:\CNN output\3D_CNN\TLE_AD_Healthy'
 
 # Define parameters
 matter = 'GM'
 ratio = [70, 20, 10]
-iterations = 1
-disease_labels = {
-    "LTLE":0,
-    "RTLE":1
-    }
+disease_labels = {"AD":0,"TLE":1,"Healthy":2}
 EPOCH = 500
-RUNNING_ARCH = 'Anees'
-Augment_arg = True
+RUNNING_ARCH = 'Eleni'
+Augment_arg = False
 Aug_Expand_Num = 1
 ROP_PATIENCE = 5
 
@@ -511,8 +537,6 @@ L2_5 = 0.1
 L2_6 = 0.1
 DO_1 = 0.5
 DO_2 = 0.0
-
-# 
 
    
 

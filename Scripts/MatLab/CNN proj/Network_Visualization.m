@@ -10,13 +10,13 @@ allengit_genpath(githubpath,'imaging')
 
 % Inputs:
 % CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output';
-CNNoutput='F:\CNN output\2D_CNN';
+CNNoutput='F:\CNN output\2D_CNN\CF_Rerun';
 
 cd(CNNoutput)
 
 savepath=fullfile(CNNoutput,'Figures');mkdir(savepath);
 
-TCmat=load(fullfile(CNNoutput,'ep_control(1) tle(2) -GM-CNN.mat'));
+% TCmat=load(fullfile(CNNoutput,'ep_control(1) tle(2) -GM-CNN.mat'));
 TCAmat=load(fullfile(CNNoutput,'ep_control(1) adni_control(1) tle(2) alz(3) -GM-CNN.mat'));
 
 %% Disease accuracy
@@ -244,11 +244,10 @@ figtitle='TLE vs Healthy vs Alz (100 models) - Age prediction';
 sgtitle(figtitle)
 
 
-
 hold on
-[maxAcc,maxIdx]=cellfun(@(x) max(x),TCAmat.acc_CF.reg);
+[maxAcc,maxIdx_reg]=cellfun(@(x) max(x),TCAmat.acc_CF.reg);
 histogram(maxAcc,'BinWidth',0.025);
-[maxAcc,maxIdx]=cellfun(@(x) max(x),TCAmat.acc_CF.shuff);
+[maxAcc,maxIdx_shuff]=cellfun(@(x) max(x),TCAmat.acc_CF.shuff);
 histogram(maxAcc,'BinWidth',0.025,'FaceColor','#631CB3');
 
 xlim([0 1.01])
@@ -260,15 +259,7 @@ pbaspect([1 2 1])
 xticks([0:0.2:1])
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',18)
-
-subplot(1,2,2)
-[maxAcc,maxIdx]=cellfun(@(x) max(x),TCAmat.acc_CF.shuff);
-histogram(maxAcc,'BinWidth',0.025);
-xlim([0 1.01])
-ylim([0 100])
-xlabel('Accuracy')
-ylabel('# of models')
-title('CNN Shuffled Label')
+legend({'Regular';'Shuffle'})
 
 savefig(gcf,fullfile(savepath,figtitle));
 
@@ -296,7 +287,7 @@ yticks([0:20:100])
 axis square
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-% legend('Control','TLE','Alz')
+legend('Control','TLE','Alz')
 %%
 
 figure('WindowState','maximized');
@@ -314,7 +305,7 @@ yticks([0:20:100])
 axis square
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-% legend('Control','TLE','Alz','Orientation','horizontal')
+legend('Control','TLE','Alz','Orientation','horizontal')
 
 
 %% Feature visualization

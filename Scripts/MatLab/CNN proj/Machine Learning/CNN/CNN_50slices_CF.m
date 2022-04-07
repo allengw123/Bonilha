@@ -8,7 +8,7 @@ cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
 % Inputs:
-PatientData='C:\Users\allen\Desktop\datadir';
+PatientData='F:\PatientData';
 cd(PatientData)
 
 save_path='F:\CNN output';
@@ -206,116 +206,105 @@ for m=1:numel(matter)
         ep_tle_age{count1,1}=tempage;
     end
     %%
-    for comp=1:numel(compGroup)
-        while cont==false
+    for comp=2%1:numel(compGroup)
+        %%%%% Permute
+        for iter=1:100
             
-            %%%%% Permute
-            for iter=1:100
-                while cont==false
+            display(['Running iteration ',num2str(iter)])
+            
+            % Permute datasets
+            adni_control = orgCNNinput(adni_control_img,0.6,0.25,0.15,adni_control_age);
+            ep_control = orgCNNinput(ep_control_img,0.6,0.25,0.15,ep_control_age);
+            alz = orgCNNinput(adni_alz_img,0.6,0.25,0.15,adni_alz_age);
+            tle = orgCNNinput(ep_tle_img,0.6,0.25,0.15,ep_tle_age);
+            
+            
+            if controlsplit
+                error('Not WORKING fix before run');
+                response_train = categorical([ones(numel(adni_control_permtrain),1);ones(numel(ep_control_permtrain),1)*2;ones(numel(adni_alz_permtrain),1)*3;ones(numel(ep_tle_permtrain),1)*4]);
+                response_test = categorical([ones(numel(adni_control_permtest),1);ones(numel(ep_control_permtest),1)*2;ones(numel(adni_alz_permtest),1)*3;ones(numel(ep_tle_permtest),1)*4]);
+                response_val = categorical([ones(numel(adni_control_permval),1);ones(numel(ep_control_permval),1)*2;ones(numel(adni_alz_permval),1)*3;ones(numel(ep_tle_permval),1)*4]);
+                
+                quan = quantile([adni_control_age_mat;ep_control_age_mat;adni_alz_age_mat;ep_tle_age_mat],[0 0.25 0.5 0.75],'all');
+                
+                response.trainAge=[adni_control_age_mat(adni_control_permtrain);ep_control_age_mat(ep_control_permtrain);adni_alz_age_mat(adni_alz_permtrain);ep_tle_age_mat(ep_tle_permtrain)];
+                response.trainAge=categorical(sum([response.trainAge>=quan(1) response.trainAge>=quan(2) response.trainAge>=quan(3) response.trainAge>=quan(4)],2));
+                response.testAge=[adni_control_age_mat(adni_control_permtest);ep_control_age_mat(ep_control_permtest);adni_alz_age_mat(adni_alz_permtest);ep_tle_age_mat(ep_tle_permtest)];
+                response.testAge=categorical(sum([response.testAge>=quan(1) response.testAge>=quan(2) response.testAge>=quan(3) response.testAge>=quan(4)],2));
+                response.valAge=[adni_control_age_mat(adni_control_permval);ep_control_age_mat(ep_control_permval);adni_alz_age_mat(adni_alz_permval);ep_tle_age_mat(ep_tle_permval)];
+                response.valAge=categorical(sum([response.valAge>=quan(1) response.valAge>=quan(2) response.valAge>=quan(3) response.valAge>=quan(4)],2));
+            else
+                tempComp=compGroup{comp};
+                
+                total_img_train = [];
+                total_img_test = [];
+                total_img_val = [];
+                
+                response_train = [];
+                response_test = [];
+                response_val = [];
+                
+                response.trainAge=[];
+                response.testAge=[];
+                response.valAge=[];
+                
+                compName=[];
+                
+                % Concatinate comparison groups
+                for g=1:size(tempComp,2)
+                    total_img_train = cat(4,total_img_train,eval([tempComp{1,g},'.trainDataset']));
+                    total_img_test = cat(4,total_img_test,eval([tempComp{1,g},'.testDataset']));
+                    total_img_val = cat(4,total_img_val,eval([tempComp{1,g},'.valDataset']));
                     
-                    display(['Running iteration ',num2str(iter)])
-
-                    % Permute datasets
-                    adni_control = orgCNNinput(adni_control_img,0.6,0.25,0.15,adni_control_age);
-                    ep_control = orgCNNinput(ep_control_img,0.6,0.25,0.15,ep_control_age);
-                    alz = orgCNNinput(adni_alz_img,0.6,0.25,0.15,adni_alz_age);
-                    tle = orgCNNinput(ep_tle_img,0.6,0.25,0.15,ep_tle_age);
+                    response_train = [response_train;ones(size(eval([tempComp{1,g},'.trainDataset']),4),1)*tempComp{2,g}];
+                    response_test = [response_test;ones(size(eval([tempComp{1,g},'.testDataset']),4),1)*tempComp{2,g}];
+                    response_val = [response_val;ones(size(eval([tempComp{1,g},'.valDataset']),4),1)*tempComp{2,g}];
                     
                     
-                    if controlsplit
-                        error('Not WORKING fix before run');
-                        response_train = categorical([ones(numel(adni_control_permtrain),1);ones(numel(ep_control_permtrain),1)*2;ones(numel(adni_alz_permtrain),1)*3;ones(numel(ep_tle_permtrain),1)*4]);
-                        response_test = categorical([ones(numel(adni_control_permtest),1);ones(numel(ep_control_permtest),1)*2;ones(numel(adni_alz_permtest),1)*3;ones(numel(ep_tle_permtest),1)*4]);
-                        response_val = categorical([ones(numel(adni_control_permval),1);ones(numel(ep_control_permval),1)*2;ones(numel(adni_alz_permval),1)*3;ones(numel(ep_tle_permval),1)*4]);
-                        
-                        quan = quantile([adni_control_age_mat;ep_control_age_mat;adni_alz_age_mat;ep_tle_age_mat],[0 0.25 0.5 0.75],'all');
-                        
-                        response.trainAge=[adni_control_age_mat(adni_control_permtrain);ep_control_age_mat(ep_control_permtrain);adni_alz_age_mat(adni_alz_permtrain);ep_tle_age_mat(ep_tle_permtrain)];
-                        response.trainAge=categorical(sum([response.trainAge>=quan(1) response.trainAge>=quan(2) response.trainAge>=quan(3) response.trainAge>=quan(4)],2));
-                        response.testAge=[adni_control_age_mat(adni_control_permtest);ep_control_age_mat(ep_control_permtest);adni_alz_age_mat(adni_alz_permtest);ep_tle_age_mat(ep_tle_permtest)];
-                        response.testAge=categorical(sum([response.testAge>=quan(1) response.testAge>=quan(2) response.testAge>=quan(3) response.testAge>=quan(4)],2));
-                        response.valAge=[adni_control_age_mat(adni_control_permval);ep_control_age_mat(ep_control_permval);adni_alz_age_mat(adni_alz_permval);ep_tle_age_mat(ep_tle_permval)];
-                        response.valAge=categorical(sum([response.valAge>=quan(1) response.valAge>=quan(2) response.valAge>=quan(3) response.valAge>=quan(4)],2));
-                    else
-                        tempComp=compGroup{comp};
-                        
-                        total_img_train = [];
-                        total_img_test = [];
-                        total_img_val = [];
-                        
-                        response_train = [];
-                        response_test = [];
-                        response_val = [];
-                        
-                        response.trainAge=[];
-                        response.testAge=[];
-                        response.valAge=[];
-                        
-                        compName=[];
-                        
-                        % Concatinate comparison groups
-                        for g=1:size(tempComp,2)
-                            total_img_train = cat(4,total_img_train,eval([tempComp{1,g},'.trainDataset']));
-                            total_img_test = cat(4,total_img_test,eval([tempComp{1,g},'.testDataset']));
-                            total_img_val = cat(4,total_img_val,eval([tempComp{1,g},'.valDataset']));
-                            
-                            response_train = [response_train;ones(size(eval([tempComp{1,g},'.trainDataset']),4),1)*tempComp{2,g}];
-                            response_test = [response_test;ones(size(eval([tempComp{1,g},'.testDataset']),4),1)*tempComp{2,g}];
-                            response_val = [response_val;ones(size(eval([tempComp{1,g},'.valDataset']),4),1)*tempComp{2,g}];
-                            
-                            
-                            response.trainAge=[response.trainAge;eval([tempComp{1,g},'.trainAge'])];
-                            response.testAge=[response.testAge;eval([tempComp{1,g},'.testAge'])];
-                            response.valAge=[response.valAge;eval([tempComp{1,g},'.valAge'])];
-                            
-                            compName=[compName sprintf('%s(%d) ',tempComp{1,g},tempComp{2,g})];
-                        end
-                        
-                        if exist(fullfile(save_path,[compName,'-',matter{m},'-CNN.mat']),'file')~=0
-                            previous=vertcat(previous,fullfile(save_path,[compName,'-',matter{m},'-CNN.mat']))
-                            cont=true;
-                            continue
-                        end
-                        
-                        % Calculate CF Quantiles
-                        quan_percent=1/size(tempComp,2);
-                        quan_val=[];
-                        for i=1:size(tempComp,2)
-                            quan_val=[quan_val quan_percent*(i-1)];
-                        end
-                        quan = quantile([response.trainAge;response.testAge;response.valAge],quan_val,'all');
-                        
-                        response.trainAge_categ=[];
-                        response.testAge_categ=[];
-                        response.valAge_categ=[];
-                        for i=1:numel(quan)
-                            response.trainAge_categ(:,i)=response.trainAge>=quan(i);
-                            response.testAge_categ(:,i)=response.testAge>=quan(i);
-                            response.valAge_categ(:,i)=response.valAge>=quan(i);
-                        end
-                        
-                        response.trainAge_categ=categorical(sum(response.trainAge_categ,2));
-                        response.testAge_categ=categorical(sum(response.testAge_categ,2));
-                        response.valAge_categ=categorical(sum(response.valAge_categ,2));
-                    end
-                    %%
-                    %%%%%%%%%%%% Train the network
-                    [net.reg{iter},acc.reg{iter},confmat.reg{iter},acc_CF.reg{iter},confmat_CF.reg{iter}]=runcnnFC(total_img_train,response_train,total_img_val,response_val,response.trainAge_categ,response.valAge_categ,total_img_test,response_test,response.testAge_categ);
-                    %%
-                    [net.suff{iter},acc.shuff{iter},confmat.shuff{iter},acc_CF.shuff{iter},confmat_CF.shuff{iter}]=runcnnFC(total_img_train,response_train(randperm(numel(response_train),numel(response_train))),total_img_val,response_val(randperm(numel(response_val),numel(response_val))),response.trainAge_categ(randperm(numel(response.trainAge),numel(response.trainAge))),response.valAge_categ(randperm(numel(response.valAge),numel(response.valAge))),total_img_test,response_test,response.testAge_categ);
+                    response.trainAge=[response.trainAge;eval([tempComp{1,g},'.trainAge'])];
+                    response.testAge=[response.testAge;eval([tempComp{1,g},'.testAge'])];
+                    response.valAge=[response.valAge;eval([tempComp{1,g},'.valAge'])];
                     
-                    %%
-                    
-                    save(fullfile(save_path,[compName,'-',matter{m},'-CNN.mat']),'net','acc','confmat','acc_CF','confmat_CF','-v7.3')
+                    compName=[compName sprintf('%s(%d) ',tempComp{1,g},tempComp{2,g})];
                 end
+                
+                % Calculate CF Quantiles
+                quan_percent=1/size(unique(cell2mat(tempComp(2,:))),2);
+                quan_val=[];
+                for i=1:size(tempComp,2)
+                    quan_val=[quan_val quan_percent*(i-1)];
+                end
+                quan = quantile([response.trainAge;response.testAge;response.valAge],quan_val,'all');
+                
+                response.trainAge_categ=[];
+                response.testAge_categ=[];
+                response.valAge_categ=[];
+                for i=1:numel(quan)-1
+                    response.trainAge_categ(:,i)=response.trainAge>=quan(i);
+                    response.testAge_categ(:,i)=response.testAge>=quan(i);
+                    response.valAge_categ(:,i)=response.valAge>=quan(i);
+                end
+                
+                response.trainAge_categ=categorical(sum(response.trainAge_categ,2));
+                response.testAge_categ=categorical(sum(response.testAge_categ,2));
+                response.valAge_categ=categorical(sum(response.valAge_categ,2));
             end
+            %%
+            %%%%%%%%%%%% Train the network
+            [net.reg{iter},acc.reg{iter},confmat.reg{iter},acc_CF.reg{iter},confmat_CF.reg{iter}]=runcnnFC(total_img_train,response_train,total_img_val,response_val,response.trainAge_categ,response.valAge_categ,total_img_test,response_test,response.testAge_categ,net.reg{iter});
+            %%
+            [net.suff{iter},acc.shuff{iter},confmat.shuff{iter},acc_CF.shuff{iter},confmat_CF.shuff{iter}]=runcnnFC(total_img_train,response_train(randperm(numel(response_train),numel(response_train))),total_img_val,response_val(randperm(numel(response_val),numel(response_val))),response.trainAge_categ(randperm(numel(response.trainAge),numel(response.trainAge))),response.valAge_categ(randperm(numel(response.valAge),numel(response.valAge))),total_img_test,response_test,response.testAge_categ,net.suff{iter});
+            
+            %%
+            
+            save(fullfile(save_path,[compName,'-',matter{m},'-CNN.mat']),'net','acc','confmat','acc_CF','confmat_CF','-v7.3')
         end
-        cont=false;
     end
 end
+
 %% Funtions
 
-function [net,acc,con,acc_CF,con_CF]=runcnnFC(trainData,trainResponse,valData,valResponse,CFtrainResponse,CFvalResponse,testDat,testRes,CFtestRes)
+function [net,acc,con,acc_CF,con_CF]=runcnnFC(trainData,trainResponse,valData,valResponse,CFtrainResponse,CFvalResponse,testDat,testRes,CFtestRes,previous)
 
 
 %% Parameters for the network
@@ -426,7 +415,12 @@ optionsCF= trainingOptions('sgdm', ...  %stochastic gradient descent with moment
 %% Train networks
 
 %%%%%%% Train on regular data %%%%%
-net=trainNetwork(trainData,categorical(trainResponse),layers,options);
+if ~exist('previous','var')
+    net=trainNetwork(trainData,categorical(trainResponse),layers,options);
+else
+    net=previous;
+    disp('Using Previous Trained Network')
+end
 
 % Test on regular response
 YPred_test = classify(net,testDat);
