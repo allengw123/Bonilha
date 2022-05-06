@@ -2,8 +2,8 @@
 clear
 clc
 
-% githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
-githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
+githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
+% githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
 
 cd(githubpath)
 allengit_genpath(githubpath,'imaging')
@@ -12,6 +12,7 @@ allengit_genpath(githubpath,'imaging')
 % CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output';
 % CNNoutput='F:\CNN output';
 CNNoutput='F:\CNN output\2D_CNN\MATLAB\AgeRegress';
+% CNNoutput='F:\CNN output';
 
 cd(CNNoutput)
 
@@ -96,6 +97,7 @@ pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
 legend([h1(1) h2(1)],{'Reg','Shuff'})
+
 
 %%
 figure('WindowState','maximized');
