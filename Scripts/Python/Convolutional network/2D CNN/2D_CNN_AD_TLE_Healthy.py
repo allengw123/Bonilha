@@ -25,21 +25,70 @@ from keras.callbacks import ModelCheckpoint
 from keras import backend as K
 from scipy import ndimage
 from keras.models import load_model
+from sklearn import model_selection
 
 
 # Extract nifti files and parse
-def extractNifti(input,type='None'):
-    output = []
+def extractNifti(input,type,kf_num):
+    dSbj_list = []
     if type == 'TLE':
         for root, dirs, files in os.walk(input):
             if len(files) > 0:
-                output.append(os.path.join(
+                dSbj_list.append(os.path.join(
                     root, [x for x in files if 'GM' in x and 'SmoothThreshold' in x][0]))
     else:
         for root, dirs, files in os.walk(input):
             if len(files) > 0:
-                output.append(os.path.join(
+                dSbj_list.append(os.path.join(
                     root, [x for x in files if 'GM' in x][0]))
+                
+
+        
+    # KFold Parse  
+    cv = model_selection.KFold(kf_num,shuffle=True)
+        
+    train_sbj_files = []
+    validation_sbj_files = []
+    test_sbj_files = []
+    
+    testindices_CP = set()
+    
+    count = 0
+    for train_indices, test_indices in cv.split(range(len(dSbj_list))):
+        print('Parsing K-Fold ',count)
+        count+=1
+        
+        random.shuffle(train_indices)
+        validation_split = 0.1
+        
+        train_indices = list(train_indices)
+        test_indices = list(test_indices)
+        validation_indices = [train_indices.pop() for x in range(math.ceil(len(train_indices)*validation_split))]
+        
+        train_sbjs=[dSbj_list[i] for i in train_indices]
+        validation_sbj=[dSbj_list[i] for i in validation_indices]
+        test_sbjs=[dSbj_list[i] for i in test_indices]
+        print('   Length of training set ',str(len(train_sbjs)))
+        print('   Length of validation set ',str(len(validation_sbj)))
+        print('   length of testing set ',str(len(test_sbjs)))
+        
+        checkpoint='FAILURE'
+        if len(set(train_indices+validation_indices+test_indices)) == (len(train_indices) + len(validation_indices) + len(test_indices)):
+             checkpoint = 'PASS'
+             
+
+        print('Checkpoint...'+checkpoint)      
+        train_sbj_files.append([os.path.join(file_dir,x) for x in file_list if x.split('_slices_')[0] in train_sbjs])
+        validation_sbj_files.append([os.path.join(file_dir,x) for x in file_list if x.split('_slices_')[0] in validation_sbj])
+        test_sbj_files.append([os.path.join(file_dir,x) for x in file_list if x.split('_slices_')[0] in test_sbjs])
+        
+        testindices_CP.update(test_indices)
+        
+    if len(testindices_CP) == len(dSbj_list):
+        print('FINAL checkpoint PASS')
+    else:
+        print('FINAL checkpoint FAILURE')
+        
     return output
 
 
@@ -355,18 +404,24 @@ iterations = 1
 disease_labels = {"AD":0,"TLE":1,"Healthy":2}
 epoch = 100
 arch = 'Eleni'
-batch_size = 32
+batch_size = 256
+KF_NUM = 10
 
 
 
-for i in range(iterations):
+AD_nifti = extractNifti(ADdir,'AD',KF_NUM)
+TLE_nifti = extractNifti(TLEdir,'TLE',KF_NUM)
+Healthy_nifti = extractNifti(Healthydir,'Healthy',KF_NUM)
+
+
+for kf in range(KF_NUM):
+    print('Running K-Fold number ...'+str(kf))
     
-    print('Running Iteration....'+str(i))
-    
+            
     # Prepare disease specific CNN input
-    ADinput = CNNinput(extractNifti(ADdir))  # 0
-    TLEinput = CNNinput(extractNifti(TLEdir,'TLE'))  # 1
-    Healthyinput = CNNinput(extractNifti(Healthydir))  # 2
+    ADinput = CNNinput()  # 0
+    TLEinput = CNNinput()  # 1
+    Healthyinput = CNNinput()  # 2
     
     # Pepare x y data
     train_images = np.concatenate(
@@ -391,9 +446,8 @@ for i in range(iterations):
     Shuff_train_loader = tf.data.Dataset.from_tensor_slices((train_images,shuffle_array(train_labels)))
     Shuff_validation_loader = tf.data.Dataset.from_tensor_slices((validation_images,shuffle_array(validation_labels)))
     
-
+    
     # Preproc dataset
-
     train_dataset = train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(batch_size).prefetch(batch_size)
     validation_dataset = validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(batch_size).prefetch(batch_size)
     
@@ -412,7 +466,7 @@ for i in range(iterations):
     # Prepare Model
     model, model_savefolder = get_model((113,137,1))
     checkpoint, valLoss_path, valAcc_path = callback_create(model_savefolder)
-
+    
     
     ############ Run CNN model
     # Train Model
@@ -428,11 +482,11 @@ for i in range(iterations):
     
     # Save Model and training progress
     save_model(model_savefolder, model, history)
-
+    
     #Load and evaluate the best model version
     best_valLoss_model = os.listdir(os.path.join(valLoss_path))[-1]
     best_valLoss_model = load_model(os.path.join(valLoss_path,best_valLoss_model))
-
+    
     #Load and evaluate the best model version
     best_valAcc_model = os.listdir(os.path.join(valAcc_path))[-1]
     best_valAcc_model = load_model(os.path.join(valAcc_path,best_valAcc_model))

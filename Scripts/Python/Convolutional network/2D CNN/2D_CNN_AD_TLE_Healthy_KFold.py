@@ -17,8 +17,11 @@ import tensorflow as tf
 import datetime
 import pandas as pd
 import time
+<<<<<<< Updated upstream
 import xlwt
 
+=======
+>>>>>>> Stashed changes
 
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -285,7 +288,15 @@ def confusionMat(weights,predictions,labels,savepath,set_type):
         FN = sum(np.logical_and(predictions!=value,labels==value)) 
         FP = sum(np.logical_and(predictions==value,labels!=value))
         Acc = (TP+TN)/(TP+TN+FP+FN)
+<<<<<<< Updated upstream
         if TP == 0:
+=======
+        if TP == 0 and FN == 0:
+            Sensitivity = 0
+            Precision = 0
+            F1 = 0
+        elif TP == 0 and FP ==0:
+>>>>>>> Stashed changes
             Sensitivity = 0
             Precision = 0
             F1 = 0
@@ -363,6 +374,7 @@ def saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath,elapsed_
         f.writelines(parameters)
 
 
+<<<<<<< Updated upstream
 def rolling_avg(arr,window_size):
       
     i = 0
@@ -390,6 +402,8 @@ def rolling_avg(arr,window_size):
     
     return mask
         
+=======
+>>>>>>> Stashed changes
 #%%
 # eliminate error notifications
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
@@ -404,12 +418,21 @@ TLEdir = os.path.join(datadir, 'TLE')
 
 
 # Define parameters
+<<<<<<< Updated upstream
 matter = 'GM'
 ratio = [60, 15, 35]
 disease_labels = {"AD":0,"TLE":1,"Healthy":2}
 EPOCH = 20
 ARCH = 'Eleni'
 BATCH_SIZE = 128
+=======
+matter = 'WM'
+ratio = [60, 15, 35]
+disease_labels = {"AD":0,"TLE":1,"Healthy":2}
+EPOCH = 10
+ARCH = 'Eleni'
+BATCH_SIZE = 256
+>>>>>>> Stashed changes
 KF_NUM = 10
 
 
@@ -447,16 +470,26 @@ for kf in range(KF_NUM):
     train_loader = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
     validation_loader = tf.data.Dataset.from_tensor_slices((validation_images, validation_labels))
     
+<<<<<<< Updated upstream
     # Shuff_train_loader = tf.data.Dataset.from_tensor_slices((train_images,shuffle_array(train_labels)))
     # Shuff_validation_loader = tf.data.Dataset.from_tensor_slices((validation_images,shuffle_array(validation_labels)))
+=======
+    Shuff_train_loader = tf.data.Dataset.from_tensor_slices((train_images,shuffle_array(train_labels)))
+    Shuff_validation_loader = tf.data.Dataset.from_tensor_slices((validation_images,shuffle_array(validation_labels)))
+>>>>>>> Stashed changes
     
     
     # Preproc dataset
     train_dataset = train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
     validation_dataset = validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
     
+<<<<<<< Updated upstream
     # Shuff_train_dataset = Shuff_train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
     # Shuff_validation_dataset = Shuff_validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
+=======
+    Shuff_train_dataset = Shuff_train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
+    Shuff_validation_dataset = Shuff_validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
+>>>>>>> Stashed changes
     
     
     data = train_dataset.take(1)
@@ -536,6 +569,7 @@ for kf in range(KF_NUM):
      
     # ShuffconMat.append(confusionMat(prediction_labels,test_labels))
     
+<<<<<<< Updated upstream
 #%%
 wb = xlwt.Workbook()
 
@@ -620,3 +654,6 @@ plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['Train','Validation'])
 plt.savefig(os.path.join(savepath,'accuracy.jpg'))
+=======
+
+>>>>>>> Stashed changes
