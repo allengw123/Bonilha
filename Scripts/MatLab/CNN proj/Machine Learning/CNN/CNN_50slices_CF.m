@@ -8,10 +8,10 @@ cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
 % Inputs:
-PatientData='F:\PatientData';
+PatientData='F:\PatientData\smallSet';
 cd(PatientData)
 
-save_path='F:\CNN output';
+save_path='F:\PatientData\smallSet';
 
 SmoothThres=fullfile(PatientData,'smooth');
 addpath(genpath(SmoothThres));
@@ -291,9 +291,9 @@ for m=1:numel(matter)
             end
             %%
             %%%%%%%%%%%% Train the network
-            [net.reg{iter},acc.reg{iter},confmat.reg{iter},acc_CF.reg{iter},confmat_CF.reg{iter}]=runcnnFC(total_img_train,response_train,total_img_val,response_val,response.trainAge_categ,response.valAge_categ,total_img_test,response_test,response.testAge_categ,net.reg{iter});
+            [net.reg{iter},acc.reg{iter},confmat.reg{iter},acc_CF.reg{iter},confmat_CF.reg{iter}]=runcnnFC(total_img_train,response_train,total_img_val,response_val,response.trainAge_categ,response.valAge_categ,total_img_test,response_test,response.testAge_categ);
             %%
-            [net.suff{iter},acc.shuff{iter},confmat.shuff{iter},acc_CF.shuff{iter},confmat_CF.shuff{iter}]=runcnnFC(total_img_train,response_train(randperm(numel(response_train),numel(response_train))),total_img_val,response_val(randperm(numel(response_val),numel(response_val))),response.trainAge_categ(randperm(numel(response.trainAge),numel(response.trainAge))),response.valAge_categ(randperm(numel(response.valAge),numel(response.valAge))),total_img_test,response_test,response.testAge_categ,net.suff{iter});
+            [net.suff{iter},acc.shuff{iter},confmat.shuff{iter},acc_CF.shuff{iter},confmat_CF.shuff{iter}]=runcnnFC(total_img_train,response_train(randperm(numel(response_train),numel(response_train))),total_img_val,response_val(randperm(numel(response_val),numel(response_val))),response.trainAge_categ(randperm(numel(response.trainAge),numel(response.trainAge))),response.valAge_categ(randperm(numel(response.valAge),numel(response.valAge))),total_img_test,response_test,response.testAge_categ);
             
             %%
             

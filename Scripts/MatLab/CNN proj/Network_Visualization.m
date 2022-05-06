@@ -2,15 +2,15 @@
 clear
 clc
 
-% githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
-githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
+githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
+% githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
 
 cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
 % Inputs:
-% CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output';
-CNNoutput='F:\CNN output\2D_CNN\CF_Rerun';
+CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\CFRedo';
+% CNNoutput='F:\CNN output\2D_CNN\CF_Rerun';
 
 cd(CNNoutput)
 
@@ -119,18 +119,19 @@ figure('WindowState','maximized');
 set(gcf,'color','w');
 
 hold on
-histogram(cell2mat(TCAmat.acc.reg),'BinWidth',0.025);
-histogram(cell2mat(TCAmat.acc.shuff),'BinWidth',0.025,'FaceColor','#631CB3');
-xlim([0 1.01])
+histogram(cell2mat(TCAmat.acc.reg)*100,'BinWidth',02.5);
+histogram(cell2mat(TCAmat.acc.shuff)*100,'BinWidth',02.5,'FaceColor','#631CB3');
+xlim([0 101])
 ylim([0 100])
 xlabel('Accuracy')
 ylabel('# of models')
-xticks([0:0.2:1])
+xticks([0:20:100])
+yticks([0:20:100])
 % title('CNN Reg Label')
 axis square
 pbaspect([1 2 1])
 a = get(gca,'XTickLabel');
-set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
+set(gca,'XTickLabel',a,'FontName','Times','fontsize',18)
 
 %%
 conf_stat=conf_analysis(TCAmat.confmat.reg);
@@ -241,22 +242,23 @@ figure('WindowState','maximized');
 set(gcf,'color','w');
 
 figtitle='TLE vs Healthy vs Alz (100 models) - Age prediction';
-sgtitle(figtitle)
+% sgtitle(figtitle)
 
 
 hold on
 [maxAcc,maxIdx_reg]=cellfun(@(x) max(x),TCAmat.acc_CF.reg);
-histogram(maxAcc,'BinWidth',0.025);
+histogram(maxAcc*100,'BinWidth',02.5);
 [maxAcc,maxIdx_shuff]=cellfun(@(x) max(x),TCAmat.acc_CF.shuff);
-histogram(maxAcc,'BinWidth',0.025,'FaceColor','#631CB3');
+histogram(maxAcc*100,'BinWidth',02.5,'FaceColor','#631CB3');
 
-xlim([0 1.01])
+xlim([0 101])
 ylim([0 100])
 xlabel('Accuracy')
 ylabel('# of models')
 axis square
 pbaspect([1 2 1])
-xticks([0:0.2:1])
+xticks([0:20:100])
+yticks([0:20:100])
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',18)
 legend({'Regular';'Shuffle'})
@@ -287,7 +289,7 @@ yticks([0:20:100])
 axis square
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-legend('Control','TLE','Alz')
+% legend('Control','TLE','Alz')
 %%
 
 figure('WindowState','maximized');
@@ -305,7 +307,7 @@ yticks([0:20:100])
 axis square
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-legend('Control','TLE','Alz','Orientation','horizontal')
+% legend('Control','TLE','Alz','Orientation','horizontal')
 
 
 %% Feature visualization

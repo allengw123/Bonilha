@@ -17,6 +17,8 @@ import tensorflow as tf
 import datetime
 import pandas as pd
 import time
+import xlwt
+
 
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -25,21 +27,66 @@ from keras.callbacks import ModelCheckpoint
 from keras import backend as K
 from scipy import ndimage
 from keras.models import load_model
+from sklearn import model_selection
 
 
 # Extract nifti files and parse
-def extractNifti(input,type='None'):
-    output = []
+def extractNifti(input,type,kf_num):
+    dSbj_list = []
     if type == 'TLE':
         for root, dirs, files in os.walk(input):
             if len(files) > 0:
-                output.append(os.path.join(
+                dSbj_list.append(os.path.join(
                     root, [x for x in files if 'GM' in x and 'SmoothThreshold' in x][0]))
     else:
         for root, dirs, files in os.walk(input):
             if len(files) > 0:
-                output.append(os.path.join(
+                dSbj_list.append(os.path.join(
                     root, [x for x in files if 'GM' in x][0]))
+                
+
+        
+    # KFold Parse  
+    cv = model_selection.KFold(kf_num,shuffle=True)
+        
+    output = []
+    
+    testindices_CP = set()
+    
+    count = 0
+    for train_indices, test_indices in cv.split(range(len(dSbj_list))):
+        print('Parsing K-Fold ',count)
+        count+=1
+        
+        random.shuffle(train_indices)
+        validation_split = 0.1
+        
+        train_indices = list(train_indices)
+        test_indices = list(test_indices)
+        validation_indices = [train_indices.pop() for x in range(math.ceil(len(train_indices)*validation_split))]
+        
+        train_sbjs=[dSbj_list[i] for i in train_indices]
+        validation_sbjs=[dSbj_list[i] for i in validation_indices]
+        test_sbjs=[dSbj_list[i] for i in test_indices]
+        print('   Length of training set ',str(len(train_sbjs)))
+        print('   Length of validation set ',str(len(validation_sbjs)))
+        print('   length of testing set ',str(len(test_sbjs)))
+        
+        checkpoint='FAILURE'
+        if len(set(train_indices+validation_indices+test_indices)) == (len(train_indices) + len(validation_indices) + len(test_indices)):
+             checkpoint = 'PASS'
+             
+        print('Checkpoint...'+checkpoint)      
+
+        testindices_CP.update(test_indices)
+        
+        output.append([train_sbjs,validation_sbjs,test_sbjs])
+        
+    if len(testindices_CP) == len(dSbj_list):
+        print('FINAL checkpoint PASS')
+    else:
+        print('FINAL checkpoint FAILURE')
+        
     return output
 
 
@@ -50,7 +97,6 @@ def NormalizeData(data):
 def PreprocImg(input):
     imgs = [nib.load(file).get_fdata().astype(np.float32)[:,:,27:84] for file in input]
     imgs = NormalizeData(np.concatenate(imgs,axis=2))
-    # imgs = np.concatenate(imgs,axis=2)
 
     return imgs
 
@@ -58,32 +104,16 @@ def PreprocImg(input):
 # Define CNN input class
 class CNNinput:
     def __init__(self, niftifiles):
-
-        # length of files
-        nFiles = len(niftifiles)
-        print('importing ... ',str(nFiles),' Files')
-
-        # shuffle files
-        rNums = random.sample(range(nFiles), nFiles)
-        niftifiles = [niftifiles[x] for x in rNums]
-
-        # obtain index ratio
-        trainingN = math.ceil(nFiles*ratio[0]/100)
-        valN = math.ceil(nFiles*ratio[1]/100)
-        testingN = math.ceil(nFiles*ratio[2]/100)
-
-        # Parse files based on ratio
-        self.trainingFiles = [niftifiles.pop(0) for x in range(trainingN)]
-        self.validationFiles = [niftifiles.pop(0) for x in range(valN)]
-        self.testingFiles = niftifiles
-
+    
+        trainingFiles, validationFiles, testingFiles = niftifiles
+        
         # Load images of niftifiles
-        self.trainingImg = PreprocImg(self.trainingFiles)
-        self.validationImg = PreprocImg(self.validationFiles)
-        self.testingImg = PreprocImg(self.testingFiles)
+        self.trainingImg = PreprocImg(trainingFiles)
+        self.validationImg = PreprocImg(validationFiles)
+        self.testingImg = PreprocImg(testingFiles)
 
 
-def get_model(dimensions):
+def get_model(dimensions, arch, K_Fold_num):
     
     width, height, depth = dimensions
     inputs = keras.Input((width, height, depth))
@@ -122,28 +152,17 @@ def get_model(dimensions):
         os.mkdir((os.path.join(MODEL_DIR, arch + '_arch')))
         
     # Model Save Folder
-    ct = datetime.datetime.now()
-    model_save_folder = os.path.join(MODEL_DIR,arch + '_arch','Model_' + str(ct)).replace(':', '_').replace('_',':',1)
-    if not (os.path.exists(model_save_folder)):
-        os.mkdir(model_save_folder)
-
-    return model, model_save_folder
-    
+    if K_Fold_num == 0:
+        ct = datetime.datetime.now()
+        model_save_folder = os.path.join(MODEL_DIR,arch + '_arch','Model_' + str(ct)).replace(':', '_').replace('_',':',1)
+        if not (os.path.exists(model_save_folder)):
+            os.mkdir(model_save_folder)
+        return model, model_save_folder
+    else:
+        return model
 
 def callback_create(model_save_folder):
     
-    # Save model architecture
-    model_Arch = model.get_config()
-    with open(os.path.join(model_save_folder,'Arch.txt'), "w") as w:
-        for l in model_Arch['layers']:
-            w.write(str(l['name'])+'\n')
-            for key,value in l['config'].items():
-                w.write('---'+key+' : '+str(value)+'\n')
-    
-    model_Op = model.optimizer.get_config()
-    with open(os.path.join(model_save_folder,'Optimizer.txt'), "w") as w:
-        w.writelines(str(model_Op))
-        
     # Callback Save Folder
     callback_save_folder = os.path.join(model_save_folder,'callbacks')
     if not os.path.exists(callback_save_folder):
@@ -189,8 +208,22 @@ def callback_create(model_save_folder):
             logs.update({'lr': K.eval(self.model.optimizer.lr)})
             super().on_epoch_end(epoch, logs)
     TB_callback = LRTensorBoard(log_dir=tensorboard_save_folder)
+    
+    
+    # Save model architecture
+    model_Arch = model.get_config()
+    with open(os.path.join(model_save_folder,'Arch.txt'), "w") as w:
+        for l in model_Arch['layers']:
+            w.write(str(l['name'])+'\n')
+            for key,value in l['config'].items():
+                w.write('---'+key+' : '+str(value)+'\n')
+    
+    model_Op = model.optimizer.get_config()
+    with open(os.path.join(model_save_folder,'Optimizer.txt'), "w") as w:
+        w.writelines(str(model_Op))
         
-    # Early Stop Callback
+        
+    # Early Stop
     ES_callback = tf.keras.callbacks.EarlyStopping(
         monitor="val_loss",
         min_delta=0.0001,
@@ -198,7 +231,7 @@ def callback_create(model_save_folder):
         verbose=2,
         mode="auto",
         baseline=None,
-        restore_best_weights=False,
+        restore_best_weights=True,
     )
     
     # Compile Callbacks
@@ -210,7 +243,6 @@ def callback_create(model_save_folder):
     ]
     
     return  Callbacks, valLoss_save_folder, valAcc_save_folder
-
 # def rotate(volume):
 #     """Rotate the volume by a few degrees"""
 
@@ -253,11 +285,7 @@ def confusionMat(weights,predictions,labels,savepath,set_type):
         FN = sum(np.logical_and(predictions!=value,labels==value)) 
         FP = sum(np.logical_and(predictions==value,labels!=value))
         Acc = (TP+TN)/(TP+TN+FP+FN)
-        if TP == 0 and FN == 0:
-            Sensitivity = 0
-            Precision = 0
-            F1 = 0
-        elif TP == 0 and FP ==0:
+        if TP == 0:
             Sensitivity = 0
             Precision = 0
             F1 = 0
@@ -335,6 +363,33 @@ def saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath,elapsed_
         f.writelines(parameters)
 
 
+def rolling_avg(arr,window_size):
+      
+    i = 0
+    # Initialize an empty list to store moving averages
+    moving_averages = []
+      
+    # Loop through the array t o
+    #consider every window of size 3
+    while i < len(arr) - window_size + 1:
+      
+        # Calculate the average of current window
+        window_average = round(np.sum(arr[
+          i:i+window_size]) / window_size, 2)
+          
+        # Store the average of current
+        # window in moving average list
+        moving_averages.append(window_average)
+          
+        # Shift window to right by one position
+        i += 1
+    
+    mask = np.empty((500,1))*np.nan
+    
+    mask[0:len(moving_averages)] = np.expand_dims(np.array(moving_averages),axis=1)
+    
+    return mask
+        
 #%%
 # eliminate error notifications
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
@@ -349,24 +404,28 @@ TLEdir = os.path.join(datadir, 'TLE')
 
 
 # Define parameters
-matter = 'WM'
+matter = 'GM'
 ratio = [60, 15, 35]
-iterations = 1
 disease_labels = {"AD":0,"TLE":1,"Healthy":2}
-epoch = 100
-arch = 'Eleni'
-batch_size = 32
+EPOCH = 20
+ARCH = 'Eleni'
+BATCH_SIZE = 128
+KF_NUM = 10
 
 
 
-for i in range(iterations):
-    
-    print('Running Iteration....'+str(i))
+AD_nifti = extractNifti(ADdir,'AD',KF_NUM)
+TLE_nifti = extractNifti(TLEdir,'TLE',KF_NUM)
+Healthy_nifti = extractNifti(Healthydir,'Healthy',KF_NUM)
+
+
+for kf in range(KF_NUM):
+    print('Running K-Fold number ...'+str(kf))
     
     # Prepare disease specific CNN input
-    ADinput = CNNinput(extractNifti(ADdir))  # 0
-    TLEinput = CNNinput(extractNifti(TLEdir,'TLE'))  # 1
-    Healthyinput = CNNinput(extractNifti(Healthydir))  # 2
+    ADinput = CNNinput(AD_nifti[kf])  # 0
+    TLEinput = CNNinput(TLE_nifti[kf])  # 1
+    Healthyinput = CNNinput(Healthy_nifti[kf])  # 2
     
     # Pepare x y data
     train_images = np.concatenate(
@@ -388,17 +447,16 @@ for i in range(iterations):
     train_loader = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
     validation_loader = tf.data.Dataset.from_tensor_slices((validation_images, validation_labels))
     
-    Shuff_train_loader = tf.data.Dataset.from_tensor_slices((train_images,shuffle_array(train_labels)))
-    Shuff_validation_loader = tf.data.Dataset.from_tensor_slices((validation_images,shuffle_array(validation_labels)))
+    # Shuff_train_loader = tf.data.Dataset.from_tensor_slices((train_images,shuffle_array(train_labels)))
+    # Shuff_validation_loader = tf.data.Dataset.from_tensor_slices((validation_images,shuffle_array(validation_labels)))
     
-
+    
     # Preproc dataset
-
-    train_dataset = train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(batch_size).prefetch(batch_size)
-    validation_dataset = validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(batch_size).prefetch(batch_size)
+    train_dataset = train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
+    validation_dataset = validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
     
-    Shuff_train_dataset = Shuff_train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(batch_size).prefetch(batch_size)
-    Shuff_validation_dataset = Shuff_validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(batch_size).prefetch(batch_size)
+    # Shuff_train_dataset = Shuff_train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
+    # Shuff_validation_dataset = Shuff_validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
     
     
     data = train_dataset.take(1)
@@ -410,15 +468,29 @@ for i in range(iterations):
     plt.show()
     
     # Prepare Model
-    model, model_savefolder = get_model((113,137,1))
-    checkpoint, valLoss_path, valAcc_path = callback_create(model_savefolder)
-
+    if kf ==0:
+        model, savepath = get_model((113,137,1),ARCH,kf)
+        
+        # Create K-Fold Folder
+        kf_folder = os.path.join(savepath,'KFold_Models')
+        if not os.path.exists(kf_folder):
+            os.mkdir(kf_folder)
+            print('K-Model folder created...')
+    else:
+        model = get_model((113,137,1),ARCH,kf)    
+    
+    # Create working K-Fold folder
+    wk_kf_folder = os.path.join(kf_folder,'KF_'+str(kf))
+    if not os.path.exists(wk_kf_folder):
+        os.mkdir(wk_kf_folder)
+        
+    checkpoint, valLoss_path, valAcc_path = callback_create(wk_kf_folder)
     
     ############ Run CNN model
     # Train Model
     tic = time.time()
     history = model.fit(train_dataset, 
-                        epochs=epoch, 
+                        epochs=EPOCH, 
                         verbose=2,
                         validation_data=validation_dataset,
                         shuffle=True,
@@ -427,12 +499,12 @@ for i in range(iterations):
     toc = time.time()
     
     # Save Model and training progress
-    save_model(model_savefolder, model, history)
-
+    save_model(wk_kf_folder, model, history)
+    
     #Load and evaluate the best model version
     best_valLoss_model = os.listdir(os.path.join(valLoss_path))[-1]
     best_valLoss_model = load_model(os.path.join(valLoss_path,best_valLoss_model))
-
+    
     #Load and evaluate the best model version
     best_valAcc_model = os.listdir(os.path.join(valAcc_path))[-1]
     best_valAcc_model = load_model(os.path.join(valAcc_path,best_valAcc_model))
@@ -448,12 +520,12 @@ for i in range(iterations):
     valAcc_test_predictions= np.argmax(valAcc_test_weights,axis=1)
     
     # Save Model Performance`
-    confusionMat(final_test_weights,final_test_predictions,test_labels,model_savefolder,'final')
-    confusionMat(valLoss_test_weights,valLoss_test_predictions,test_labels,model_savefolder,'valLoss')
-    confusionMat(valAcc_test_weights,valAcc_test_predictions,test_labels,model_savefolder,'valAcc')
+    confusionMat(final_test_weights,final_test_predictions,test_labels,wk_kf_folder,'final')
+    confusionMat(valLoss_test_weights,valLoss_test_predictions,test_labels,wk_kf_folder,'valLoss')
+    confusionMat(valAcc_test_weights,valAcc_test_predictions,test_labels,wk_kf_folder,'valAcc')
     
     # Save Model Parematers
-    saveParameters(matter,ratio,disease_labels,epoch,batch_size,model_savefolder,(toc-tic))
+    saveParameters(matter,ratio,disease_labels,EPOCH,BATCH_SIZE,wk_kf_folder,(toc-tic))
     
     # # Train Shuffle Model
     # model.fit(Shuff_train_dataset, epochs=epoch, verbose=2,validation_data=Shuff_validation_dataset,shuffle=True)
@@ -464,4 +536,87 @@ for i in range(iterations):
      
     # ShuffconMat.append(confusionMat(prediction_labels,test_labels))
     
+#%%
+wb = xlwt.Workbook()
 
+loss = []
+acc = []
+val_loss = []
+val_acc = []
+
+kf_count = 0
+for kf in os.listdir(kf_folder):
+    kf_count += 1
+
+    wk_kf_folder = os.path.join(kf_folder,kf)
+    
+    for d, label in disease_labels.items():
+        if kf_count == 1:
+            exec(d+'_sheet = wb.add_sheet("'+str(d)+'")')
+        
+        with open(os.path.join(wk_kf_folder,'valLoss-'+ d +' performance.txt'),'r') as perf:
+            lines = perf.readlines()
+            
+            row_c = 0
+            for l in lines:
+                parts = l.split(' = ')
+                header = parts[0]
+                value = parts[1].split('\n')[0]
+                if kf_count == 1:
+                    exec(d+'_sheet.write(row_c,0,header)')
+                exec(d+'_sheet.write(row_c,kf_count,float(value))')
+                row_c +=1
+    
+    history = pd.read_csv(os.path.join(wk_kf_folder,'history.csv'))
+    
+    
+    temp_loss = (rolling_avg(history['loss'].to_numpy(),3))
+    temp_acc = (rolling_avg(history['accuracy'].to_numpy(),3))
+    temp_val_acc = (rolling_avg(history['val_accuracy'].to_numpy(),3))
+    temp_val_loss = (rolling_avg(history['val_loss'].to_numpy(),3))
+
+    if kf_count == 1:
+        loss = temp_loss
+        acc = temp_acc
+        val_acc = temp_val_acc
+        val_loss = temp_val_loss
+    else:
+        loss = np.hstack((loss,temp_loss))
+        acc = np.hstack((acc,temp_acc))
+        val_acc = np.hstack((val_acc,temp_val_acc))
+        val_loss = np.hstack((val_loss,temp_val_loss))
+        
+wb.save(os.path.join(savepath,'K-Fold_Performance.xls'))
+
+
+plt.figure()
+std = np.nanstd(loss,axis=1)
+mean = np.nanmean(loss,axis=1)
+plt.fill_between(range(0,500), mean-std, mean+std,color = 'g', alpha=0.1)
+plt.plot(mean, color = 'g')
+std = np.nanstd(val_loss,axis=1)
+mean = np.nanmean(val_loss,axis=1)
+plt.fill_between(range(0,500), mean-std, mean+std,color = 'r', alpha=0.1)
+plt.plot(mean,color = 'r')
+plt.title('Summary Loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.ylim((0,2))
+plt.legend(['Train','Validation'])
+plt.savefig(os.path.join(savepath,'loss.jpg'))
+
+
+plt.figure()
+std = np.nanstd(acc,axis=1)
+mean = np.nanmean(acc,axis=1)
+plt.fill_between(range(0,500), mean-std, mean+std,color = 'g', alpha=0.1)
+plt.plot(mean,color = 'g')
+std = np.nanstd(val_acc,axis=1)
+mean = np.nanmean(val_acc,axis=1)
+plt.fill_between(range(0,500), mean-std, mean+std,color = 'r', alpha=0.1)
+plt.plot(mean,color = 'r')
+plt.title('Summary Accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['Train','Validation'])
+plt.savefig(os.path.join(savepath,'accuracy.jpg'))

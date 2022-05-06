@@ -20,13 +20,11 @@ from keras.callbacks import ModelCheckpoint
 from keras.callbacks import TensorBoard
 from keras.models import load_model
 import datetime
-import itertools
 import time
 import pandas as pd
 from keras import backend as K
 from sklearn import model_selection
 import xlwt
-import pandas as pd
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
         
@@ -93,9 +91,9 @@ def fileParse_KF(sbj_list,file_dir):
 
 def get_model(dimensions, arch, K_Fold_num):
     
-    width, height, depth = dimensions
+    width, height, depth, dim = dimensions
     if arch == 'Anees':
-        inputs = keras.Input((width, height, depth, 1))
+        inputs = keras.Input((width, height, depth, dim))
         
         x = layers.Conv3D(filters=64, kernel_size=5,strides=2,padding='valid', kernel_regularizer=tf.keras.regularizers.l2(L2_1))(inputs)
         x = layers.BatchNormalization()(x)
@@ -145,7 +143,7 @@ def get_model(dimensions, arch, K_Fold_num):
         )        
         
     elif arch == 'Zunair':
-        inputs = keras.Input((width, height, depth, 1))
+        inputs = keras.Input((width, height, depth, dim))
         
         x = layers.Conv3D(filters=64, kernel_size=3, activation="relu")(inputs)
         x = layers.MaxPool3D(pool_size=2)(x)
@@ -294,7 +292,7 @@ def callback_create(model_save_folder):
 def decode(serialized_example):
     features = tf.io.parse_single_example(
         serialized_example,
-        features={'image': tf.io.FixedLenFeature([113, 137, 113, 1], tf.float32),
+        features={'image': tf.io.FixedLenFeature([113, 137, 113, 2], tf.float32),
                   'label': tf.io.FixedLenFeature([], tf.int64),
                   'fileName': tf.io.FixedLenFeature([], tf.string, default_value='')}
     )
@@ -304,25 +302,28 @@ def loadTFrecord(input_files, batchNum, set_type, augmentExpand=False, expandNum
     wk_angles = []
     if set_type == 'training':
         print('Augment Expand...',str(augmentExpand))
-        if augmentExpand:
+        # if augmentExpand:
             
-            # Angles
-            angles =[-2, 0, 2]
-            perm = list(itertools.product(angles,repeat=3))
-            random.shuffle(perm)
+        #     # Angles
+        #     angles =[-2, 0, 2]
+        #     perm = list(itertools.product(angles,repeat=3))
+        #     random.shuffle(perm)
             
-            out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
-            for i in range(expandNum):
-                selected_angle = perm.pop()
-                print('Selecting rotation...',str(selected_angle))
-                out_files = out_files + [x for x in input_files if 'ANGLES_'+str(selected_angle[0])+'_'+str(selected_angle[1])+'_'+str(selected_angle[2]) in x]
-            wk_angles.append(selected_angle)
-        else:
-            out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
-            
+        #     out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+        #     for i in range(expandNum):
+        #         selected_angle = perm.pop()
+        #         print('Selecting rotation...',str(selected_angle))
+        #         out_files = out_files + [x for x in input_files if 'ANGLES_'+str(selected_angle[0])+'_'+str(selected_angle[1])+'_'+str(selected_angle[2]) in x]
+        #     wk_angles.append(selected_angle)
+        # else:
+        #     out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+        
+        out_files = [x for x in input_files]
         
     else:
-        out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+        # out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+        out_files = [x for x in input_files]
+        
             
     print('Imported ',set_type,' file number....',str(len(out_files)))
     dataset = tf.data.TFRecordDataset(out_files)
@@ -481,8 +482,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
 # Data path
 # RECORD_DIR=r'F:\test\TFRecords'
-RECORD_DIR = r'F:\PatientData\TRRecords\LTLE_RTLE_TFRecord_4'
-MODEL_DIR = r'F:\CNN output\3D_CNN\RTLE_LTLE\AllSlices'
+RECORD_DIR = r'F:\PatientData\LargeSet_4_7\TFRecords_LTLE_RTLE_T1_zScore'
+MODEL_DIR = r'F:\CNN output\3D_CNN\LargeSet_RTLE_LTLE'
 
 # Define parameters
 matter = 'GM'
@@ -512,7 +513,7 @@ L2_6 = 0.1
 DO_1 = 0.4
 DO_2 = 0.0
 
-# 
+
 
    
 
@@ -533,7 +534,7 @@ for kf in range(KF_NUM):
         
     # Prepare Model
     if kf ==0:
-        model, savepath = get_model((113,137,113),RUNNING_ARCH,kf)
+        model, savepath = get_model((113,137,113,2),RUNNING_ARCH,kf)
         
         # Create K-Fold Folder
         kf_folder = os.path.join(savepath,'KFold_Models')

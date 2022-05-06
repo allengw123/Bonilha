@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Mar 10 11:32:26 2022
+Created on Tue Apr 19 09:55:41 2022
 
 @author: bonilha
 """
-
 #%% Functions
+
 
 # Import modules
 import os
@@ -20,13 +20,11 @@ from keras.callbacks import ModelCheckpoint
 from keras.callbacks import TensorBoard
 from keras.models import load_model
 import datetime
-import itertools
 import time
 import pandas as pd
 from keras import backend as K
 from sklearn import model_selection
 import xlwt
-import pandas as pd
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
         
@@ -37,13 +35,14 @@ def fileParse_KF(sbj_list,file_dir):
 
     dSbj_list = []
     dSbj_label = []
-    for d, label in disease_labels.items():
-    
+    for disease, label in disease_labels.items():
+        
         # Disease subject
-        dSbjs = [x for x in sbj_list if d in x]
-        dSbj_list = dSbjs + dSbj_list
+        dSbjs = [x for x in sbj_list if disease+'_' in x]
+        dSbj_list = dSbj_list + dSbjs
         dSbj_label = dSbj_label+([label for x in dSbjs])
         
+
         
     # KFold Parse  
     cv = model_selection.StratifiedKFold(KF_NUM,shuffle=True)
@@ -79,11 +78,12 @@ def fileParse_KF(sbj_list,file_dir):
              
 
         print('Checkpoint...'+checkpoint)      
-        train_sbj_files.append([os.path.join(file_dir,x) for x in file_list if x.split('_ANGLES_')[0] in train_sbjs])
-        validation_sbj_files.append([os.path.join(file_dir,x) for x in file_list if x.split('_ANGLES_')[0] in validation_sbj])
-        test_sbj_files.append([os.path.join(file_dir,x) for x in file_list if x.split('_ANGLES_')[0] in test_sbjs])
+        train_sbj_files.append([os.path.join(file_dir,x) for x in file_list if x.split('_slices_')[0] in train_sbjs])
+        validation_sbj_files.append([os.path.join(file_dir,x) for x in file_list if x.split('_slices_')[0] in validation_sbj])
+        test_sbj_files.append([os.path.join(file_dir,x) for x in file_list if x.split('_slices_')[0] in test_sbjs])
         
         testindices_CP.update(test_indices)
+        
     if len(testindices_CP) == len(dSbj_list):
         print('FINAL checkpoint PASS')
     else:
@@ -94,96 +94,36 @@ def fileParse_KF(sbj_list,file_dir):
 def get_model(dimensions, arch, K_Fold_num):
     
     width, height, depth = dimensions
-    if arch == 'Anees':
-        inputs = keras.Input((width, height, depth, 1))
-        
-        x = layers.Conv3D(filters=64, kernel_size=5,strides=2,padding='valid', kernel_regularizer=tf.keras.regularizers.l2(L2_1))(inputs)
-        x = layers.BatchNormalization()(x)
-        x = layers.ReLU()(x)
-        x = layers.MaxPool3D(pool_size=3,strides=3)(x)
-        
-        x = layers.Conv3D(filters=128, kernel_size=3,strides=1,padding='valid', kernel_regularizer=tf.keras.regularizers.l2(L2_2))(x)
-        x = layers.BatchNormalization()(x)
-        x = layers.ReLU()(x)
-        x = layers.MaxPool3D(pool_size=3,strides=3)(x)
-        
-        x = layers.Conv3D(filters=192, kernel_size=3,strides=1,padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2_3))(x)
-        x = layers.BatchNormalization()(x)
-        x = layers.ReLU()(x)
-        
-        x = layers.Conv3D(filters=192, kernel_size=3,strides=1,padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2_4))(x)
-        x = layers.BatchNormalization()(x)
-        x = layers.ReLU()(x)
-        
-        x = layers.Conv3D(filters=128, kernel_size=3,strides=1,padding='same', kernel_regularizer=tf.keras.regularizers.l2(L2_5))(x)
-        x = layers.BatchNormalization()(x)
-        x = layers.ReLU()(x)
-        
-        x = layers.MaxPool3D(pool_size=2,strides=3)(x)
-        x = layers.Flatten()(x)
-        x = layers.Dropout(DO_1)(x)
-        x = layers.Dense(128, kernel_regularizer=tf.keras.regularizers.l2(L2_6))(x)
-        x = layers.ReLU()(x)
-        x = layers.Dropout(DO_2)(x)
-        
-        outputs = layers.Dense(len(disease_labels))(x)
-        
-        # Define the model.
-        model = keras.Model(inputs, outputs, name="3dcnn_Anees")
-        
-        # Compile model
-        optimizer=keras.optimizers.Adam(
-            learning_rate=0.0001,
-            beta_1=0.9,
-            beta_2=0.999,
-            epsilon=1e-08, 
-            amsgrad=False)
-        model.compile(
-            loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-            optimizer=optimizer,
-            metrics=["accuracy"]
-        )        
-        
-    elif arch == 'Zunair':
-        inputs = keras.Input((width, height, depth, 1))
-        
-        x = layers.Conv3D(filters=64, kernel_size=3, activation="relu")(inputs)
-        x = layers.MaxPool3D(pool_size=2)(x)
-        x = layers.BatchNormalization()(x)
-        
-        x = layers.Conv3D(filters=64, kernel_size=3, activation="relu")(x)
-        x = layers.MaxPool3D(pool_size=2)(x)
-        x = layers.BatchNormalization()(x)
-        
-        x = layers.Conv3D(filters=128, kernel_size=3, activation="relu")(x)
-        x = layers.MaxPool3D(pool_size=2)(x)
-        x = layers.BatchNormalization()(x)
-        
-        x = layers.Conv3D(filters=256, kernel_size=3, activation="relu")(x)
-        x = layers.MaxPool3D(pool_size=2)(x)
-        x = layers.BatchNormalization()(x)
-        
-        x = layers.GlobalAveragePooling3D()(x)
-        x = layers.Dense(units=512, activation="relu")(x)
-        x = layers.Dropout(0.1)(x)
-        
-        outputs = layers.Dense(units=len(disease_labels), activation="sigmoid")(x)
-        
-        # Define the model.
-        model = keras.Model(inputs, outputs, name="3dcnn_Zunair")
-        
-        loss = keras.losses.SparseCategoricalCrossentropy()
-        optim = keras.optimizers.SGD(learning_rate=0.1, momentum=0.09)
-        metrics = ['accuracy']
-        
-        model.compile(
-            optimizer=optim, 
-            loss=loss, 
-            metrics=metrics
-        )
-        
-    if arch != 'Eleni' and arch != 'Anees' and arch !='Zunair':
-        raise ValueError('2nd Argument must be either "Eleni", "Zunair", or "Anees"')
+    inputs = keras.Input((width, height, depth))
+    
+    x = layers.Conv2D(filters=8, kernel_size=3,padding='same')(inputs)
+    x = layers.BatchNormalization()(x)
+    x = layers.ReLU()(x)
+    x = layers.MaxPool2D(pool_size=(2,2),strides=2)(x)
+    
+    x = layers.Conv2D(filters=16, kernel_size=3,padding='same')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.ReLU()(x)
+    x = layers.MaxPool2D(pool_size=(2,2),strides=2)(x)
+    
+    x = layers.Conv2D(filters=32, kernel_size=3,padding='same')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.ReLU()(x)
+    x = layers.MaxPool2D(pool_size=(2,2),strides=2)(x)
+    
+    x = layers.Flatten()(x)
+    
+    outputs = layers.Dense(units=3)(x)
+
+    # Define the model.
+    model = keras.Model(inputs, outputs, name="2dcnn")
+    
+    # Compile model.
+    model.compile(
+        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        optimizer=keras.optimizers.SGD(learning_rate=0.01, momentum=0.9),
+        metrics=["accuracy"])
+    
     
     # Arch Save Folder
     if not (os.path.exists(os.path.join(MODEL_DIR, arch + '_arch'))):
@@ -294,35 +234,39 @@ def callback_create(model_save_folder):
 def decode(serialized_example):
     features = tf.io.parse_single_example(
         serialized_example,
-        features={'image': tf.io.FixedLenFeature([113, 137, 113, 1], tf.float32),
+        features={'image': tf.io.FixedLenFeature(dim, tf.float32),
                   'label': tf.io.FixedLenFeature([], tf.int64),
                   'fileName': tf.io.FixedLenFeature([], tf.string, default_value='')}
     )
+
     return features['image'], features['label']
 
 def loadTFrecord(input_files, batchNum, set_type, augmentExpand=False, expandNum=0):
     wk_angles = []
     if set_type == 'training':
         print('Augment Expand...',str(augmentExpand))
-        if augmentExpand:
+        # if augmentExpand:
             
-            # Angles
-            angles =[-2, 0, 2]
-            perm = list(itertools.product(angles,repeat=3))
-            random.shuffle(perm)
+        #     # Angles
+        #     angles =[-2, 0, 2]
+        #     perm = list(itertools.product(angles,repeat=3))
+        #     random.shuffle(perm)
             
-            out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
-            for i in range(expandNum):
-                selected_angle = perm.pop()
-                print('Selecting rotation...',str(selected_angle))
-                out_files = out_files + [x for x in input_files if 'ANGLES_'+str(selected_angle[0])+'_'+str(selected_angle[1])+'_'+str(selected_angle[2]) in x]
-            wk_angles.append(selected_angle)
-        else:
-            out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
-            
+        #     out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+        #     for i in range(expandNum):
+        #         selected_angle = perm.pop()
+        #         print('Selecting rotation...',str(selected_angle))
+        #         out_files = out_files + [x for x in input_files if 'ANGLES_'+str(selected_angle[0])+'_'+str(selected_angle[1])+'_'+str(selected_angle[2]) in x]
+        #     wk_angles.append(selected_angle)
+        # else:
+        #     out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+        
+        out_files = [x for x in input_files]
         
     else:
-        out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+        # out_files = [x for x in input_files if 'ANGLES_0_0_0' in x]
+        out_files = [x for x in input_files]
+        
             
     print('Imported ',set_type,' file number....',str(len(out_files)))
     dataset = tf.data.TFRecordDataset(out_files)
@@ -417,8 +361,6 @@ def saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath,elapsed_
             'Epoch = ' + str(EPOCH) + '\n',
             'Batch Size = ' + str(batchSize) + '\n',
             'Script Name = ' + '3D_CNN_LTLE_RTLE_Healthy_TFRecord' + '\n',
-            'Augment Argument = ' + str(Augment_arg) + '\n',
-            'Augment Number = ' + str(Aug_Expand_Num) + '\n',
             'Elapsed Time (h) = ' + str(elapsed_time/60/60) + '\n',
             'ReduceOnPlateu Patience = ' + str(ROP_PATIENCE) + '\n'
         ]
@@ -480,47 +422,30 @@ def rolling_avg(arr,window_size):
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
 # Data path
-# RECORD_DIR=r'F:\test\TFRecords'
-RECORD_DIR = r'F:\PatientData\TRRecords\LTLE_RTLE_TFRecord_4'
-MODEL_DIR = r'F:\CNN output\3D_CNN\RTLE_LTLE\AllSlices'
-
-# Define parameters
-matter = 'GM'
-ratio = [70, 20, 10]
-iterations = 1
-disease_labels = {
-    "LTLE":0,
-    "RTLE":1
-    }
-EPOCH = 500
-RUNNING_ARCH = 'Anees'
-Augment_arg = False
-Aug_Expand_Num = 1
-ROP_PATIENCE = 5
+RECORD_DIR = r'F:\PatientData\LargeSet_4_7\TFRecords\58Slices\TFRecords_LTLE_RTLE_T1_58Slices_GM'
+MODEL_DIR = r'F:\CNN output\2D_CNN\Python'
 
 ############## Testing Parameters
-batchSize = 1
-KF_NUM = 10
+matter = 'GM'
+ratio = [70, 20, 10]
+disease_labels = {
+    "TLE":1,
+    "AD":2,
+    "Control":3
+    }
+EPOCH = 500
+ROP_PATIENCE = 5
+arch = 'Eleni'
+dim = (113,137,1)
 
-# Anees
-L2_1 = 0.001
-L2_2 = 0.0001
-L2_3 = 0.1
-L2_4 = 0.1
-L2_5 = 0.1
-L2_6 = 0.1
-DO_1 = 0.4
-DO_2 = 0.0
-
-# 
-
-   
+batchSize = 128
+KF_NUM = 10   
 
 # Find sbj files
 sbj_names = []
 for root, folders, file in os.walk(RECORD_DIR):
     for name in file:
-        sbj_names.append(name.split('_ANGLES_')[0])
+        sbj_names.append(name.split('_slices')[0])
 sbj_names = set(sbj_names)
 
 # Obtain training/val/testing files
@@ -533,7 +458,7 @@ for kf in range(KF_NUM):
         
     # Prepare Model
     if kf ==0:
-        model, savepath = get_model((113,137,113),RUNNING_ARCH,kf)
+        model, savepath = get_model(dim,arch,kf)
         
         # Create K-Fold Folder
         kf_folder = os.path.join(savepath,'KFold_Models')
@@ -541,7 +466,7 @@ for kf in range(KF_NUM):
             os.mkdir(kf_folder)
             print('K-Model folder created...')
     else:
-        model = get_model((113,137,113),RUNNING_ARCH,kf)    
+        model = get_model(dim,arch,kf)    
     
     
     
@@ -556,7 +481,7 @@ for kf in range(KF_NUM):
 
 
     # Load TFRecordDataset 
-    trainingDataset, angels = loadTFrecord(trainingFiles[kf],batchSize,'training',Augment_arg,Aug_Expand_Num)
+    trainingDataset, angels = loadTFrecord(trainingFiles[kf],batchSize,'training')
     validationDataset, angels = loadTFrecord(validationFiles[kf],batchSize,'validation')
     testingDataset, angels = loadTFrecord(testingFiles[kf],batchSize,'testing')
 
@@ -573,7 +498,8 @@ for kf in range(KF_NUM):
               verbose=2,
               validation_data=validationDataset,
               shuffle=True,
-              callbacks=checkpoint)
+              callbacks=checkpoint,
+              use_multiprocessing=True)
     toc = time.time()
 
     # Save Model and training progress

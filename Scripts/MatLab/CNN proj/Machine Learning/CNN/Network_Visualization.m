@@ -10,14 +10,16 @@ allengit_genpath(githubpath,'imaging')
 
 % Inputs:
 % CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output';
-CNNoutput='F:\CNN output';
+% CNNoutput='F:\CNN output';
+CNNoutput='F:\CNN output\2D_CNN\MATLAB\AgeRegress';
 
 cd(CNNoutput)
 
 savepath=fullfile(CNNoutput,'Figures');mkdir(savepath);
 
-TCmat=load(fullfile(CNNoutput,'ep_control(1) tle(2) -GM-CNN.mat'));
-TCAmat=load(fullfile(CNNoutput,'ep_control(1) adni_control(1) tle(2) alz(3) -GM-CNN.mat'));
+% TCmat=load(fullfile(CNNoutput,'ep_control(1) tle(2) -GM-CNN.mat'));
+% TCAmat=load(fullfile(CNNoutput,'ep_control(1) adni_control(1) tle(2) alz(3) -GM-CNN.mat'));
+TCAmat=load(fullfile(CNNoutput,'AgeRegress_GM_ADTLEHC_CNN.mat'));
 
 %% Disease accuracy
 
@@ -30,22 +32,23 @@ conf_stat_shuff=conf_analysis(TCAmat.confmat.shuff);
 figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
-histfit(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100,10);
+h1 = histfit(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100,10);
 mean(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100)
 std(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100)
-histfit(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100,5);
+h2 = histfit(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100,5);
 mean(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100)
 std(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100)
 xlim([40 101]) 
 ylim([0 90])
+yticks(0:20:80)
 xlabel('Accuracy')
 ylabel('# of models')
 xticks([40:20:100])
 axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
-set(gca,'XTickLabel',a,'FontName','Times','fontsize',18)
-
+set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
+legend([h1(1) h2(1)],{'Reg','Shuff'})
 
 fdic=sum((mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100)>(mean(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100)))/100
 
@@ -54,10 +57,10 @@ fdic=sum((mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100)>(mean(mean(cell2ma
 figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
-histfit(mean(cell2mat(conf_stat_reg.Precision'),2,'omitnan'),10);
+h1 = histfit(mean(cell2mat(conf_stat_reg.Precision'),2,'omitnan'),10);
 std(mean(cell2mat(conf_stat_reg.Precision'),2,'omitnan'))
 mean(mean(cell2mat(conf_stat_reg.Precision'),2,'omitnan'))
-histfit(mean(cell2mat(conf_stat_shuff.Precision'),2,'omitnan'),15);
+h2 = histfit(mean(cell2mat(conf_stat_shuff.Precision'),2,'omitnan'),15);
 std(mean(cell2mat(conf_stat_shuff.Precision'),2,'omitnan'))
 mean(mean(cell2mat(conf_stat_shuff.Precision'),2,'omitnan'))
 xlim([.10 1.01])
@@ -65,19 +68,21 @@ ylim([0 90])
 xlabel('Precision')
 ylabel('# of models')
 xticks([0.10:0.20:1.00])
+yticks(0:20:80)
 axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
-set(gca,'XTickLabel',a,'FontName','Times','fontsize',18)
+set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
+legend([h1(1) h2(1)],{'Reg','Shuff'})
 
 
 figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
-histfit(mean(cell2mat(conf_stat_reg.Recall'),2,'omitnan'),15);
+h1 = histfit(mean(cell2mat(conf_stat_reg.Recall'),2,'omitnan'),15);
 std(mean(cell2mat(conf_stat_reg.Recall'),2,'omitnan'))
 mean(mean(cell2mat(conf_stat_reg.Recall'),2,'omitnan'))
-histfit(mean(cell2mat(conf_stat_shuff.Recall'),2,'omitnan'),5);
+h2 = histfit(mean(cell2mat(conf_stat_shuff.Recall'),2,'omitnan'),5);
 std(mean(cell2mat(conf_stat_shuff.Recall'),2,'omitnan'))
 mean(mean(cell2mat(conf_stat_shuff.Recall'),2,'omitnan'))
 xlim([.10 1.01])
@@ -85,90 +90,114 @@ ylim([0 90])
 xlabel('Recall')
 ylabel('# of models')
 xticks([0.10:0.20:1.00])
+yticks(0:20:80)
 axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
-set(gca,'XTickLabel',a,'FontName','Times','fontsize',18)
+set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
+legend([h1(1) h2(1)],{'Reg','Shuff'})
 
 %%
 figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
-histfit(conf_stat_reg.Acc{1}*100);
+h1 = histfit(conf_stat_reg.Acc{1}*100);
 mean(conf_stat_reg.Acc{1}*100)
 std(conf_stat_reg.Acc{1}*100)
-histfit(conf_stat_reg.Acc{2}*100);
+h2 = histfit(conf_stat_reg.Acc{2}*100);
 mean(conf_stat_reg.Acc{2}*100)
 std(conf_stat_reg.Acc{2}*100)
-histfit(conf_stat_reg.Acc{3}*100);
+h3 = histfit(conf_stat_reg.Acc{3}*100);
 mean(conf_stat_reg.Acc{3}*100)
 std(conf_stat_reg.Acc{3}*100)
 xlim([40 101]) 
 ylim([0 70])
+yticks([0:20:60])
 xlabel('Accuracy')
 ylabel('# of models')
 xticks([40:20:100])
 axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
-set(gca,'XTickLabel',a,'FontName','Times','fontsize',18)
+set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
+legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
 
 
 figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
-histfit(conf_stat_reg.Precision{1});
-histfit(conf_stat_reg.Precision{2});
-histfit(conf_stat_reg.Precision{3});
-xlim([40 101])  
-ylim([0 70]) 
+h1 = histfit(conf_stat_reg.Precision{1});
+h2 = histfit(conf_stat_reg.Precision{2});
+h3 = histfit(conf_stat_reg.Precision{3});
+xlim([.10 1.01])
+ylim([0 90])
 xlabel('Precision')
 ylabel('# of models')
-xticks([0:0.2:1])
-yticks([0:20:60])
+xticks([0.10:0.20:1.00])
+yticks(0:20:80)
 axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-% legend('Control','TLE','Alz')
+legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
 
 figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
-histfit(conf_stat_reg.Recall{1});
-histfit(conf_stat_reg.Recall{2});
-histfit(conf_stat_reg.Recall{3});
-xlim([40 101])  
+h1 = histfit(conf_stat_reg.Recall{1});
+h2 = histfit(conf_stat_reg.Recall{2});
+h3 = histfit(conf_stat_reg.Recall{3});
+xlim([.10 1.01])
 ylim([0 70])
 xlabel('Recall')
 ylabel('# of models')
-xticks([0:0.2:1])
+xticks([0.10:0.20:1.00])
 yticks([0:20:60])
 axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-% legend('Control','TLE','Alz')
+legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
 
 %% Confounding factor
 
-[maxAcc,maxIdx]=cellfun(@(x) max(x),TCAmat.acc_CF.reg);
+[maxAcc,maxIdx_reg]=cellfun(@(x) max(x),TCAmat.acc_CF.reg);
 tempconf=TCAmat.confmat_CF.reg;
 for i=1:numel(TCAmat.confmat_CF.reg)
-    tempconf{i}.C=tempconf{i}.C{maxIdx(i)};
-    tempconf{i}.order=tempconf{i}.order{maxIdx(i)};
-    tempconf{i}.perm=tempconf{i}.perm{maxIdx(i)};
+    tempconf{i}.C=tempconf{i}.C{maxIdx_reg(i)};
+    tempconf{i}.order=tempconf{i}.order{maxIdx_reg(i)};
+    tempconf{i}.perm=tempconf{i}.perm{maxIdx_reg(i)};
 end
 conf_stat_reg=conf_analysis(tempconf);
 
-[maxAcc,maxIdx]=cellfun(@(x) max(x),TCAmat.acc_CF.shuff);
+figure('WindowState','maximized');
+set(gcf,'color','w');
+histogram(maxIdx_reg)
+xlim([0,7])
+ylim([0,100])
+axis square
+ylabel('# of Models')
+
+
+[maxAcc,maxIdx_shuff]=cellfun(@(x) max(x),TCAmat.acc_CF.shuff);
 tempconf=TCAmat.confmat_CF.shuff;
 for i=1:numel(TCAmat.confmat_CF.reg)
-    tempconf{i}.C=tempconf{i}.C{maxIdx(i)};
-    tempconf{i}.order=tempconf{i}.order{maxIdx(i)};
-    tempconf{i}.perm=tempconf{i}.perm{maxIdx(i)};
+    tempconf{i}.C=tempconf{i}.C{maxIdx_shuff(i)};
+    tempconf{i}.order=tempconf{i}.order{maxIdx_shuff(i)};
+    tempconf{i}.perm=tempconf{i}.perm{maxIdx_shuff(i)};
 end
 conf_stat_shuff=conf_analysis(tempconf);
+
+
+figure('WindowState','maximized');
+set(gcf,'color','w');
+histogram(maxIdx_shuff)
+xlim([0,7])
+ylim([0,100])
+axis square
+ylabel('# of Models')
+
+
 %%
 %%%% Historgram of accuracy (TLE v Control v Alz)
 
@@ -177,10 +206,10 @@ conf_stat_shuff=conf_analysis(tempconf);
 figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
-histfit(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100);
+proper = histfit(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100);
 mean(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100)
 std(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100)
-histfit(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100,7);
+shuff = histfit(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100,7);
 mean(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100)
 std(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100)
 xlim([40 101]) 
@@ -192,6 +221,8 @@ axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',18)
+legend([proper(1),shuff(1)],{'Proper','Shuffled'})
+
 
 
 figure('WindowState','maximized');
@@ -203,11 +234,11 @@ std(mean(cell2mat(conf_stat_reg.Precision'),2,'omitnan'))
 histfit(mean(cell2mat(conf_stat_shuff.Precision'),2,'omitnan'),15);
 mean(mean(cell2mat(conf_stat_shuff.Precision'),2,'omitnan'))
 std(mean(cell2mat(conf_stat_shuff.Precision'),2,'omitnan'))
-xlim([10 101])
+xlim([0 1.01])
 ylim([0 90])
 xlabel('Precision')
 ylabel('# of models')
-xticks([10:20:100])
+xticks(0:0.2:1)
 axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
@@ -223,11 +254,11 @@ std(mean(cell2mat(conf_stat_reg.Recall'),2,'omitnan'))
 histfit(mean(cell2mat(conf_stat_shuff.Recall'),2,'omitnan'),5);
 mean(mean(cell2mat(conf_stat_shuff.Recall'),2,'omitnan'))
 std(mean(cell2mat(conf_stat_shuff.Recall'),2,'omitnan'))
-xlim([10 101])
+xlim([0 1.01])
 ylim([0 90])
 xlabel('Recall')
 ylabel('# of models')
-xticks([10:20:100])
+xticks(0:.2:1)
 axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
@@ -265,7 +296,7 @@ hold on
 histfit(conf_stat_reg.Precision{1});
 histfit(conf_stat_reg.Precision{2});
 histfit(conf_stat_reg.Precision{3});
-xlim([40 101])  
+xlim([0 1.01])  
 ylim([0 70]) 
 xlabel('Precision')
 ylabel('# of models')
@@ -283,7 +314,7 @@ hold on
 histfit(conf_stat_reg.Recall{1});
 histfit(conf_stat_reg.Recall{2});
 histfit(conf_stat_reg.Recall{3});
-xlim([40 101])  
+xlim([0 1.01])  
 ylim([0 70])
 xlabel('Recall')
 ylabel('# of models')
@@ -773,7 +804,7 @@ for g=1:nGroups
         NPR{tempperm(g),1}(i,1)=TN{tempperm(g),1}(i,1)/(TN{tempperm(g),1}(i,1)+FN{tempperm(g),1}(i,1));
         Recall{tempperm(g),1}(i,1)=TP{tempperm(g),1}(i,1)/(TP{tempperm(g),1}(i,1)+FN{tempperm(g),1}(i,1));
         Specificity{tempperm(g),1}(i,1)=TN{tempperm(g),1}(i,1)/(TN{tempperm(g),1}(i,1)+FP{tempperm(g),1}(i,1));
-        AccT{tempperm(g),1}(i,1)=(TP{tempperm(g),1}(i,1)+TN{tempperm(g),1}(i,1))/sum(sum(tempconf));
+        Acc{tempperm(g),1}(i,1)=(TP{tempperm(g),1}(i,1)+TN{tempperm(g),1}(i,1))/sum(sum(tempconf));
         F1{tempperm(g),1}(i,1)=2*((Precision{tempperm(g),1}(i,1)*Recall{tempperm(g),1}(i,1))/(Precision{tempperm(g),1}(i,1)+Recall{tempperm(g),1}(i,1)));
     end
 end
