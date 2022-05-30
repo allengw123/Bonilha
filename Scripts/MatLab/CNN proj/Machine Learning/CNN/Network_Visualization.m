@@ -9,18 +9,19 @@ cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
 % Inputs:
+% CNNoutput='F:\CNN output';
 % CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output';
-% CNNoutput='F:\CNN output';
-CNNoutput='F:\CNN output\2D_CNN\MATLAB\AgeRegress';
-% CNNoutput='F:\CNN output';
+% CNNoutput = 'C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\CFRedo';
+CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\AgeReg';
+
 
 cd(CNNoutput)
 
 savepath=fullfile(CNNoutput,'Figures');mkdir(savepath);
 
 % TCmat=load(fullfile(CNNoutput,'ep_control(1) tle(2) -GM-CNN.mat'));
-% TCAmat=load(fullfile(CNNoutput,'ep_control(1) adni_control(1) tle(2) alz(3) -GM-CNN.mat'));
-TCAmat=load(fullfile(CNNoutput,'AgeRegress_GM_ADTLEHC_CNN.mat'));
+TCAmat=load(fullfile(CNNoutput,'ep_control(1) adni_control(1) tle(2) alz(3) -GM-CNN.mat'));
+% TCAmat=load(fullfile(CNNoutput,'AgeRegress_GM_ADTLEHC_CNN.mat'));
 
 %% Disease accuracy
 
@@ -34,11 +35,11 @@ figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
 h1 = histfit(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100,10);
-mean(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100)
-std(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100)
+m1 = mean(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100)
+s1 = std(mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100)
 h2 = histfit(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100,5);
-mean(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100)
-std(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100)
+m2 = mean(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100)
+s2 = std(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100)
 xlim([40 101]) 
 ylim([0 90])
 yticks(0:20:80)
@@ -59,11 +60,11 @@ figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
 h1 = histfit(mean(cell2mat(conf_stat_reg.Precision'),2,'omitnan'),10);
-std(mean(cell2mat(conf_stat_reg.Precision'),2,'omitnan'))
 mean(mean(cell2mat(conf_stat_reg.Precision'),2,'omitnan'))
+std(mean(cell2mat(conf_stat_reg.Precision'),2,'omitnan'))
 h2 = histfit(mean(cell2mat(conf_stat_shuff.Precision'),2,'omitnan'),15);
-std(mean(cell2mat(conf_stat_shuff.Precision'),2,'omitnan'))
 mean(mean(cell2mat(conf_stat_shuff.Precision'),2,'omitnan'))
+std(mean(cell2mat(conf_stat_shuff.Precision'),2,'omitnan'))
 xlim([.10 1.01])
 ylim([0 90])
 xlabel('Precision')
@@ -81,11 +82,11 @@ figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
 h1 = histfit(mean(cell2mat(conf_stat_reg.Recall'),2,'omitnan'),15);
-std(mean(cell2mat(conf_stat_reg.Recall'),2,'omitnan'))
 mean(mean(cell2mat(conf_stat_reg.Recall'),2,'omitnan'))
+std(mean(cell2mat(conf_stat_reg.Recall'),2,'omitnan'))
 h2 = histfit(mean(cell2mat(conf_stat_shuff.Recall'),2,'omitnan'),5);
-std(mean(cell2mat(conf_stat_shuff.Recall'),2,'omitnan'))
 mean(mean(cell2mat(conf_stat_shuff.Recall'),2,'omitnan'))
+std(mean(cell2mat(conf_stat_shuff.Recall'),2,'omitnan'))
 xlim([.10 1.01])
 ylim([0 90])
 xlabel('Recall')
@@ -122,17 +123,23 @@ axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
+% legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
 
 
 figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
 h1 = histfit(conf_stat_reg.Precision{1});
+mean(conf_stat_reg.Precision{1})
+std(conf_stat_reg.Precision{1})
 h2 = histfit(conf_stat_reg.Precision{2});
+mean(conf_stat_reg.Precision{2},'omitnan')
+std(conf_stat_reg.Precision{2},'omitnan')
 h3 = histfit(conf_stat_reg.Precision{3});
+mean(conf_stat_reg.Precision{3},'omitnan')
+std(conf_stat_reg.Precision{3},'omitnan')
 xlim([.10 1.01])
-ylim([0 90])
+ylim([0 70])
 xlabel('Precision')
 ylabel('# of models')
 xticks([0.10:0.20:1.00])
@@ -141,14 +148,20 @@ axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
+% legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
 
 figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
 h1 = histfit(conf_stat_reg.Recall{1});
+mean(conf_stat_reg.Recall{1},'omitnan')
+std(conf_stat_reg.Recall{1},'omitnan')
 h2 = histfit(conf_stat_reg.Recall{2});
+mean(conf_stat_reg.Recall{2},'omitnan')
+std(conf_stat_reg.Recall{2},'omitnan')
 h3 = histfit(conf_stat_reg.Recall{3});
+mean(conf_stat_reg.Recall{3},'omitnan')
+std(conf_stat_reg.Recall{3},'omitnan')
 xlim([.10 1.01])
 ylim([0 70])
 xlabel('Recall')
@@ -159,7 +172,7 @@ axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
+% legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
 
 %% Confounding factor
 
@@ -203,8 +216,6 @@ ylabel('# of Models')
 %%
 %%%% Historgram of accuracy (TLE v Control v Alz)
 
-
-
 figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
@@ -225,6 +236,7 @@ a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',18)
 legend([proper(1),shuff(1)],{'Proper','Shuffled'})
 
+fdic=sum((mean(cell2mat(conf_stat_reg.Acc'),2,'omitnan')*100)>(mean(mean(cell2mat(conf_stat_shuff.Acc'),2,'omitnan')*100)))/100
 
 
 figure('WindowState','maximized');
@@ -296,8 +308,14 @@ figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
 histfit(conf_stat_reg.Precision{1});
+mean(conf_stat_reg.Precision{1})
+std(conf_stat_reg.Precision{1})
 histfit(conf_stat_reg.Precision{2});
+mean(conf_stat_reg.Precision{2})
+std(conf_stat_reg.Precision{2})
 histfit(conf_stat_reg.Precision{3});
+mean(conf_stat_reg.Precision{3})
+std(conf_stat_reg.Precision{3})
 xlim([0 1.01])  
 ylim([0 70]) 
 xlabel('Precision')
@@ -314,8 +332,14 @@ figure('WindowState','maximized');
 set(gcf,'color','w');
 hold on
 histfit(conf_stat_reg.Recall{1});
+mean(conf_stat_reg.Recall{1})
+std(conf_stat_reg.Recall{1})
 histfit(conf_stat_reg.Recall{2});
+mean(conf_stat_reg.Recall{2})
+std(conf_stat_reg.Recall{2})
 histfit(conf_stat_reg.Recall{3});
+mean(conf_stat_reg.Recall{3})
+std(conf_stat_reg.Recall{3})
 xlim([0 1.01])  
 ylim([0 70])
 xlabel('Recall')

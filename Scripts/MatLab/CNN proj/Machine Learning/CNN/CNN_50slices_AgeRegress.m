@@ -2,7 +2,8 @@
 clear
 clc
 
-githubpath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
+%githubpath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
+githubpath = 'C:\Users\allen\Documents\GitHub\Bonilha';
 cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
