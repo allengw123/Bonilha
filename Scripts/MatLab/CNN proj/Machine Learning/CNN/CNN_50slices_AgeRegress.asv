@@ -236,10 +236,10 @@ for iter = 1:100
     testDataset=permute(cat(3,testDataset{:}),[1 2 4 3]);
     valDataset=permute(cat(3,valDataset{:}),[1 2 4 3]);
     
-
+%%
     %%%%%%%%%%%% Train the network
     [net.reg{iter},acc.reg{iter},confmat.reg{iter}] = runcnnFC(trainDataset,trainLabels,testDataset,testLabels,valDataset,valLabels);
-    
+    %%
     [net.suff{iter},acc.shuff{iter},confmat.shuff{iter}] = runcnnFC(trainDataset,trainLabels(randperm(numel(trainLabels))),testDataset,testLabels(randperm(numel(testLabels))),valDataset,valLabels(randperm(numel(valLabels))));
 end
 
