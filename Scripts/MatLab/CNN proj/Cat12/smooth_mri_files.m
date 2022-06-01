@@ -27,11 +27,13 @@ for sf = 1:numel(subject_folders)
     tempsubfolder_path=fullfile(PatientData_folder,subject_folders{sf});
     tempsub_list={dir(tempsubfolder_path).name};
     tempsub_list=tempsub_list(~startsWith(tempsub_list,'.'));
-    for m=1:2
+    for m=1:3
         if m==1
             matter='GM';
-        else
+        elseif m==2
             matter='WM';
+        else
+            matter='GMWM';
         end
         for sbj = 1:numel(tempsub_list)
             

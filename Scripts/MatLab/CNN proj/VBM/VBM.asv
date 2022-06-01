@@ -113,12 +113,10 @@ p_comps = nchoosek(c_label,2);
 for n = 1:length(p_comps)
     v1 = cellfun(@(x) reshape(x,113,137,[]),imgs(comp_label == p_comps(n,1)),'UniformOutput',false);
     v1 = cat(4,v1{:});
-    disp([comps{p_comps(n,1)},'...',num2str(size(v1,4))])
+    ([comps{p_comps(n,1)},'...',num2str(size(v1,3))])
 
     v2 = cellfun(@(x) reshape(x,113,137,[]),imgs(comp_label == p_comps(n,2)),'UniformOutput',false);
     v2 = cat(4,v2{:});
-    disp([comps{p_comps(n,2)},'...',num2str(size(v2,4))])
-
    
     
     [P, T] = compare_volumes(v1, v2, 'F:\VBM ouput\Age_Regress\Example.nii', ttest_savepath,comps{p_comps(n,1)},comps{p_comps(n,2)});

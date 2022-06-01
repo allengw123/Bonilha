@@ -17,11 +17,8 @@ import tensorflow as tf
 import datetime
 import pandas as pd
 import time
-<<<<<<< Updated upstream
 import xlwt
-
-=======
->>>>>>> Stashed changes
+import re
 
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -36,16 +33,34 @@ from sklearn import model_selection
 # Extract nifti files and parse
 def extractNifti(input,type,kf_num):
     dSbj_list = []
+    dSbj_name = []
     if type == 'TLE':
         for root, dirs, files in os.walk(input):
             if len(files) > 0:
-                dSbj_list.append(os.path.join(
-                    root, [x for x in files if 'GM' in x and 'SmoothThreshold' in x][0]))
+                if matter == 'GMWM':
+                    dSbj_list.append(os.path.join(
+                        root, [x for x in files if 'GM' in x and 'SmoothThreshold' in x][0]))
+                    dSbj_list.append(os.path.join(
+                        root, [x for x in files if 'WM' in x and 'SmoothThreshold' in x][0]))
+                    dSbj_name.append([x for x in files if 'GM' in x and 'SmoothThreshold' in x][0].split('GM_')[1])
+                else:
+                    dSbj_list.append(os.path.join(
+                        root, [x for x in files if matter in x and 'SmoothThreshold' in x][0]))
+                    dSbj_name.append([x for x in files if matter in x and 'SmoothThreshold' in x][0].split(matter+'_')[1])
+                    
     else:
         for root, dirs, files in os.walk(input):
             if len(files) > 0:
-                dSbj_list.append(os.path.join(
-                    root, [x for x in files if 'GM' in x][0]))
+                if matter == 'GMWM':
+                    dSbj_list.append(os.path.join(
+                        root, [x for x in files if 'GM' in x][0]))
+                    dSbj_list.append(os.path.join(
+                        root, [x for x in files if 'WM' in x][0]))
+                    dSbj_name.append([x for x in files if 'GM' in x][0].split('GM_')[1])
+                else:
+                    dSbj_list.append(os.path.join(
+                        root, [x for x in files if matter in x][0]))
+                    dSbj_name.append([x for x in files if matter in x][0].split(matter+'_')[1])
                 
 
         
@@ -53,11 +68,12 @@ def extractNifti(input,type,kf_num):
     cv = model_selection.KFold(kf_num,shuffle=True)
         
     output = []
+    output_name = []
     
     testindices_CP = set()
     
     count = 0
-    for train_indices, test_indices in cv.split(range(len(dSbj_list))):
+    for train_indices, test_indices in cv.split(range(len(dSbj_name))):
         print('Parsing K-Fold ',count)
         count+=1
         
@@ -67,13 +83,18 @@ def extractNifti(input,type,kf_num):
         train_indices = list(train_indices)
         test_indices = list(test_indices)
         validation_indices = [train_indices.pop() for x in range(math.ceil(len(train_indices)*validation_split))]
+       
+        train_sbjs = []
+        validation_sbjs = []
+        test_sbjs = []
         
-        train_sbjs=[dSbj_list[i] for i in train_indices]
-        validation_sbjs=[dSbj_list[i] for i in validation_indices]
-        test_sbjs=[dSbj_list[i] for i in test_indices]
-        print('   Length of training set ',str(len(train_sbjs)))
-        print('   Length of validation set ',str(len(validation_sbjs)))
-        print('   length of testing set ',str(len(test_sbjs)))
+        [[train_sbjs.append(x) for x in list(filter(re.compile('.*'+dSbj_name[i]).match, dSbj_list))] for i in train_indices]
+        [[validation_sbjs.append(x) for x in list(filter(re.compile('.*'+dSbj_name[i]).match, dSbj_list))] for i in validation_indices]
+        [[test_sbjs.append(x) for x in list(filter(re.compile('.*'+dSbj_name[i]).match, dSbj_list))] for i in test_indices]
+
+        print('   Length of training set ',str(len(train_indices)))
+        print('   Length of validation set ',str(len(test_indices)))
+        print('   length of testing set ',str(len(validation_indices)))
         
         checkpoint='FAILURE'
         if len(set(train_indices+validation_indices+test_indices)) == (len(train_indices) + len(validation_indices) + len(test_indices)):
@@ -84,36 +105,50 @@ def extractNifti(input,type,kf_num):
         testindices_CP.update(test_indices)
         
         output.append([train_sbjs,validation_sbjs,test_sbjs])
+        output_name.append([
+            [dSbj_name[i] for i in train_indices],
+            [dSbj_name[i] for i in validation_indices],
+            [dSbj_name[i] for i in test_indices]])
         
-    if len(testindices_CP) == len(dSbj_list):
+    if len(testindices_CP) == len(dSbj_name):
         print('FINAL checkpoint PASS')
     else:
-        print('FINAL checkpoint FAILURE')
+        raise ValueError('FINAL checkpoint FAILURE')
         
-    return output
+    return output, output_name
 
 
 def NormalizeData(data):
     return (data - np.min(data)) / (np.max(data) - np.min(data))
 
 
-def PreprocImg(input):
-    imgs = [nib.load(file).get_fdata().astype(np.float32)[:,:,27:84] for file in input]
-    imgs = NormalizeData(np.concatenate(imgs,axis=2))
-
-    return imgs
+def PreprocImg(files, names):
+    output = []
+    for sbj in names:
+        nifti_files = list(filter(re.compile('.*'+sbj).match, files))
+        count = 0
+        for imgs in nifti_files:
+            if count == 0:
+                tmp_img = NormalizeData(nib.load(imgs).get_fdata().astype(np.float32)[:,:,27:84])
+            else:
+                tmp_img = tmp_img + NormalizeData(nib.load(imgs).get_fdata().astype(np.float32)[:,:,27:84])
+            count += 1
+    
+        output.append(tmp_img)
+    return NormalizeData(np.concatenate(output,axis=2))
 
 
 # Define CNN input class
 class CNNinput:
-    def __init__(self, niftifiles):
+    def __init__(self, niftifiles, subject_names):
     
         trainingFiles, validationFiles, testingFiles = niftifiles
+        trainingNames, validationNames, testingNames = subject_names
         
         # Load images of niftifiles
-        self.trainingImg = PreprocImg(trainingFiles)
-        self.validationImg = PreprocImg(validationFiles)
-        self.testingImg = PreprocImg(testingFiles)
+        self.trainingImg = PreprocImg(trainingFiles, trainingNames)
+        self.validationImg = PreprocImg(validationFiles, validationNames)
+        self.testingImg = PreprocImg(testingFiles, testingNames)
 
 
 def get_model(dimensions, arch, K_Fold_num):
@@ -288,15 +323,7 @@ def confusionMat(weights,predictions,labels,savepath,set_type):
         FN = sum(np.logical_and(predictions!=value,labels==value)) 
         FP = sum(np.logical_and(predictions==value,labels!=value))
         Acc = (TP+TN)/(TP+TN+FP+FN)
-<<<<<<< Updated upstream
         if TP == 0:
-=======
-        if TP == 0 and FN == 0:
-            Sensitivity = 0
-            Precision = 0
-            F1 = 0
-        elif TP == 0 and FP ==0:
->>>>>>> Stashed changes
             Sensitivity = 0
             Precision = 0
             F1 = 0
@@ -374,7 +401,6 @@ def saveParameters(matter,ratio,disease_labels,EPOCH,batchSize,savepath,elapsed_
         f.writelines(parameters)
 
 
-<<<<<<< Updated upstream
 def rolling_avg(arr,window_size):
       
     i = 0
@@ -401,9 +427,8 @@ def rolling_avg(arr,window_size):
     mask[0:len(moving_averages)] = np.expand_dims(np.array(moving_averages),axis=1)
     
     return mask
-        
-=======
->>>>>>> Stashed changes
+
+
 #%%
 # eliminate error notifications
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
@@ -418,37 +443,29 @@ TLEdir = os.path.join(datadir, 'TLE')
 
 
 # Define parameters
-<<<<<<< Updated upstream
-matter = 'GM'
+matter = 'GMWM'
 ratio = [60, 15, 35]
 disease_labels = {"AD":0,"TLE":1,"Healthy":2}
 EPOCH = 20
 ARCH = 'Eleni'
 BATCH_SIZE = 128
-=======
-matter = 'WM'
-ratio = [60, 15, 35]
-disease_labels = {"AD":0,"TLE":1,"Healthy":2}
-EPOCH = 10
-ARCH = 'Eleni'
-BATCH_SIZE = 256
->>>>>>> Stashed changes
+
 KF_NUM = 10
 
 
 
-AD_nifti = extractNifti(ADdir,'AD',KF_NUM)
-TLE_nifti = extractNifti(TLEdir,'TLE',KF_NUM)
-Healthy_nifti = extractNifti(Healthydir,'Healthy',KF_NUM)
+AD_nifti, AD_sbjs = extractNifti(ADdir,'AD',KF_NUM)
+TLE_nifti, TLE_sbjs = extractNifti(TLEdir,'TLE',KF_NUM)
+Healthy_nifti, Healthy_sbjs = extractNifti(Healthydir,'Healthy',KF_NUM)
 
 
 for kf in range(KF_NUM):
     print('Running K-Fold number ...'+str(kf))
     
     # Prepare disease specific CNN input
-    ADinput = CNNinput(AD_nifti[kf])  # 0
-    TLEinput = CNNinput(TLE_nifti[kf])  # 1
-    Healthyinput = CNNinput(Healthy_nifti[kf])  # 2
+    ADinput = CNNinput(AD_nifti[kf], AD_sbjs[kf])  # 0
+    TLEinput = CNNinput(TLE_nifti[kf], TLE_sbjs[kf])  # 1
+    Healthyinput = CNNinput(Healthy_nifti[kf], Healthy_sbjs[kf])  # 2
     
     # Pepare x y data
     train_images = np.concatenate(
@@ -469,28 +486,19 @@ for kf in range(KF_NUM):
     # Define data loaders
     train_loader = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
     validation_loader = tf.data.Dataset.from_tensor_slices((validation_images, validation_labels))
-    
-<<<<<<< Updated upstream
+
     # Shuff_train_loader = tf.data.Dataset.from_tensor_slices((train_images,shuffle_array(train_labels)))
     # Shuff_validation_loader = tf.data.Dataset.from_tensor_slices((validation_images,shuffle_array(validation_labels)))
-=======
-    Shuff_train_loader = tf.data.Dataset.from_tensor_slices((train_images,shuffle_array(train_labels)))
-    Shuff_validation_loader = tf.data.Dataset.from_tensor_slices((validation_images,shuffle_array(validation_labels)))
->>>>>>> Stashed changes
+
     
     
     # Preproc dataset
     train_dataset = train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
     validation_dataset = validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
     
-<<<<<<< Updated upstream
     # Shuff_train_dataset = Shuff_train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
     # Shuff_validation_dataset = Shuff_validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
-=======
-    Shuff_train_dataset = Shuff_train_loader.shuffle(len(train_labels),reshuffle_each_iteration=True).map(train_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
-    Shuff_validation_dataset = Shuff_validation_loader.shuffle(len(validation_labels),reshuffle_each_iteration=True).map(validation_preprocessing).batch(BATCH_SIZE).prefetch(BATCH_SIZE)
->>>>>>> Stashed changes
-    
+
     
     data = train_dataset.take(1)
     images, labels = list(data)[0]
@@ -569,7 +577,14 @@ for kf in range(KF_NUM):
      
     # ShuffconMat.append(confusionMat(prediction_labels,test_labels))
     
-<<<<<<< Updated upstream
+    # Delete Memory Variables
+    train_images = None
+    validation_images = None
+    test_images = None
+    train_loader = None
+    validation_loader = None
+    train_dataset = None
+    validation_dataset = None
 #%%
 wb = xlwt.Workbook()
 
@@ -654,6 +669,4 @@ plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['Train','Validation'])
 plt.savefig(os.path.join(savepath,'accuracy.jpg'))
-=======
 
->>>>>>> Stashed changes
