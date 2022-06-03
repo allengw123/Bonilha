@@ -125,6 +125,7 @@ for r=1:numel(resp)
     resp_coh(:,:,:,countstart:count)=beta_coh.(resp{r});
 end
 mean_resp_coh=mean(resp_coh,4,'omitnan');
+std_resp_coh=std(resp_coh,[],4,'omitnan');
 
 count=0;
 for r=1:numel(nonresp)
@@ -133,6 +134,7 @@ for r=1:numel(nonresp)
     nonresp_coh(:,:,:,countstart:count)=beta_coh.(nonresp{r});
 end
 mean_nonresp_coh=mean(nonresp_coh,4,'omitnan');
+std_nonresp_coh=std(nonresp_coh,[],4,'omitnan');
 
 % Calculate electrodes (clips) for responsive and nonresponsive group
 for r=1:numel(resp)
@@ -161,11 +163,14 @@ for r=1:numel(resp)
     resp_struct(:,:,r)=struct_con.(resp{r});
 end
 mean_resp_struct=mean(resp_struct,3,'omitnan');
+std_resp_struct=std(resp_struct,[],3,'omitnan');
 
+nonresp_struct =[];
 for r=1:numel(nonresp)
     nonresp_struct(:,:,r)=struct_con.(nonresp{r});
 end
 mean_nonresp_struct=mean(nonresp_struct,3,'omitnan');
+std_nonresp_struct=std(nonresp_struct,[],3,'omitnan');
 
 %% Coherence Group Figures
 
@@ -180,7 +185,7 @@ for i=1:4
     ylabel(c,'Beta coherence','fontsize',12);
     title(['Responders - ',trials_label{i}])
     axis('square')
-    meancoh=mean(mean_resp_coh(:,:,i),'all','omitnan');
+    meancoh=mean(resp_coh(:,:,i,:),'all','omitnan');
     stdcoh=std(mean_resp_coh(:,:,i),[],'all','omitnan');
     disp(['Mean is ', num2str(meancoh),'. STD is ',num2str(stdcoh)])
 end
@@ -278,6 +283,19 @@ meanfa=mean(mean_resp_struct,'all','omitnan');
 stdfa=std(mean_resp_struct,[],'all','omitnan');
 disp(['Mean is ', num2str(meanfa),'. STD is ',num2str(stdfa)])
 
+figure
+imagesc(std_resp_struct);
+set(gca,'xtick',[],'xticklabel',[],'ytick',[],'yticklabel',[])
+set(gcf,'color',[1 1 1]);
+cb=colorbar;
+set(cb,'FontSize',16,'Location','southoutside')
+ylabel(cb,'Standard Deviation of Fractional Anisotropy','FontSize',16)
+axis('square')
+struc_ccm=customcolormap([0 1],{'#E28E40','#6E3908'});
+colormap(struc_ccm)
+caxis([0 max(std_resp_struct,[],'all')]);
+title('Responders')
+
 % Create nonresponsive figure
 figure
 imagesc(mean_nonresp_struct,[0 1]);
@@ -291,6 +309,16 @@ struc_ccm=customcolormap([0 1],{'#E28E40','#6E3908'});
 colormap(struc_ccm)
 caxis([0 1]);
 title('Non Responders')
-meanfa=mean(mean_nonresp_struct,'all','omitnan');
-stdfa=std(mean_nonresp_struct,[],'all','omitnan');
-disp(['Mean is ', num2str(meanfa),'. STD is ',num2str(stdfa)])
+
+figure
+imagesc(std_nonresp_struct);
+set(gca,'xtick',[],'xticklabel',[],'ytick',[],'yticklabel',[])
+set(gcf,'color',[1 1 1]);
+cb=colorbar;
+set(cb,'FontSize',16,'Location','southoutside')
+ylabel(cb,'Standard Deviation of Fractional Anisotropy','FontSize',16)
+axis('square')
+struc_ccm=customcolormap([0 1],{'#0068FF','#022454'});
+colormap(struc_ccm)
+caxis([0 max(std_nonresp_struct,[],'all')]);
+title('Non-Responders')
