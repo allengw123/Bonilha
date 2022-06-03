@@ -2,7 +2,8 @@ clear all
 close all
 clc
 
-gitpath='C:\Users\allen\Documents\GitHub\Bonilha';
+% gitpath='C:\Users\allen\Documents\GitHub\Bonilha';
+gitpath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
 cd(gitpath)
 allengit_genpath(gitpath)
 %% Insert Info

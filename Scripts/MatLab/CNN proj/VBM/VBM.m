@@ -82,7 +82,7 @@ mkdir(ttest_savepath);
 cd(ttest_savepath)
 
 imgs = load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\residual_imgs.mat');
-imgs = imgs.residual_imgs;
+imgs = imgs.reshaped_residuals;
 
 d_label = load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\disease_label.mat');
 d_label = d_label.disease;

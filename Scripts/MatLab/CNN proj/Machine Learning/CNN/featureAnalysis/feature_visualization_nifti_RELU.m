@@ -15,7 +15,7 @@ example=load_nii('EXAMPLE.nii');
 
 %% Create feature weight niftis
 for i=1:numel(files)
-    if strcmp(files{i},'EXAMPLE.nii')
+    if strcmp(files{i},'Example.nii')
         continue
     end
     

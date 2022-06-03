@@ -531,7 +531,7 @@ FLIP = true;
 
 groups={'AD','TLE','Control'};
 residual_imgs = load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\residual_imgs.mat');
-residual_imgs = residual_imgs.residual_imgs;
+residual_imgs = residual_imgs.reshaped_residuals;
 residual_disease_label =  load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\disease_label.mat');
 residual_disease_label = residual_disease_label.disease;
 residual_side =  load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\side_label.mat');
@@ -594,13 +594,13 @@ for g=1:numel(groups)
     niftiwrite(weight_img.img,fullfile(savepath,[savename,'_STD.nii']));
 end
 
-%% Occulsion sensitivity
+%% Occulsion sensitivity (Age Regress)
 
 FLIP = true;
 
 groups={'AD','TLE','Control'};
 residual_imgs = load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\residual_imgs.mat');
-residual_imgs = residual_imgs.residual_imgs;
+residual_imgs = residual_imgs.reshaped_residuals;
 residual_disease_label =  load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\disease_label.mat');
 residual_disease_label = residual_disease_label.disease;
 residual_side =  load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\side_label.mat');

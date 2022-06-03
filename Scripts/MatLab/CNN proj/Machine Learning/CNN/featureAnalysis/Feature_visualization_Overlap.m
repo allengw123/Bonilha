@@ -8,7 +8,7 @@ cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 %%
 comps = {'TLE','AD','Control'};
-
+cd('F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures')
 relu_folder = 'F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\Ip_RELU';
 occlusion_folder = 'F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\Ip_Occlusion';
 
@@ -34,7 +34,7 @@ overlap = CNN.img>0 & VBM.img>0;
 
 output_nii = CNN;
 output_nii.img = overlap;
-save_nii(output_nii,'VBM_CNN_overlap.nii')c=1
+save_nii(output_nii,'VBM_CNN_overlap.nii')
 
 %%
 dataPath='F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\Ip_OccVRelu';
