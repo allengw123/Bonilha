@@ -2,8 +2,8 @@
 clear
 clc
 
-%githubpath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
-githubpath = 'C:\Users\allen\Documents\GitHub\Bonilha';
+githubpath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
+% githubpath = 'C:\Users\allen\Documents\GitHub\Bonilha';
 cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
@@ -13,7 +13,7 @@ cd(PatientData)
 
 save_path='F:\PatientData\smallSet';
 
-SmoothThres=fullfile(PatientData,'smooth');
+SmoothThres=fullfile(PatientData,'thres');
 addpath(genpath(SmoothThres));
 
 %% Calculate Residuals
@@ -31,7 +31,7 @@ Alzfiles={dir(fullfile(SmoothThres,'Alz\ADNI_Alz_nifti','*','*.nii')).name}';
 tlefiles={dir(fullfile(SmoothThres,'TLE','*','*','*.nii')).name}';
 
 % look for control nifti files
-controlfiles={dir(fullfile(SmoothThres,'Controls','*','*','*GM*.nii')).name}';
+controlfiles={dir(fullfile(SmoothThres,'Control','*','*','*GM*.nii')).name}';
 
 
 disp('Loading tle control subjects and extracting 50 slices')
@@ -149,9 +149,8 @@ end
 warning('off','all')
 lin_relationship = [];
 template = [];
-residual_imgs = cell(numel([tle_age;alz_age;control_age]),1);
-tic
-for vox = 1:897898
+residual_imgs = cell(897898,1);
+parfor vox = 1:897898
     
     intensities = [];
     age = [];
@@ -174,24 +173,27 @@ for vox = 1:897898
         disease = [disease;3];
     end
     
+    temp_residual = [];
     if any(intensities)
         mdl=LinearModel.fit(age,intensities);
         residuals = mdl.Residuals.('Raw');
         for s = 1:numel(residuals)
-            residual_imgs{s} = [residual_imgs{s},residuals(s)];
+            temp_residual = [temp_residual,residuals(s)];
         end
     else
-        for s = 1:numel(residuals)
-            residual_imgs{s} = [residual_imgs{s},0];
+        for s = 1:numel(intensities)
+            temp_residual= [temp_residual,0];
         end
     end
     
-    if rem(vox,10000)==0
-        disp([num2str(vox/897898*100),'% complete elapsed time(s)...',num2str(toc)])
-    end
+    residual_imgs{vox} = temp_residual';
 end
 
-reshaped_residuals = cellfun(@(x) reshape(x,113,137,58),residual_imgs,'UniformOutput',false);
+residual_imgs = cat(2,residual_imgs{:});
+reshaped_residuals = [];
+for r = 1:size(residual_imgs,1)
+    reshaped_residuals{r,1} = reshape(residual_imgs(r,:),113,137,58);
+end
 %% Setup for CNN model
 
 net = [];
@@ -203,7 +205,7 @@ for iter = 1:100
     display(['Running iteration ',num2str(iter)])
     
     % Calculate # of groups
-    d_groups = unique(disease);
+    d_groups = [1,2,3];
     
     trainDataset = [];
     trainLabels = [];

@@ -1,19 +1,20 @@
 clear all
 clc
 
-gitPath = 'C:\Users\allen\Documents\GitHub\Bonilha';
-% gitPath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
+% gitPath = 'C:\Users\allen\Documents\GitHub\Bonilha';
+gitPath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
 
 cd(gitPath)
 allengit_genpath(gitPath,'imaging')
 
 % dataPath='F:\CNN output\2D_CNN\Feature Analysis\Occlusion_smallstride';
-dataPath='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\feature Visualization\Occlusion';
+% dataPath='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\feature Visualization\Occlusion';
+dataPath = 'F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\Ip_Occlusion';
 cd(dataPath)
 files={dir(fullfile(dataPath,'*.nii')).name};
 % example=load_nii('F:\CNN output\2D_CNN\Feature Analysis\Example.nii');
-example=load_nii('C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\feature Visualization\Example.nii');
-
+% example=load_nii('C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\feature Visualization\Example.nii');
+example = load_nii('F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\Occlusion\Example.nii');
 
 %% Create feature weight niftis
 for i=1:numel(files)
@@ -26,7 +27,7 @@ for i=1:numel(files)
         nifti.img(:,:,l)=mat2gray(nifti.img(:,:,l));
     end
     
-    % Save full brain
+    % Save full brains
     temp.img=nifti.img;
     save_nii(temp,['FULL_',files{i}]);
 
@@ -45,9 +46,10 @@ for i=1:numel(files)
 end
 
 %% Create Histogram of means of CNN
-aal_regions=readtable(fullfile('C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\feature Visualization','aal.xlsx'));
+aal_regions=readtable(fullfile('F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures','aal.xlsx'));
 xmlFiles={dir(fullfile(dataPath,'*.xlsx')).name};
-TLE_Regions=sort([36,110,96,99,72,49,109,98,22,100,40,61,33,19,42,73,60,34,30,51]);
+TLE_Regions_name = {'Angular_R','Parietal_Inf_R','Angular_L','Temporal_Inf_L','Amygdala_L','Temporal_Inf_R','Occipital_Mid_R','Occipital_Inf_L','Temporal_Mid_R','Fusiform_L','Thalamus_R','Occipital_Mid_L','Occipital_Inf_R','Thalamus_L','Frontal_Mid_R','Hippocampus_L','Fusiform_R','ParaHippocampal_L','Amygdala_R','Frontal_Mid_L'};
+TLE_Regions=sort(cellfun(@(x) find(strcmp(x,aal_regions.Structure)),TLE_Regions_name));
 
 vectdat=[];
 
@@ -206,3 +208,83 @@ for c=1:size(comp,1)
     xticklabels(TLE_Regions)
 end
 sgtitle('VBM comparisons')
+
+%% Create FULL Histogram of means of CNN
+dataPath='F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\Occlusion';
+aal_regions=readtable('F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\aal.xlsx');
+xmlFiles={dir(fullfile(dataPath,'*.xlsx')).name};
+cd(dataPath)
+for d=1:numel(xmlFiles)
+    tempxml=readtable(fullfile(dataPath,xmlFiles{d}));
+    
+    bardata=[];
+    for r=1:size(aal_regions,1)
+        ROI_idx=find(strcmp(aal_regions.Structure{r},tempxml.Structure));
+        if isempty(ROI_idx)
+            bardata=[bardata;0];
+            disp([aal_regions.Structure{r},' NOT FOUND'])
+        else
+            bardata=[bardata;mean(tempxml.Mean(ROI_idx))];
+        end
+        if sum(strcmp(aal_regions.Structure{r},tempxml.Structure))>1
+            disp(aal_regions.Structure{r})
+        end
+    end
+    
+%     figure('Units','normalized','Position',[0 0 .33 1],'Name',extractBefore(xmlFiles{d},'.xlsx'));
+    figure('Name',extractBefore(xmlFiles{d},'.xlsx'));
+    set(gcf,'color','w');
+    barh(bardata)
+    yticks(1:10:117);  
+
+    set(gca, 'YDir','reverse','box','off')
+    xlabel('Occlusion Sensitivty')
+    ylabel('AAL Region Index')
+    
+    pbaspect([1 5 1])
+
+end
+
+%% Create FULL matrix of means of CNN
+dataPath='F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\Ip_Occlusion';
+aal_regions=readtable('F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\aal.xlsx');
+xmlFiles={dir(fullfile(dataPath,'*.xlsx')).name};
+cd(dataPath)
+for d=1:numel(xmlFiles)
+    tempxml=readtable(fullfile(dataPath,xmlFiles{d}));
+    matrix = nan(10,12);
+    
+    bardata=[];
+    for r=1:size(aal_regions,1)
+        ROI_idx=find(strcmp(aal_regions.Structure{r},tempxml.Structure));
+        if isempty(ROI_idx)
+            bardata=[bardata;0];
+            disp([aal_regions.Structure{r},' NOT FOUND'])
+        else
+            bardata=[bardata;mean(tempxml.Mean(ROI_idx))];
+        end
+        if sum(strcmp(aal_regions.Structure{r},tempxml.Structure))>1
+            disp(aal_regions.Structure{r})
+        end
+    end
+    
+%     figure('Units','normalized','Position',[0 0 .33 1],'Name',extractBefore(xmlFiles{d},'.xlsx'));
+    figure('Name',extractBefore(xmlFiles{d},'.xlsx'));
+    set(gcf,'color','w');
+    
+    for i = 1:numel(bardata)
+        matrix(i+1) = bardata(i);
+    end
+    matrix = matrix';
+    imagesc(matrix)
+    yticks([1:12])
+    yticklabels([0:11])
+
+    xticks([1:10])
+    xticklabels([0:9])
+    
+    map =interp1([0;1],[1 1 1; 0 0 1],linspace(0,1,256))
+    colormap(map)
+    colorbar
+
+end

@@ -1,4 +1,4 @@
- s %% This script is used to run an Independent (two-sample) t-test using the 
+%% This script is used to run an Independent (two-sample) t-test using the 
 % modified smoothed files from the VBM analysis of CAT12 (grey matter).
 %--------------------------------------------------------------------------
 % Notes: 
@@ -23,7 +23,7 @@ cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
 % Inputs:
-PatientData='F:\PatientData';
+PatientData='F:\PatientData\smallSet';
 cd(PatientData)
 
 
@@ -41,8 +41,10 @@ mkdir(save_path)
 Alzfiles={dir(fullfile(SmoothThres,'Alz\ADNI_Alz_nifti','*',['*',matter,'*.nii'])).name};
 
 % look for TLE nifti files
-tlefiles={dir(fullfile(SmoothThres,'TLE','*','*',['*',matter,'*.nii'])).name};
-
+tledir = dir(fullfile(SmoothThres,'TLE','*','*',['*',matter,'*.nii']));
+tlefiles={tledir.name};
+tleFolder = {tledir.folder};
+flipIdx = cellfun(@(x) contains(x,'LTLE'),tleFolder);
 % look for control nifti files
 controlfiles={dir(fullfile(SmoothThres,'Control','*','*',['*',matter,'*.nii'])).name}';
 
@@ -72,6 +74,55 @@ mkdir(ttest_savepath);
     controlfiles{1},ttest_savepath,'TLE vs Control');
 
 cd(ttest_savepath)
+
+%% Load AgeRegress
+save_path = 'F:\VBM ouput\Age_Regress';
+ttest_savepath=fullfile(save_path,'flip_ttest');
+mkdir(ttest_savepath);
+cd(ttest_savepath)
+
+imgs = load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\residual_imgs.mat');
+imgs = imgs.reshaped_residuals;
+
+d_label = load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\disease_label.mat');
+d_label = d_label.disease;
+
+s_label = load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\side_label.mat');
+s_label = s_label.side;
+
+comp_label = [];
+for i = 1:numel(d_label)
+    switch d_label(i)
+        case 1
+            comp_label = [comp_label; 1];
+        case 2
+            if s_label(i) == 2
+                comp_label = [comp_label; 3];
+            else
+                comp_label = [comp_label; 2];
+            end
+        case 3
+            comp_label = [comp_label; 4];
+    end
+end
+comps = {'Control','R_TLE','L_TLE','AD'};
+c_label = [1,2,3,4];
+
+p_comps = nchoosek(c_label,2);
+
+for n = 1:length(p_comps)
+    v1 = cellfun(@(x) reshape(x,113,137,[]),imgs(comp_label == p_comps(n,1)),'UniformOutput',false);
+    v1 = cat(4,v1{:});
+    disp([comps{p_comps(n,1)},'...',num2str(size(v1,4))])
+
+    v2 = cellfun(@(x) reshape(x,113,137,[]),imgs(comp_label == p_comps(n,2)),'UniformOutput',false);
+    v2 = cat(4,v2{:});
+    disp([comps{p_comps(n,2)},'...',num2str(size(v2,4))])
+
+   
+    
+    [P, T] = compare_volumes(v1, v2, 'F:\VBM ouput\Age_Regress\Example.nii', ttest_savepath,comps{p_comps(n,1)},comps{p_comps(n,2)});
+end
 %% Fitlm
 
 fitlm_savepath=fullfile(save_path,'fitlm');
@@ -249,6 +300,7 @@ end
 save(fullfile(fitlm_savepath,'fitlm_output.mat'),'x1','x2','comp')
 
 
+
 %% supporting functions
 
 function [X, X_names,N] = get_volume_data(ff)
@@ -261,30 +313,46 @@ function [X, X_names,N] = get_volume_data(ff)
     end
 end
  
-function [P, T] = compare_volumes(Cont, Pat, mask, save_place, savefile_name)
+function [P, T] = compare_volumes(Cont, Pat, mask, save_place, v1_savename, v2_savename)
 
+    savefile_name = [v1_savename, ' vs ', v2_savename];
     [~,P,~,STATS] = ttest2(Cont,Pat,'dim',4);
  
     T = STATS.tstat;
     M = load_nii(mask);
-    M.img = P;
-    save_nii(M, fullfile(save_place,[savefile_name '_P.nii']));
-    M.img = T;
-    save_nii(M, fullfile(save_place,[savefile_name '_T.nii'])); 
+    M.img = zeros(113,137,113);
     
-    %% save bonferroni
+    PM = M;
+    TM = M;
+
+    if size(P,3) == 58
+        PM.img(:,:,28:85) = P;
+        TM.img(:,:,28:85) = T;
+    else
+        PM.img = P;
+        TM.img = T;
+    end
+    save_nii(PM, fullfile(save_place,[savefile_name '_P.nii']));
+    save_nii(TM, fullfile(save_place,[savefile_name '_T.nii'])); 
+
+
+    % save bonferroni
     crit_p = 0.05/numel(find(mean(Cont,4)>0));
     PP = P; PP(P>crit_p) = NaN;
     TT = T; TT(P>crit_p) = NaN;
     
     TT=TT.*-1;
     
-    
-    M.img = PP;
-    save_nii(M, fullfile(save_place,[savefile_name '_P_bonf.nii']));
+    if size(P,3) == 58
+        PM.img(:,:,28:85) = PP;
+        TM.img(:,:,28:85) = TT;
+    else
+        PM.img = PP;
+        TM.img = TT;
+    end
+    save_nii(TM, fullfile(save_place,[savefile_name '_T_bonf.nii'])); 
+    save_nii(PM, fullfile(save_place,[savefile_name '_P_bonf.nii']));
 
-    M.img = TT;
-    save_nii(M, fullfile(save_place,[savefile_name '_T_bonf.nii']));     
 
 end
 
