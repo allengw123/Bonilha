@@ -10,9 +10,10 @@ allengit_genpath(githubpath,'imaging')
 
 % Inputs:
 % CNNoutput='F:\CNN output';
+CNNoutput='F:\CNN output\2D_CNN\MATLAB\AgeRegress';
 % CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output';
 % CNNoutput = 'C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\CFRedo';
-CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\AgeReg';
+% CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\AgeReg';
 
 
 cd(CNNoutput)
@@ -20,8 +21,8 @@ cd(CNNoutput)
 savepath=fullfile(CNNoutput,'Figures');mkdir(savepath);
 
 % TCmat=load(fullfile(CNNoutput,'ep_control(1) tle(2) -GM-CNN.mat'));
-TCAmat=load(fullfile(CNNoutput,'ep_control(1) adni_control(1) tle(2) alz(3) -GM-CNN.mat'));
-% TCAmat=load(fullfile(CNNoutput,'AgeRegress_GM_ADTLEHC_CNN.mat'));
+% TCAmat=load(fullfile(CNNoutput,'ep_control(1) adni_control(1) tle(2) alz(3) -GM-CNN.mat'));
+TCAmat=load(fullfile(CNNoutput,'AgeRegress_GM_ADTLEHC_CNN.mat'));
 
 %% Disease accuracy
 
