@@ -2,8 +2,12 @@ clear all
 close all
 clc
 
+<<<<<<< Updated upstream
 % gitpath='C:\Users\allen\Documents\GitHub\Bonilha';
 gitpath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
+=======
+gitpath='C:\Users\allen\Google Drive\GitHub\Bonilha';
+>>>>>>> Stashed changes
 cd(gitpath)
 allengit_genpath(gitpath)
 %% Insert Info
