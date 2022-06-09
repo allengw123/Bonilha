@@ -214,9 +214,8 @@ for a = 1:numel(t1_acq)
     input = niftifile;
     output = fullfile(aq_folder,[subjectname,'_T1_brain_predicted.csv']);
     
-    cmd = sprintf('brainageR -f %s -o %s',input,output);
+    cmd = sprintf('brainageR.sh -f %s -o %s',input,output);
     system(cmd)
-    
     
 end
 
@@ -226,6 +225,8 @@ function setup_brainagedir(brainage_path,spm_path)
     
 % Detect brainage SH file
 brainage_file_path = fullfile(brainage_path,'software','brainageR');
+
+% Read brainage SH file
 brainage_file = fopen(brainage_file_path,'r');
 eof = false;
 fileContents = [];
@@ -237,6 +238,7 @@ while ~eof
         fileContents = [fileContents; {str}];
     end
 end
+fclose(brainage_file);
 
 % Replace brainageR_dir path
 idx = find(~cellfun(@isempty,(regexp(fileContents,'brainageR_dir'))));
@@ -253,7 +255,8 @@ idx = find(~cellfun(@isempty,(regexp(fileContents,'matlab_path'))));
 matlab_path_line = sprintf('matlab_path=%s',matlabroot);
 fileContents{idx(1)} = matlab_path_line;
 
-fprintf(brainage_file,'%s',string(fileContents));
+% write/replace brainageR sh file
+brainage_file = fopen(brainage_file_path,'w');
+fprintf(brainage_file,'%s\n',string(fileContents));
 fclose(brainage_file);
-
 end
