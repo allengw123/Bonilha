@@ -8,7 +8,7 @@ function [ROI,sROI,ROIsum] = cat_conf_ROI(expert)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_conf_ROI.m 1838 2021-05-30 20:56:34Z gaser $
+% $Id: cat_conf_ROI.m 1950 2022-02-21 20:10:37Z gaser $
 
 
 if nargin == 0
@@ -43,6 +43,7 @@ for ai = 1:size(exatlas,1)
       switch ff
         case 'hammers', lic = 2; 
         case 'lpba40' , lic = 1; 
+        case 'suit',    lic = 1; 
         otherwise,      lic = 0; 
       end
     end
@@ -120,8 +121,8 @@ else
 end
 ROI.values = {noROI atlases};
 ROI.help   = {
-'Export of ROI data of volume to a xml-files. '
-['For further information see atlas specific text files in "' cat_get_defaults('extopts.pth_templates') '" CAT12 subdir. ']
+'Export of ROI data of volume to a xml-files. For further information see atlas specific text files in'
+['  "' cat_get_defaults('extopts.pth_templates') '" CAT12 subdir. ']
 ''
 'For thickness estimation the projection-based thickness (PBT) [Dahnke:2012] is used that average cortical thickness for each GM voxel. '
 ''
@@ -196,6 +197,12 @@ for ali=1:numel(atlaslist)
     ROI.help = [ROI.help; strrep({
         '(MAI) Atlas of human thalamic nuclei:'
         '    Najdenovska E, Alemán-Gómez Y, Battistella G, Descoteaux M, Hagmann P, Jacquemont S, Maeder P, Thiran JP, Fornari E, Bach Cuadra M. In-vivo probabilistic atlas of human thalamic nuclei based on diffusion- weighted magnetic resonance imaging. Sci Data. 2018 Nov 27;5:180270.'
+        ''},'MAI',num2str(mai,'%d'))]; mai = mai+1; 
+  end
+  if any(~cellfun('isempty',strfind(atlaslist(ali),'suit')))
+    ROI.help = [ROI.help; strrep({
+        '(MAI) SUIT Atlas of the human cerebellum:'
+        '    Diedrichsen J., Balster J.H., Flavell J., Cussans E., Ramnani N. (2009). A probabilistic MR atlas of the human cerebellum. Neuroimage; 46(1), 39-46.'
         ''},'MAI',num2str(mai,'%d'))]; mai = mai+1; 
   end
   if any(~cellfun('isempty',strfind(atlaslist(ali),'Schaefer2018_200Parcels_17Networks_order')))
@@ -418,7 +425,7 @@ Method.help     = {'Select method.'};
 
 ROIsum          = cfg_exbranch;
 ROIsum.tag      = 'ROIsum';
-ROIsum.name     = 'Summarise 3D/4D data within a ROI';
+ROIsum.name     = 'Summarise 3D/4D volume data within a ROI';
 ROIsum.val      = {Method};
 ROIsum.prog     = @cat_vol_ROI_summarize;
 ROIsum.help     = {

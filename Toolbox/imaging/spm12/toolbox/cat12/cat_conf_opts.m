@@ -8,7 +8,7 @@ function opts = cat_conf_opts(expert)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_conf_opts.m 1842 2021-06-01 14:41:58Z gaser $
+% $Id: cat_conf_opts.m 1883 2021-10-01 13:02:31Z dahnke $
 %#ok<*AGROW>
 
 if ~exist('expert','var')
@@ -298,9 +298,9 @@ tol.help    = { ...
 tol.def    = @(val)cat_get_defaults('opts.tol', val{:}); 
 tol.labels = {'average (default)' 'high (slow)' 'ultra high (very slow)'};
 tol.values = {1e-4 1e-8 1e-16};
-if 0 %expert
-  tol.labels = [{'ultra low (superfast)' 'low (fast)'} tol.labels];
-  tol.values = [{1e-1 1e-2} tol.values];
+if expert>1 % developer
+  tol.labels = [{'ultra low (superfast)' 'low (fast)'} tol.labels {'insane'}];
+  tol.values = [{1e-1 1e-2} tol.values {1e-32}];
 end
 
 % single parameter 

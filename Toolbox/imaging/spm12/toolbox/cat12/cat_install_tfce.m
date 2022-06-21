@@ -9,7 +9,7 @@ function varargout = cat_install_tfce(install)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_install_tfce.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_install_tfce.m 1890 2021-10-13 17:06:57Z gaser $
 
 if nargin == 0
   install = spm_input('Install TFCE toolbox',1,'yes|no',[1 0],1);
@@ -26,7 +26,7 @@ if install
     addpath(d0);
     rehash
     rehash toolboxcache;
-    toolbox_path_cache
+    if exist('toolbox_path_cache','file'), toolbox_path_cache; end
     eval(['spm fmri;clear cat_version;spm_cat12']);
   catch
     le = lasterror;

@@ -8,7 +8,7 @@ function cat_stat_analyze_ROIs(spmmat,alpha,show_results)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_stat_analyze_ROIs.m 1830 2021-05-27 16:15:21Z gaser $
+% $Id: cat_stat_analyze_ROIs.m 1986 2022-04-25 11:45:39Z gaser $
 
 if nargin < 1
   spmmat = spm_select(1,'SPM.mat','Select SPM.mat file to get design');
@@ -24,7 +24,7 @@ end
 write_beta = 0;
 
 % compare correlation coefficients between samples
-% experimental! might not working
+% experimental! might be not working
 compare_two_samples = 0;
 
 cwd = fileparts(spmmat);
@@ -129,6 +129,7 @@ for i=1:numel(P)
     case 0
       fprintf('Label file %s not found in %s. Please check whether you have extracted ROI-based surface values or have moved your data.\n',sname,pth_label);
       roi_files_found = 0;
+      break
     case 1
       roi_names{i} = files{1};
       roi_files_found = roi_files_found + 1;
@@ -156,7 +157,7 @@ fprintf('\n')
 
 % select files interactively if no xml files were found
 if roi_files_found ~= n
-  roi_names0 = cellstr(spm_select(n ,'xml','Select xml files in the same order of your SPM design.',{},'',pattern));
+  roi_names0 = cellstr(spm_select(n ,'xml','Select xml files from label folder in the same order of your SPM design.',{},'',pattern));
   roi_names = roi_names0;
   
   roi_files_found = 0;
@@ -205,10 +206,10 @@ end
 xml = convert(xmltree(deblank(roi_names{1})));
 
 % get selected atlas and measure
-[sel_atlas, sel_measure, atlas, measure] = get_atlas_measure(xml);
+[sel_atlas, sel_measure, atlas, measure, measures] = get_atlas_measure(xml);
 
 % get names IDs and values of selected atlas and measure inside ROIs
-[ROInames ROIids ROIvalues] = get_ROI_measure(roi_names, atlas, measure);
+[ROInames, ROIids, ROIvalues, relROIvalues] = get_ROI_measure(roi_names, atlas, measures, sel_measure);
 
 if mesh_detected
   [pth,nam,ext] = spm_fileparts(fname{1});
@@ -235,6 +236,12 @@ str_con = spm_str_manip(str_con,'v');
 % build X and Y for GLM
 Y = ROIvalues;
 X = SPM.xX.X;
+
+% check whether mean relative ROI value is <0.1 and mean absolue ROI value is <0.1 of
+% maximum mean ROI value
+avgROIvalue = mean(Y);
+avgROIvalue = avgROIvalue/max(avgROIvalue); % get value relative to max value
+ind_toolow = (mean(relROIvalues) < 0.1 & avgROIvalue < 0.1);
 
 %-Apply global scaling
 %--------------------------------------------------------------------------
@@ -385,7 +392,11 @@ end
 if n_corr > 2
   p_tissue = p(defined_measure);
   [Psort0, indP0] = sort(p_tissue);
-  HBcorr = length(Psort0):-1:1;
+  HBcorr = (length(Psort0):-1:1)';
+  % sometimes we have to transpose HBcorr for some unkwown reasons
+  if ~all(size(p) == size(HBcorr))
+    HBcorr = HBcorr';
+  end
   p_tissue = p_tissue.*HBcorr(indP0);
   Pcorr{3} = ones(size(p));
   Pcorr{3}(defined_measure) = p_tissue;
@@ -426,6 +437,7 @@ else
 end
 
 overlay_results = true;
+print_warning = false;
 
 % go through left and right hemisphere and structures in both hemispheres
 for i=sort(unique(hemi_code))'
@@ -434,8 +446,9 @@ for i=sort(unique(hemi_code))'
   ID_sel = ROIids(hemi_ind{i});
   B_sel  = Beta(:,hemi_ind{i});
   Ze_sel = Ze(hemi_ind{i});
-  statval_sel = statval(hemi_ind{i});
-  hemi_code_sel = hemi_code(hemi_ind{i});
+  statval_sel      = statval(hemi_ind{i});
+  hemi_code_sel    = hemi_code(hemi_ind{i});
+  ind_toolow_hemi  = ind_toolow(hemi_ind{i}); 
   
   for c=1:n_corr
     Pcorr_sel{c} = Pcorr{c}(hemi_ind{i});
@@ -545,15 +558,23 @@ for i=sort(unique(hemi_code))'
           rname = N_sel{indP(ind(j))}(:,2:end);
         end
         
-        if found_inv
-          fprintf('%9f\t%9s\t%9f\t%9f\t%s\n',Pcorr_sel{c}(indP(ind(j))),'',statval_sel(indP(ind(j))),Ze_sel(indP(ind(j))),rname);
+        % add warning if some indicators are too low
+        if ind_toolow_hemi(indP(ind(j)))
+          warn_str = ' <--- Warning';
+          print_warning = true;
         else
-          fprintf('%9f\t%9f\t%9f\t%s\n',Pcorr_sel{c}(indP(ind(j))),statval_sel(indP(ind(j))),Ze_sel(indP(ind(j))),rname);
+          warn_str = '';
+        end
+        
+        if found_inv
+          fprintf('%9f\t%9s\t%9f\t%9f\t%s%s\n',Pcorr_sel{c}(indP(ind(j))),'',statval_sel(indP(ind(j))),Ze_sel(indP(ind(j))),rname,warn_str);
+        else
+          fprintf('%9f\t%9f\t%9f\t%s%s\n',Pcorr_sel{c}(indP(ind(j))),statval_sel(indP(ind(j))),Ze_sel(indP(ind(j))),rname,warn_str);
         end
       end
     end
 
-    if ~isempty(ind_inv) & found_inv
+    if ~isempty(ind_inv) && found_inv
       ind_corr_inv{c} = [ind_corr_inv{c} ind_inv];
       % print header here if no positive effects were found
       if isempty(ind)
@@ -567,8 +588,23 @@ for i=sort(unique(hemi_code))'
 
       if ~isempty(ind), fprintf('%s\n',repmat('-',[1,90])); end
       for j=1:length(ind_inv)
+        % get name of ROI and exclude first hemi-indicator if necessary
+        if hemi_code_sel(indP_inv(ind_inv(j))) == 4
+          rname = N_sel{indP_inv(ind_inv(j))};
+        else
+          rname = N_sel{indP_inv(ind_inv(j))}(:,2:end);
+        end
+        
+        % add warning if some indicators are too low
+        if ind_toolow_hemi(indP_inv(ind_inv(j)))
+          warn_str = ' <--- Warning';
+          print_warning = true;
+        else
+          warn_str = '';
+        end
+        
         data{c}(data0 == ID_sel(indP_inv(ind_inv(j)))) = log10(Pcorr_inv_sel{c}(indP_inv(ind_inv(j))));
-        fprintf('%9f\t%9s\t%9f\t%9f\t%s\n',Pcorr_inv_sel{c}(indP_inv(ind_inv(j))),'inverse',statval_sel(indP_inv(ind_inv(j))),Ze_sel(indP_inv(ind_inv(j))),N_sel{indP_inv(ind_inv(j))}(:,2:end));
+        fprintf('%9f\t%9s\t%9f\t%9f\t%s%s\n',Pcorr_inv_sel{c}(indP_inv(ind_inv(j))),'inverse',statval_sel(indP_inv(ind_inv(j))),Ze_sel(indP_inv(ind_inv(j))),rname,warn_str);
       end
     end
 
@@ -592,13 +628,23 @@ for i=sort(unique(hemi_code))'
   
 end
 
+% finally print warning if too low values were found
+if print_warning
+  fprintf('%s\n',repmat('*',[1,90]))
+  fprintf('Warning: The indicated regions have values for %s that are smaller than %s of the \nrelative value and smaller than %s of the maximum tissue value.\n',measure,'20%','20%');
+  fprintf('This points to regions that rather contain other more meaningful tissue classes and \nthese ROI results should be considered ctitically.\n');
+  fprintf('%s\n',repmat('*',[1,90]))
+end
+
 % prepare display ROI results according to found results
 corr{n_corr+1} = 'Do not display';
 ind_show = [];
 
 for c=1:n_corr
-  if ~isempty(ind_corr{c}) | ~isempty(ind_corr_inv{c})
+  if ~isempty(ind_corr{c}) || ~isempty(ind_corr_inv{c})
     ind_show = [ind_show c];
+  else
+    fprintf('No results found for %s threshold of P<%g.\n',corr{c},alpha);
   end
 end
 
@@ -628,7 +674,7 @@ if mesh_detected
     
     if ~isempty(find(M.cdata~=0)) && overlay_results
       save(gifti(M), name_mesh, 'Base64Binary');
-        fprintf('\nLabel file with thresholded logP values (%s) was saved as %s.',corr{c},name_mesh);
+      fprintf('\nLabel file with thresholded logP values (%s) was saved as %s.',corr{c},name_mesh);
     end
     spm_unlink(name_lh);
     spm_unlink(name_rh);
@@ -645,6 +691,20 @@ if mesh_detected
   if show_results
     name_mesh = fullfile(cwd,['mesh.logP' corr_short{show_results} output_name '.gii']);
     cat_surf_results('Disp',name_mesh);
+    ROI_mode = spm_input('Use new customized ROI display?','+1','b','yes|no',[1,0],1);
+    if ROI_mode
+      cat_surf_results('texture', 3); % no texture
+      border_mode = 0;
+      if strcmp(atlas,'aparc_DK40')
+        border_mode = 1;
+      elseif strcmp(atlas,'aparc_a2009s')
+        border_mode = 2;
+      elseif strcmp(atlas,'aparc_HCP_MMP1')
+        border_mode = 3;
+      end
+      cat_surf_results('surface', 2); % inflated surface
+      if border_mode, cat_surf_results('border', border_mode); end
+    end
   end
 
 else % write label volume with thresholded p-values
@@ -811,19 +871,23 @@ measures = useful_measures;
 % remove spaces
 measure = deblank(measure);
 %_______________________________________________________________________
-function [ROInames ROIids ROIvalues] = get_ROI_measure(roi_names, atlas, measure)
+function [ROInames, ROIids, ROIvalues, relROIvalues] = get_ROI_measure(roi_names, atlas, measures, sel_measure)
 % get names, IDs and values inside ROI for a selected atlas
 %
 % FORMAT [ROInames ROIids ROIvalues] = get_ROI_measure(roi_names, sel_atlas, sel_measure);
 % roi_names    - cell of ROI xml files
 % atlas        - name of selected atlas
-% measure      - name selected measure
+% measures     - names of useful measures
+% sel_measure  - index of selected measure
 %
 % ROInames     - array 2*rx1 of ROI names (r - # of ROIs)
 % ROIids       - array 2*rx1 of ROI IDs for left and right hemisphere
 % ROIvalues    - cell nxr of values inside ROI (n - # of data)
+% relROIvalues - cell nxr of values inside ROI (n - # of data) relative to
+%                overall value
 
 n_data = length(roi_names);
+measure = measures{sel_measure};
 
 spm_progress_bar('Init',n_data,'Load xml-files','subjects completed')
 for i=1:n_data        
@@ -835,7 +899,6 @@ for i=1:n_data
   ind = strfind(ID,'_');
   ID = ID(ind(1)+1:end);
   
-  measures = fieldnames(xml.(atlas).data);
   ROInames = xml.(atlas).names;
   ROIids = xml.(atlas).ids;
 
@@ -844,7 +907,7 @@ for i=1:n_data
   catch
     measure_found = 0;
     for j=1:numel(measures)
-      if strcmp(deblank(measures{j}),deblank(measure_name)); 
+      if strcmp(deblank(measures{j}),deblank(measure_name))
         val = xml.(atlas).data.(measures{j});
         measure_found = 1;
         break;
@@ -857,10 +920,21 @@ for i=1:n_data
     end
   end
   
-  if i==1, ROIvalues = zeros(n_data, numel(val)); end
+  if i==1
+    ROIvalues    = zeros(n_data, numel(val));
+    relROIvalues = ones(n_data, numel(val));
+  end
 
+  % get selected measure
   ROIvalues(i,:) = xml.(atlas).data.(measure);
-
+  
+  % and also get all measures to estimate relative value
+  allROIvalues = zeros(1,numel(val)) + eps;
+  for j=1:numel(measures)
+    allROIvalues = allROIvalues + xml.(atlas).data.(measures{j})';    
+  end
+  relROIvalues(i,:) = ROIvalues(i,:)./allROIvalues;
+  
   spm_progress_bar('Set',i);  
 end
 spm_progress_bar('Clear');

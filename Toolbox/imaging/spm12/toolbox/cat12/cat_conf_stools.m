@@ -8,7 +8,7 @@ function stools = cat_conf_stools(expert)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_conf_stools.m 1844 2021-06-02 23:40:58Z gaser $
+% $Id: cat_conf_stools.m 1979 2022-03-30 14:12:01Z gaser $
 
 %#ok<*NOCOM>
 
@@ -71,6 +71,7 @@ merge_hemi.labels  = {
 };
 merge_hemi.values  = {0,1};
 merge_hemi.val     = {1};
+merge_hemi.hidden  = expert<1;
 merge_hemi.help    = {
   'Meshes for left and right hemisphere can be merged to one single mesh. This simplifies the analysis because only one analysis has to be made for both hemispheres and this is the recommended approach.'
   'However, this also means that data size is doubled for one single analysis which might be too memory demanding for studies with several hundreds or even more files. If your model cannot be estimated due to memory issues you should not merge the resampled data.'
@@ -118,7 +119,7 @@ stools = cfg_choice;
 stools.name   = 'Surface Tools';
 stools.tag    = 'stools';
 stools.values = { ...
-  check_mesh_cov, ...     .cat.stat
+...  check_mesh_cov, ...     .cat.stat
   check_mesh_cov2, ...    .cat.stat
   surfextract, ...        .cat.stools
   surfresamp, ...         .cat.stools
@@ -755,14 +756,17 @@ data_surf_cov.num     = [3 Inf];
 data_surf_cov.help    = {'Select resampled surfaces parameter files.'};
 
 data_xml              = cfg_files;
-data_xml.name         = 'Quality measures (optional)';
+data_xml.name         = 'Quality measures (leave emtpy for autom. search)';
 data_xml.tag          = 'data_xml';
 data_xml.filter       = 'xml';
 data_xml.ufilter      = '^cat_.*\.xml$';
 data_xml.val          = {{''}};
 data_xml.num          = [0 Inf];
-data_xml.help         = {...
-'Select optional the quality measures that are saved during segmentation as xml-files in the report folder. This additionally allows to analyze image quality parameters such as noise, and bias. Please note, that the order of the xml-files should be the same as the other data files.'};
+data_xml.help         = {
+    'Select optional the quality measures that are saved during segmentation as xml-files in the report folder. This allows to additionally analyze image quality parameters such as noise, bias, weighted overall image quality, and Euler number or defect size.'
+    'Please note, that the order of the xml-files should be the same as the other data files.'
+    'Leave empty for automatically search for these xml-files.'
+    };
 
 sample_cov            = cfg_repeat;
 sample_cov.tag        = 'sample';
@@ -867,9 +871,9 @@ abs_startpoint.help    = {
   'Absolute position of the start point of the grid along the surface normals in mm according to the surface. Give negative value for a start point outside of the surface (CSF direction, outwards). '
 };
 rel_startpoint = abs_startpoint;
-rel_startpoint.val     = {-0.5};
+rel_startpoint.val     = {-0.6};
 rel_startpoint.help    = {
-  'Relative position of the start point of the grid along the surface normals according to a tissue class. A value of "-0.5" begins at the GM/CSF border and even lower values define a start point outside of the tissue class (CSF direction, outwards). A value of "0" means that the central surface is used as starting point and "0.5" is related to the GM/WM border.'
+  'Relative position of the start point of the grid along the surface normals according to a tissue class. A value of "-0.5" begins at the GM/CSF border and even lower values define a start point outside of the tissue class (CSF direction, outwards) which is the default to ensure that all values are mapped. A value of "0" means that the central surface is used as starting point and "0.5" is related to the GM/WM border.'
 };
 
 % steps
@@ -895,9 +899,9 @@ abs_endpoint.help    = {
   'Absolute position of the end point of the grid along the surface normals (pointing inwards) in mm according to the surface. '
 };
 rel_endpoint = abs_endpoint;
-rel_endpoint.val     = {0.5};
+rel_endpoint.val     = {0.6};
 rel_endpoint.help    = {
-  'Relative position of the end point of the grid along the surface normals (pointing inwards) according to a tissue class. A value of "0.5" ends at the GM/WM border and values > 0.5 define an end point outside of the tissue class (WM direction, inwards). A value of "0" ends at the central surface.'
+  'Relative position of the end point of the grid along the surface normals (pointing inwards) according to a tissue class. A value of "0.5" ends at the GM/WM border and values > 0.5 define an end point outside of the tissue class (WM direction, inwards) which is the default to ensure that all values are mapped. A value of "0" ends at the central surface.'
 };
 
 % tissue class
@@ -1309,7 +1313,7 @@ else
   data_surf.ufilter = '^lh.(?!cent|pial|white|sphe|defe|hull|pbt).*';
 end
 data_surf.num     = [1 Inf];
-data_surf.help    = {'Select surfaces data files for left hemisphere for resampling to template space.'};
+data_surf.help    = {'Select surfaces data files for left hemisphere for resampling to template space.Right side will be automatically processed.'};
 
 data_surf_mixed        = data_surf; 
 data_surf_mixed.tag    = 'data_surf_mixed';

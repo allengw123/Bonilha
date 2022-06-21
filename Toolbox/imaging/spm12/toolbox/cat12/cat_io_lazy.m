@@ -1,15 +1,18 @@
-function run = cat_io_rerun(files,filedates)
+function run = cat_io_lazy(files,filedates,verb,force)
 %cat_io_lazy. Test if a file is newer than another file.  
 % This function is used to estimated if a file is newer than another given 
 % file or date. For instance file is the result of anther file that was 
 % changed in the meantime, it has to be reprocessed. 
 %
-%  run = cat_io_lazy(files,filedates)
+%  run = cat_io_lazy(files,filedates,verb)
 % 
 %  run      .. logical vector with the number of given files
 %              cell if directories or wildcards are used
 %  files    .. filenames (cellstr or char)
 %  filedat  .. filenames (cellstr or char) or datetimes or datenum
+%  verb     .. print details about the files and about the result 
+%               (default = 0.5 only display if reprocessing is NOT reqired)
+%  force    .. use also in non developer mode (default = 0)
 %
 % Examples: 
 %  1) Is the working directory younger than the SPM dir?
@@ -28,8 +31,18 @@ function run = cat_io_rerun(files,filedates)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_io_lazy.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_io_lazy.m 1927 2022-01-04 10:25:27Z dahnke $
 
+  if ~exist('verb','var'),  verb  = 0.5; end
+  if ~exist('force','var'), force = 1; end
+  
+  % only use that function in developer mode because it's simply too dangerous if files
+  % are not processed if already existing and parameter changed
+  if cat_get_defaults('extopts.expertgui') < 2 && ~force 
+    run = zeros(size(files));
+    return
+  end
+  
   files = cellstr(files);
   if iscellstr(filedates) || ischar(filedates)
     filedates = cellstr(filedates);
@@ -69,6 +82,33 @@ function run = cat_io_rerun(files,filedates)
           run(fi) = fdata.datenum < datenum( filedates(fi,:) );
         end
       end
+      % be verbose only if verb>=1 or if no reprocessing is required  
+      if verb >= 1 || (verb && ~( (iscell(run) && any(cell2mat(run))) || ( ismatrix(run) && any(run) ) ))
+        fprintf('\n'); 
+        if numel(files)==1
+          fprintf('\n Input file 1: %50s: %s\n',spm_str_manip( fdata.name , 'a50'),datestr(fdata.datenum) ); 
+          fprintf('\n Input file 2: %50s: %s\n',spm_str_manip( fdata2.name, 'a50'),datestr(fdata2.datenum));
+        else
+          if fi == 1
+            fprintf('\n Input file 1:     %50s: %s\n',   spm_str_manip( fdata.name ,'a50'),datestr(fdata.datenum) ); 
+          end
+          fprintf('\n Input file 2-%02d: %50s: %s\n',fi,spm_str_manip( fdata2.name,'a50'),datestr(fdata2.datenum));
+        end
+      end
+    end
+  end
+  % be verbose only if verb>=1 or if no reprocessing is required  
+  if verb >= 1 || ~( (iscell(run) && any(cell2mat(run))) || ( ismatrix(run) && any(run) ) ) 
+    if verb >= 1 && ( (iscell(run) && any(cell2mat(run))) || ( ismatrix(run) && any(run) ) )
+      if all(exf)
+        cat_io_cprintf([0.5 0.0 0.0],' Reprocessing is required. \n'); 
+      elseif all(exf==0) && numel(files)>1
+        cat_io_cprintf([0.5 0.0 0.0],' (Re)processing is required. \n'); 
+      else
+        cat_io_cprintf([0.5 0.0 0.0],' Processing is required. \n');
+      end
+    elseif verb 
+      cat_io_cprintf([0.0 0.5 0.0],' Reprocessing is NOT required. \n'); 
     end
   end
 end

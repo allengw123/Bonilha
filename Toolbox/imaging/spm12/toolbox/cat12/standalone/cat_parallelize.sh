@@ -6,12 +6,12 @@
 # Departments of Neurology and Psychiatry
 # Jena University Hospital
 # ______________________________________________________________________
-# $Id: cat_parallelize.sh 1831 2021-05-27 22:50:12Z gaser $
+# $Id: cat_parallelize.sh 1976 2022-03-21 12:38:34Z gaser $
 
 ########################################################
 # global parameters
 ########################################################
-version='cat_parallelize.sh $Id: cat_parallelize.sh 1831 2021-05-27 22:50:12Z gaser $'
+version='cat_parallelize.sh $Id: cat_parallelize.sh 1976 2022-03-21 12:38:34Z gaser $'
 
 CPUINFO=/proc/cpuinfo
 ARCH=`uname`
@@ -147,7 +147,7 @@ get_no_of_cpus () {
     if [ "$ARCH" == "Linux" ]; then
       NUMBER_OF_PROC=`grep ^processor $CPUINFO | wc -l`
     elif [ "$ARCH" == "Darwin" ]; then
-      NUMBER_OF_PROC=`sysctl -a hw | grep -w logicalcpu | awk '{ print $2 }'`
+      NUMBER_OF_PROC=`sysctl -a hw | grep -w hw.logicalcpu | awk '{ print $2 }'`
     elif [ "$ARCH" == "FreeBSD" ]; then
       NUMBER_OF_PROC=`sysctl hw.ncpu | awk '{ print $2 }'`
     else

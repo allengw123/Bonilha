@@ -1,7 +1,7 @@
-% batch file of volume smoothing for SPM12 standalone installation
+% Batch file for getting ROI values for SPM12/CAT12 standalone installation
 %
 %_______________________________________________________________________
-% $Id: cat_standalone_get_ROI_values.m 1841 2021-06-01 10:03:38Z gaser $
+% $Id: cat_standalone_get_ROI_values.m 1981 2022-04-04 07:23:37Z gaser $
 
 % data field, that will be dynamically replaced by cat_standalone.sh
 matlabbatch{1}.spm.tools.cat.tools.calcroi.roi_xml = '<UNDEFINED>';

@@ -2,7 +2,10 @@ function varargout=cat_vol_resize(T,operation,varargin)
 % ______________________________________________________________________
 % 
 %   varargout = cat_vol_resize(T,operation,varargin)
-% 
+%
+%   varargout = cat_vol_resize(job) 
+%
+%
 %   T .. image or cell of images
 %
 % Examples:
@@ -29,7 +32,7 @@ function varargout=cat_vol_resize(T,operation,varargin)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_vol_resize.m 1791 2021-04-06 09:15:54Z gaser $ 
+% $Id: cat_vol_resize.m 1982 2022-04-12 11:09:13Z dahnke $ 
   
   if nargin==0, help cat_vol_resize; return; end
   if isempty(T), varargout{1} = T; return; end
@@ -38,9 +41,9 @@ function varargout=cat_vol_resize(T,operation,varargin)
       job = T; 
       
       % set defaults
-      def.restype.res     = 0; 
-      def.restype.Pref    = {''}; 
-      def.restype.scale   = 1; 
+    %  def.restype.res     = 0; 
+    %  def.restype.Pref    = {''}; 
+    %  def.restype.scale   = 1; 
       def.interp          = 2; 
       def.prefix          = 'r';
       def.outdir          = ''; 
@@ -48,6 +51,42 @@ function varargout=cat_vol_resize(T,operation,varargin)
       def.lazy            = 0;
       job                 = cat_io_checkinopt(job,def); 
       
+      if strcmp( job.prefix , 'auto' )
+        if isfield(job,'restype') && (isfield(job.restype,'Pref') || isfield(job.restype,'res'))
+          if isfield(job.restype,'Pref') && ~isempty(job.restype.Pref) && ~isempty(job.restype.Pref{1})
+            job.prefix = 'rimg_'; 
+          elseif isfield(job.restype,'res') && ~isempty(job.restype.res)
+            if numel(job.restype.res)==1
+              if job.restype.res == 0
+                job.prefix = 'rorg_';
+              else
+                job.prefix = sprintf('r%0.2f_',job.restype.res);
+              end
+            elseif numel(job.restype.res)==3
+              job.prefix = sprintf('r%0.2fx%0.2fx%0.2f_',job.restype.res); 
+            end
+          end
+        elseif isfield(job,'restype') && isfield(job.restype,'scale') 
+          if any( job.restype.scale~=1 )
+            % handle scaling 
+            if  numel(job.restype.scale)==3
+              job.prefix = sprintf('rx%0.2fx%0.2fx%0.2f_',job.restype.scale);  
+            elseif  numel(job.restype.scale)==1
+              if job.restype.scale == 1
+                job.prefix = 'rorg_';
+              else
+                job.prefix = sprintf('rx%0.2f_',repmat( job.restype.scale(1) , 1 , 3));
+              end
+            else
+              job.prefix = sprintf('rx%0.2f_',job.restype.scale(1));  
+            end
+          else
+            job.prefix = 'rorg_';
+          end
+        end
+      end
+
+      varargout{1}.res = {}; 
       for fi = 1:numel(job.data)
         stimef      = clock;
         fnameres    = spm_file(job.data{fi},'prefix',job.prefix); 
@@ -57,7 +96,7 @@ function varargout=cat_vol_resize(T,operation,varargin)
           pp = job.outdir{1}; 
         end
         fnameres = fullfile(pp,[ff ee]); 
-        varargout{1}.res{fi} = fnameres; 
+        varargout{1}.res{fi,1} = fnameres; 
         
         if job.lazy && ~cat_io_rerun(fnameres,job.data{fi} ) 
           if job.verb, fprintf('  Exist %s\n',fnameres); end
@@ -77,45 +116,36 @@ function varargout=cat_vol_resize(T,operation,varargin)
             Y  = spm_read_vols(V); 
           end
           
-          if isfield(job,'restype') && isfield(job.restype,'scale') && all( (job.restype.scale)==1 )
+          if isfield(job,'restype') && (isfield(job.restype,'Pref') || isfield(job.restype,'res')) %&& all( (job.restype.scale)==1 )
           % call main function
-            if ~isempty(job.restype.Pref) && ~isempty(job.restype.Pref{1}) 
+          
+            if isfield(job.restype,'Pref') && ~isempty(job.restype.Pref) && ~isempty(job.restype.Pref{1})
+              % adapt to given image
               Vref = spm_vol(char(job.restype.Pref));
-              [Y,res] = cat_vol_resize(Y,'interphdr',V,job.restype.res,job.interp,Vref);
-            else
-              % job.interp = -1; % RD202008: not working yet - has a displacement
-              switch 1 %job.interp
-                case -1
-                % this cases is for a PVE based volume reduction and does not work yet
-                  [Yx,res ] = cat_vol_resize(Y ,'interphdr',V,job.restype.res,job.interp); 
-                  
-                  % volume average interpolation
-                  if any( res.resN > res.resO )
-                    %
-                    resf = ceil(res.resN ./ res.resO); 
-                    V2 = V; % V2mat = spm_imatrix(V2.mat); V2mat(1:3) = V2mat(1:3) - sign(V2mat(7:9))./resf;  V2.mat = spm_matrix(V2mat);
-                   
-                    [Yt,res2] = cat_vol_resize(Y ,'interphdr',V2,job.restype.res ./ resf,2);
-                    [Yt,res2] = cat_vol_resize(Yt,'reduceV'  ,res.resN, res.resN .* resf,2,'meanm');
-                    if 0
-                      Y = Yt; res = res2; 
-                    else
-                      Y = Yx; 
-                      Y(1:min([size(Y,1),size(Yt,1)]),...
-                        1:min([size(Y,2),size(Yt,2)]),...
-                        1:min([size(Y,3),size(Yt,3)])) = ...
-                        Yt(1:min([size(Y,1),size(Yt,1)]),...
-                          1:min([size(Y,2),size(Yt,2)]),...
-                          1:min([size(Y,3),size(Yt,3)]));
-                    end
-                  else
-                    Y = Yx; 
-                  end
-                 
-                  
-                otherwise
-                  [Y,res] = cat_vol_resize(Y,'interphdr',V,job.restype.res,job.interp); 
+              
+              % use smoothing for denoising in case of 
+              if abs( job.interp ) >= 1000
+                fs = max(0,(sqrt(sum(Vref.mat(1:3,1:3).^2)) ./ sqrt(sum(V.mat(1:3,1:3).^2)) ) - 1) / 2^floor(abs(job.interp)/1000 - 1);
+                spm_smooth(Y, Y, fs );
               end
+              
+              [Y,res] = cat_vol_resize(Y,'interphdr',V,sqrt(sum(Vref.mat(1:3,1:3)^2)),rem(job.interp,1000),Vref);
+            elseif isfield(job.restype,'res') && ~isempty(job.restype.res) 
+              % use defined resolution
+            
+              if abs( job.interp ) >= 1000
+                fs = max(0,(job.restype.res ./ sqrt(sum(V.mat(1:3,1:3).^2))) - 1 ) / 2^floor(abs(job.interp)/1000 - 1); 
+                spm_smooth(Y, Y, fs );
+              end
+              
+              if all(job.restype.res == 0)
+                vx_vol = sqrt(sum(V.mat(1:3,1:3).^2)); 
+                res = struct('hdrO',V,'hdrN',V,'sizeO',size(Y),'sizeN',size(Y),'resO',vx_vol,'resN',vx_vol); 
+              else
+                [Y,res] = cat_vol_resize(Y,'interphdr',V,job.restype.res,rem(job.interp,1000));
+              end
+            else
+              error('Undefined setting.');            
             end
             Vo = res.hdrN; Vo.fname = fnameres;
           
@@ -140,10 +170,10 @@ function varargout=cat_vol_resize(T,operation,varargin)
           else
             error('Undefined setting.');            
           end
-          
+                    
           if isfield(Vo,'private'), Vo = rmfield(Vo,'private'); end
           
-          if strcmp(job.data{fi},fnameres) && exist(fnameres,'file'), delete(fnameres); end
+          if exist(fnameres,'file'), delete(fnameres); end %strcmp(job.data{fi},fnameres) && 
           if exist('dims','var') && dims>3
             Ndef      = nifti;
             Ndef.dat  = file_array(fnameres,size(Y),V.dt,0,V.pinfo(1),0);
@@ -287,7 +317,7 @@ function varargout=cat_vol_resize(T,operation,varargin)
                 for kk=1:ss(3)
                   Tadd = T{i}(ii:ss(1):nsize(1),jj:ss(2):nsize(2),kk:ss(3):nsize(3));
                   Tadd(isnan(Tadd(:))) = 0;
-                  varargout{i} = varargout{i} + Tadd;
+                  varargout{i} = varargout{i} + single(Tadd);
                   counter = counter + (Tadd~=0);
                   clear Tadd;
                 end
@@ -549,6 +579,7 @@ function varargout=cat_vol_resize(T,operation,varargin)
       if numel(varargin)>0, V      = varargin{1}; end
       if numel(varargin)>1, res    = varargin{2}; end
       if numel(varargin)>2, interp = varargin{3}; end
+      if numel(varargin)>3, smooth = varargin{4}; end
        
       if ~exist('V','var') || isempty(V),
         V.mat=[1 0 0 1;0 1 0 1; 0 0 1 1; 0 0 0 1]; 
@@ -573,6 +604,27 @@ function varargout=cat_vol_resize(T,operation,varargin)
                             single(res(1) / resV(1) : res(1)/resV(1) : size(T,1)),...
                             single(res(3) / resV(3) : res(3)/resV(3) : size(T,3))); 
 
+        % use smoothing in case of resolution downsampling as partial volume effect                 
+        if exist('smooth','var') && any( ( res ./ resV ) > 1.0 )
+          if ndims(T)>3
+            for d4i = 1:size(T,4)
+              if ndims(T)>4
+                for d5i = 1:size(T,5)
+                  Ts = TI(:,:,:,d4i,d5i); 
+                  spm_smooth(Ts,Ts, (res(2)/resV(2)) / 2 * smooth); 
+                  TI(:,:,:,d4i,d5i) = Ts; clear Ts; 
+                end
+              else
+                Ts = TI(:,:,:,d4i); 
+                spm_smooth(Ts,Ts, (res(2)/resV(2)) / 2 * smooth); 
+                TI(:,:,:,d4i) = Ts; clear Ts; 
+              end
+            end
+          else
+            spm_smooth(T,T, (res(2)/resV(2)) / 2 * smooth); 
+          end 
+        end
+                          
         %% T = spm_sample_vol(T,Dx,Dy,Dz,method);
         if ndims(T)>3
           dims = size(T); 
@@ -692,7 +744,33 @@ function varargout=cat_vol_resize(T,operation,varargin)
         T = TI; clear TI; 
       else
         % simple 3D case
+        if isfield(Vt,'private'), Vt = rmfield(Vt,'private'); end
+        if isfield(Vi,'private'), Vi = rmfield(Vi,'private'); end
+        if isfield(V,'pinfo')
+          Vt.pinfo = repmat([1;0],1,size(T,3));
+          Vi.pinfo = repmat([1;0],1,size(T,3));
+        else
+          Vt.pinfo = repmat([Vt.pinfo(1);0],1,size(T,3));
+          Vi.pinfo = repmat([Vt.pinfo(1);0],1,size(T,3));
+        end
+        % update datatype
+        dt = spm_type(Vt.dt(1)); 
+        dt = cat_io_strrep(dt,{'float32','float64'},{'single','double'}); 
+        if any(~cellfun('isempty',strfind({'single','double'},dt)))
+          eval(sprintf('T = %s(T);', dt ));
+        else
+          Vt.dt(1) = spm_type('float32'); 
+          T  = single(T); 
+        end
+        % setup images
+        Vt.dat(:,:,:) = T(:,:,:); 
+        Vi.dat(:,:,:) = T(:,:,:); 
+        
         [Vo,T] = cat_vol_imcalc(Vt,Vi,'i1',struct('interp',interp,'verb',0));
+        
+        Vo.pinfo = V.pinfo; 
+        if isfield(Vo,'dat'), Vo = rmfield(Vo,'dat'); end
+        
         if nonan
           [D,I] = cat_vbdist( single(~isnan(T)) ); T = T(I); clear I D; 
         end
@@ -720,15 +798,18 @@ function varargout=cat_vol_resize(T,operation,varargin)
       if strcmp(interp,'masked')
         % for interpolation of partial defined maps like the cortical
         % thickness... finally 'nearest' interpolation is often good 
-        % enought and much faster 
+        % enough and much faster 
         if all(res>0) %&& any(round(abs(res)*100)/100>resV)
           d = single(res./resV);
           %[Rx,Ry,Rz]=meshgrid(0.5:d(1):size(D,2),0.5:d(2):size(D,1),0.5:d(3):size(D,3));
           [Rx,Ry,Rz]=meshgrid(d(2):d(2):size(T,2),d(1):d(1):size(T,1),d(3):d(3):size(T,3));
-          M  = T>0.5; MM = cat_vol_morph(M,'d',2);
+          if strcmpi(spm_check_version,'octave') 
+            Rx = single(Rx); Ry = single(Ry); Rz = single(Rz);
+          end
+          M  = single(T>0.5); MM = cat_vol_morph(M,'d',2);
           [D,I] = cat_vbdist(T,MM); T=T(I); clear D I; 
           %Ts = smooth3(T); MM=cat_vol_morph(M,'e'); T(~MM)=Ts(~MM); clear MM; 
-          M = cat_vol_interp3f(single(M),Rx,Ry,Rz,'linear')>0.5;
+          M = cat_vol_interp3f(M,Rx,Ry,Rz,'linear')>0.5;
           T = cat_vol_interp3f(T,Rx,Ry,Rz,'linear');
           T = T .* M; 
           clear Rx Ry Rz;
@@ -738,6 +819,9 @@ function varargout=cat_vol_resize(T,operation,varargin)
           d = single(res./resV);
           %[Rx,Ry,Rz]=meshgrid(0.5:d(1):size(D,2),0.5:d(2):size(D,1),0.5:d(3):size(D,3));
           [Rx,Ry,Rz]=meshgrid(d(2):d(2):size(T,2),d(1):d(1):size(T,1),d(3):d(3):size(T,3));
+          if strcmpi(spm_check_version,'octave') 
+            Rx = single(Rx); Ry = single(Ry); Rz = single(Rz);
+          end
           T = cat_vol_interp3f(T,Rx,Ry,Rz,interp);
           clear Rx Ry Rz;
         end

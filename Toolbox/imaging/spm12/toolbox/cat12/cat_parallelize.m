@@ -3,7 +3,7 @@ function varargout = cat_parallelize(job,func,datafield)
 % Function to parallelize other functions with job structure, by the 
 % following call:
 % 
-%   SVNid = '$Rev: 1842 $';
+%   SVNid = '$Rev: 1985 $';
 % 
 %   ... further initialization code
 %  
@@ -39,7 +39,7 @@ function varargout = cat_parallelize(job,func,datafield)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_parallelize.m 1842 2021-06-01 14:41:58Z gaser $
+% $Id: cat_parallelize.m 1985 2022-04-25 07:18:54Z gaser $
 
 %#ok<*STRIFCND,*STREMP,*STRCL1> % MATLAB contains function 
 %#ok<*ASGLU>
@@ -206,11 +206,15 @@ function varargout = cat_parallelize(job,func,datafield)
         
         % open file in editor
         test = inf; 
-        edit(log_name{i});
+        if ~strcmpi(spm_check_version,'octave') && usejava('jvm') && feature('ShowFigureWindows') && usejava('awt')
+          edit(log_name{i});
+        end
       end
     end
 
-    edit(log_name{i});
+    if ~strcmpi(spm_check_version,'octave') && usejava('jvm') && feature('ShowFigureWindows') && usejava('awt')
+      edit(log_name{i}); 
+    end
     if PID(i)>0
       fprintf('\nCheck %s for logging information (PID: ',spm_file(log_name{i},'link','edit(''%s'')')); 
       cat_io_cprintf([1 0 0.5],sprintf('%d',PID(i))); 
@@ -370,7 +374,19 @@ function varargout = cat_parallelize(job,func,datafield)
                         
                           if strcmp(FN{fni},'mov') % long
                             % this does not work
-                            FIN = find( cellfun('isempty', strfind( txt, 'Finished CAT12 longitudinal processing of '))); 
+                            FIN = find( ~cellfun('isempty', strfind( txt, 'Finished CAT12 longitudinal processing of '))); 
+                            if ~isempty( FIN ) && numel(txt)>FIN(end)
+                              SIDFIN = find( cellfun('isempty', strfind( txt( FIN(end)+1 ) , ff ))==0 ); 
+                              if ~isempty( SIDFIN )
+                                jobIDs( jobSID , 5) = 1;
+                                jobIDs( jobSID , 6) = 0;
+                              else
+                                jobIDs( jobSID , 5) = 1;
+                                jobIDs( jobSID , 6) = 1;
+                              end
+                            end
+                            % CAT long errors with broken batch pipeline 
+                            FIN = find( ~cellfun('isempty', strfind( txt, 'Error using MATLABbatch system')));
                             if ~isempty( FIN ) && numel(txt)>FIN(end)
                               SIDFIN = find( cellfun('isempty', strfind( txt( FIN(end)+1 ) , ff ))==0 ); 
                               if ~isempty( SIDFIN )
@@ -399,7 +415,7 @@ function varargout = cat_parallelize(job,func,datafield)
                                 jobSID,sum( numel(job_data) ),  i, jobIDs(jobSID,3) , numel(jobs(i).(datafield)), ...
                                 spm_str_manip( jobs(i).(datafield)(si).(FN{1}){1}, 'k40') ));
                             else
-                              cat_io_cprintf( [1 0 0] ,sprintf('  failed %d/%d (pjob %d: %d/%d): %s\n',...
+                              cat_io_cprintf( [1 0 0] ,sprintf('  failed   %d/%d (pjob %d: %d/%d): %s\n',...
                                 jobSID,sum( numel(job_data) ),  i, jobIDs(jobSID,3) , numel(jobs(i).(datafield)), ...
                                 spm_str_manip( jobs(i).(datafield)(si).(FN{1}){1}, 'k40') ));
                             end

@@ -8,7 +8,7 @@ function [output,output_spm] = cat_conf_output(expert)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_conf_output.m 1821 2021-05-05 09:27:01Z gaser $
+% $Id: cat_conf_output.m 1976 2022-03-21 12:38:34Z gaser $
 %
 %#ok<*AGROW>
  
@@ -53,7 +53,11 @@ function [output,output_spm] = cat_conf_output(expert)
   BIDS.tag      = 'BIDS';
   BIDS.name     = 'Use BIDS directory structure?';
   BIDS.values   = {BIDSyes BIDSno};
-  BIDS.val      = {BIDSno};
+  if cat_get_defaults('extopts.bids_yes')
+    BIDS.val      = {BIDSyes};
+  else
+    BIDS.val      = {BIDSno};
+  end
   BIDS.help     = {'Select prefered output structure to save data.'};
 
 

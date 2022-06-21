@@ -8,7 +8,7 @@ function varargout = cat_conf_long(varargin)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_conf_long.m 1814 2021-04-27 10:50:38Z gaser $
+% $Id: cat_conf_long.m 1975 2022-03-21 08:00:58Z dahnke $
 
 newapproach = 0; 
 
@@ -61,7 +61,7 @@ nproc.help    = {
 data              = cfg_files;
 data.tag          = 'data';
 data.name         = 'Volumes';
-data.filter       = 'image';
+data.filter       = {'image','.*\.(nii.gz)$'};
 data.ufilter      = '.*';
 data.num          = [1 Inf];
 data.help         = {'Select the same number and order of subjects for each time point. '};
@@ -105,25 +105,43 @@ datalong.help     = {
 longmodel        = cfg_menu;
 longmodel.tag    = 'longmodel';
 longmodel.name   = 'Longitudinal Model';
-longmodel.labels = {'Optimized for detecting small changes (i.e. plasticity/learning effects','Optimized for detecting large changes (i.e. aging/developmental effects)'};
-longmodel.values = {1 2};
-if expert && 0
-  longmodel.labels{3} = 'Save both longitudinal models'; 
-  longmodel.values{3} = 3;
+longmodel.labels = {
+  'Optimized for detecting small changes (i.e. plasticity/learning effects)', ...
+  'Optimized for detecting large changes (i.e. aging effects)', ...
+  'Optimized for detecting large changes with brain/head growth (i.e. developmental effects)'}; 
+longmodel.values = {1 2 0};
+if expert 
+  % Add the internal values and the special plasticity & aging model for 
+  % developer only because it is not fully working now (RD20220317).
+  longmodel.labels{1} = [longmodel.labels{1}(1:end-1) '; 1)']; 
+  longmodel.labels{2} = [longmodel.labels{2}(1:end-1) '; 2)']; 
+  if expert > 1
+    longmodel.labels{4} = [longmodel.labels{3}(1:end-1) ' V2; 4)']; 
+    longmodel.values{4} = 4;
+  end
+  longmodel.labels{3} = [longmodel.labels{3}(1:end-1) '; 0)']; 
+  longmodel.labels{3 + expert} = 'Save plasticity and aging models (3)';
+  longmodel.values{3 + expert} = 3;
 end
-longmodel.val    = {1};
+longmodel.val  = {1};
 longmodel.help = {
 'The longitudinal pre-processing in CAT12 has been developed and optimized to detect subtle effects over shorter periods of time (e.g. brain plasticity or training effects after a few weeks or even shorter periods of time) and is less sensitive to detect larger changes over longer periods of time (e.g. ageing or developmental effects). To detect larger effects, we also offer a model that additionally takes into account deformations between time points. The use of deformations between the time points makes it possible to estimate and detect larger changes, while subtle effects over shorter periods of time in the range of weeks or a few months can be better detected with the model for small changes.'
+''
+'Unlike the plasticity and ageing models, the developmental pipeline must include a time point-independent registration to adjust the growth of the brain/head. '
 ''
 'Please note that due to the additional warping and modulation steps, the resulting files are saved with "mwmwp1r" for gray matter instead of "mwp1r"'
 ''
 };
+if expert % add some further detail for the combined model that is only available for experts
+  longmodel.help{end-3} = [longmodel.help{end-1} ...
+    ' It therefore also requires independent processing and cannot be processed together with the other two models.'];
+end
 
 % The heavy option is at the limit and the images starts to look artifical.
 % However, this could be relevant of strong artifacts and plasticity studies.  
 bstr                 = cfg_menu;
 bstr.tag             = 'bstr';
-bstr.name            = 'Strength of final longitudinal bias correction';
+bstr.name            = 'Strength of final longitudinal bias correction (IN DEVELOPMENT)';
 bstr.labels          = {'no correction','light','medium','strong'}; %,'heavy'};
 bstr.values          = {0,0.25,0.5,0.75}; %,1.0
 bstr.val             = {0};
@@ -131,6 +149,36 @@ bstr.hidden          = expert<2;
 bstr.help            = {
   'Strength of final longitudinal bias correction that utilize the average segmentation for further subtile corrections. Test also higher SPM bias correction that also incooperates the information from the average by using the longTPM. Use weaker corrections if the points in time are far apart or if the imgages are less affected by inhomogeneities. Only use stong corrections in case of severe inhomogeneities or artefacts and check the results! '
   'This correction was introduced in CAT12.7 (2020/10) and is still under test! So use it carefully! '
+  ''
+};
+
+prepavg              = cfg_menu;
+prepavg.tag          = 'prepavg';
+prepavg.name         = 'Optimize orignal data before averaging (IN DEVELOPMENT)';
+prepavg.labels       = {'no preparation','denoising','denosing+trimming'};
+prepavg.values       = {0,1,2};
+prepavg.val          = {2};
+prepavg.hidden       = expert<2; 
+prepavg.help         = {
+  'Denoising, trimming and intensity scaling of the original timepoint data before creating the average. '
+  ''
+};
+
+avgLASWMHC              = cfg_menu;
+avgLASWMHC.tag          = 'avgLASWMHC';
+avgLASWMHC.name         = 'Handling of LAS and WMHC on the average (IN DEVELOPMENT)';
+avgLASWMHC.labels       = {'classic (AVG=TP)','reduced LAS','reduce LAS & extra WMH class','reduce LAS in TPs & extra WMH class'};
+avgLASWMHC.values       = {0,1,2,3};
+avgLASWMHC.val          = {0};
+avgLASWMHC.hidden       = expert<2; 
+
+avgLASWMHC.help         = {
+ ['The use of the LAS for the creation of the indiviudal TPM as well as in the time point specific processing can result in a overestimation of subcortical GM. ' ...
+  'A lower correction in the average or the time point is therefore maybe better suited. '];
+ ['The correction of WMHs to the WM is most similar to the original SPM TPM in principle. ' ...
+  'However, the many GM-like values of large WMHs seams to bias the WM peak resulting in WM over- and GM underestimation. ' ...
+  'Without or with temporar correction (WMHC=0, WMHC=1) the values of WMHs are maybe corrected to GM what can causes problems in the WMHC of the time points. ' ...
+  'Using an extra WMH class (WMHC=3) may reduce this bias. '];
   ''
 };
 
@@ -238,7 +286,7 @@ if newapproach % new way - not working
   if expert
     output.val = [output.val, delete_temp]; 
   end
-  long.val  = {datalong,longmodel,bstr,nproc,opts,extopts,output}; 
+  long.val  = {datalong,longmodel,prepavg,bstr,avgLASWMHC,nproc,opts,extopts,output}; 
   long.vout = @vout_long2;
 else
   % old appraoch
@@ -283,14 +331,13 @@ else
   ROI     = output.val{ setdiff( find(cellfun('isempty',strfind(FN,'ROImenu'))==0) , ...
                      find(cellfun('isempty',strfind(FN,'sROImenu'))==0,1) ) }; 
   BIDS    = output.val{find(cellfun('isempty',strfind(FN,'BIDS'))==0)};
-  BIDS.hidden = true;
   surface = output.val{find(cellfun('isempty',strfind(FN,'surface'))==0)};
 
   output.val = {BIDS,surface};
   
   delete_temp.hidden = expert<1;
   
-  long.val  = {datalong,longmodel,enablepriors,bstr,nproc,opts,extopts,output,ROI,longTPM,modulate,dartel,delete_temp};
+  long.val  = {datalong,longmodel,enablepriors,prepavg,bstr,avgLASWMHC,nproc,opts,extopts,output,ROI,longTPM,modulate,dartel,delete_temp};
   
 % does not yet work! 
 % long.vout = @vout_long;

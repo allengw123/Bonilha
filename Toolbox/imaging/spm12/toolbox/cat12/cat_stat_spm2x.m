@@ -93,7 +93,7 @@ function out = cat_stat_spm2x(job)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_stat_spm2x.m 1812 2021-04-22 22:13:50Z gaser $
+% $Id: cat_stat_spm2x.m 1934 2022-01-28 09:48:48Z gaser $
 
 if nargin > 0
   if isfield(job,'data_T2x')
@@ -156,7 +156,7 @@ else
 
   if T2x
     stat = 'T';
-    P = spm_select(Inf,'^spmT.*(img|nii|gii)','Select T-images');
+    P = spm_select(Inf,'^(spmT|nullT).*(img|nii|gii)','Select T-images');
     sel = spm_input('Convert t value to?',1,'m',...
       '1-p|-log(1-p)|correlation coefficient cc|effect size d|apply thresholds without conversion|standard Normal (z-score) distribution',1:6, 2);
   else
@@ -198,7 +198,11 @@ else
   end
 
   if T2x
-    neg_results = spm_input('Show also inverse effects (e.g. neg. values)','+1','b','yes|no',[1 0],2);
+    if adjustment < 0
+      neg_results = 1;
+    else
+      neg_results = spm_input('Show also inverse effects (e.g. neg. values)','+1','b','yes|no',[1 0],2);
+    end
   end
 
   if pk ~= 0
@@ -231,7 +235,7 @@ for i=1:size(P,1)
      error('SPM.mat not found')
   end
 
-  if strcmp(nm(1:6),sprintf('spm%s_0',stat)) 
+  if strcmp(nm(1:6),sprintf('spm%s_0',stat)) || strcmp(nm(1:7),sprintf('nullT_0'))
     Ic = str2double(nm(length(nm)-2:length(nm)));
   else
     % conversion needs spmT/F images
@@ -481,6 +485,10 @@ for i=1:size(P,1)
     end
   end    
 
+  if strcmp(nm(1:7),sprintf('nullT_0'))
+    t2x_name = ['null' t2x_name];
+  end
+  
   if isempty(Qe) || isempty(Qh)
     t2x  = Inf;  
   else
@@ -546,9 +554,9 @@ for i=1:size(P,1)
   end
 
   if ~isempty(Qe) || u0 > -Inf
-     name = [t2x_name str_num p_height_str num2str(u0*100) p_extent_str '_k' num2str(k) neg_str ext];
+    name = [t2x_name str_num p_height_str num2str(u0*100) p_extent_str '_k' num2str(k) neg_str ext];
   else
-     name = [t2x_name str_num ext];
+    name = [t2x_name str_num ext];
   end
 
   Pname{i} = deblank(fullfile(pth,name));
@@ -570,26 +578,31 @@ for i=1:size(P,1)
     if ~isempty(maxsort)
       found_neg = 0;
       found_pos = 0;
+      print_header_neg = 0;
+      print_header_pos = 0;
       for l=1:length(maxsort)
         j = maxsort(l); 
         [tmp, indZ] = max(abs(Zj{j}));
       
         if ~isempty(indZ)
-          if maxZ(j) < 0,  found_neg = found_neg + 1; end
-          if maxZ(j) >= 0, found_pos = found_pos + 1; end
+          if maxZ(j) < 0, found_neg = 1; end
+          if maxZ(j) > 0, found_pos = 1; end
           
           % print header if the first pos./neg. result was found
-          if found_pos == 1
+          if found_pos && ~print_header_pos
+
             fprintf('\n______________________________________________________');
             fprintf('\n%s: Positive effects\n%s',name,atlas_name);
             fprintf('\n______________________________________________________\n\n');
-            fprintf('%1s-%5s\t%7s\t%15s\t%s\n\n',STAT,'Value','   Size','  xyz [mm] ','Overlap of atlas region');
+            fprintf('%1s-%5s\t%12s\t%15s\t%s\n\n',STAT,'Value','Cluster-Size','  xyz [mm] ','Overlap of atlas region');
+            print_header_pos = 1;
           end
-          if found_neg == 1
+          if found_neg && ~print_header_neg
             fprintf('\n______________________________________________________');
             fprintf('\n%s: Negative effects\n%s',name,atlas_name);
             fprintf('\n______________________________________________________\n\n');
-            fprintf('%1s-%5s\t%7s\t%15s\t%s\n\n',STAT,'Value','   Size','  xyz [mm] ','Overlap of atlas region');
+            fprintf('%1s-%5s\t%12s\t%15s\t%s\n\n',STAT,'Value','Cluster-Size','  xyz [mm] ','Overlap of atlas region');
+            print_header_neg = 1;
           end
           if ~found_pos && ~found_neg
             fprintf('\n______________________________________________________');
@@ -597,11 +610,11 @@ for i=1:size(P,1)
             fprintf('\n______________________________________________________\n\n');
           else
 
-            fprintf('%7.2f\t%7d\t%4.0f %4.0f %4.0f',maxZ(j),length(Zj{j}),XYZmmj{j}(:,indZ));
+            fprintf('%7.2f\t%12d\t%4.0f %4.0f %4.0f',maxZ(j),length(Zj{j}),XYZmmj{j}(:,indZ));
             for m=1:numel(labk{j})
               if Pl{j}(m) >= 1
                 if m==1, fprintf('\t%3.0f%%\t%s\n',Pl{j}(m),labk{j}{m});
-                else   fprintf('%7s\t%7s\t%15s\t%3.0f%%\t%s\n','       ','       ','               ',...
+                else   fprintf('%7s\t%12s\t%15s\t%3.0f%%\t%s\n','       ','       ','               ',...
                   Pl{j}(m),labk{j}{m});
                 end
               end
@@ -613,24 +626,25 @@ for i=1:size(P,1)
     fprintf('\n');
   end
 
+  %-Reconstruct (filtered) image from XYZ & T/Z pointlist
+  %-----------------------------------------------------------------------
+  Y    = zeros(Vspm.dim);
+  OFF    = XYZ(1,:) + Vspm.dim(1)*(XYZ(2,:)-1 + Vspm.dim(2)*(XYZ(3,:)-1));
+  Y(OFF) = t2x;
+
+  VO = Vspm;
+  VO.fname = Pname{i};
+  VO.dt = [spm_type('float32') spm_platform('bigend')];
+
   % only write and display files if some voxels survived thresholds
-  if ~isempty(Qh) && ~isempty(Qe)
-    %-Reconstruct (filtered) image from XYZ & T/Z pointlist
-    %-----------------------------------------------------------------------
-    Y    = zeros(Vspm.dim);
-    OFF    = XYZ(1,:) + Vspm.dim(1)*(XYZ(2,:)-1 + Vspm.dim(2)*(XYZ(3,:)-1));
-    Y(OFF) = t2x;
-  
-    VO = Vspm;
-    VO.fname = Pname{i};
-    VO.dt = [spm_type('float32') spm_platform('bigend')];
-  
+  if ~isempty(Qh) && ~isempty(Qe)  
     VO = spm_data_hdr_write(VO);
     spm_data_write(VO,Y);
   end
   
 end % (for i=1:size(P,1))
 
-out.Pname = Pname;  
-
+if nargout
+  out.Pname = Pname;  
+end
 

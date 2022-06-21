@@ -33,7 +33,7 @@ fi
 
 eddyExeName=eddy_cuda
 if ! [ -x "$(command -v $eddyExeName)" ]; then
-  echo 'You may need to run configure_eddy.sh
+  echo 'You may need to run configure_eddy.sh'
   echo ' https://github.com/neurolabusc/gpu_test/tree/master/eddy_setup'
   echo 'Error: ' $eddyExeName ' is not installed.' >&2
   exit 1

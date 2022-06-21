@@ -9,7 +9,7 @@ function cat_install_atlases
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_install_atlases.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_install_atlases.m 1880 2021-09-28 12:04:36Z gaser $
 
 spm_dir = spm('dir');
 atlas_dir = fullfile(spm_dir,'atlas');
@@ -60,7 +60,7 @@ def.desc   = '';
 def.url    = '';
 def.ver    = cat_version;
 def.lic    = 'CC BY-NC';
-def.cor    = 'MNI DARTEL'; 
+def.cor    = 'MNI152 NLin 2009c Asym'; 
 def.type   = 'Label';
 def.images = ['cat12_' ff '.nii'];
 
@@ -86,23 +86,13 @@ xml.header = [...
   ];
 xml.data = '';
 
-for di = 2:size(csvx,1);
-  % index      = label id
-  % name       = long name SIDE STRUCTURE TISSUE 
-  % short_name = short name 
-  % RGBA       = RGB color
-  % XYZmm      = XYZ coordinate
-  if size(csvx,2) < 8
+% find ROIname in header
+ind_name = find(strcmp(csvx(1,:),'ROIname'));
+
+for di = 2:size(csvx,1)
     xml.data = sprintf('%s%s\n',xml.data,sprintf(['    <label><index>%d</index>'...
-      '<short_name>%s</short_name><name>%s</name>' ...
-      '<RGBA></RGBA><XYZmm></XYZmm></label>'],...
-      csvx{di,1}, csvx{di,2},csvx{di,3}));
-  else
-    xml.data = sprintf('%s%s\n',xml.data,sprintf(['    <label><index>%d</index>'...
-      '<short_name>%s</short_name><name>%s</name>' ...
-      '<RGBA></RGBA><XYZmm>%s</XYZmm></label>'],...
-      csvx{di,1}, csvx{di,2},csvx{di,3},csvx{di,8}));
-  end
+      '<name>%s</name></label>'],...
+      csvx{di,1}, csvx{di,ind_name}));
 end
 
 xml.footer = [ ...

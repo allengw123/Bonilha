@@ -17,10 +17,15 @@ function varargout = cat_surf_results(action, varargin)
 %
 %  * cat_surf_results('surface',1..4) 
 %  Select surface type.
+%  1 - FSaverage, 2 - Inflated, 3 - Dartel, 4 - Flatmap
 %
-%  * cat_surf_results('texture',0..2)
+%  * cat_surf_results('texture',0..3)
 %  Select surface underlay. 
-%  0 - none, 1 - mean curvature, 2 - sulcal depth
+%  0 - no transparancy, 1 - mean curvature, 2 - sulcal depth, 3 - nothing
+%
+%  * cat_surf_results('border',0..3)
+%  Select border overlay. 
+%  0 - no border, 1 - Desikan-Killiany DK40, 2- Destrieux 2009, 3 - HCP Multi-Modal Parcellation
 %
 %  * cat_surf_results('view',1..3)
 %  Select render view.
@@ -33,35 +38,44 @@ function varargout = cat_surf_results(action, varargin)
 %  Select overlay colormap.
 %  1 - jet, 2 - hot, 3 - hsv, 4 - cold-hot
 %
+%  * cat_surf_results('ctitle',string)
+%  Set title for colorbar.
+%
 %  * cat_surf_results('colormap','customized',cmap)
 %  use customized overlay colormap.
 %  cmap can be a nx3 variable with the colormap values
 % or a function that creates a colormap (e.g. jet)
 %
-%  * cat_surf_results('invcolormap',[0..1])
+%  * cat_surf_results('invcolormap',0..1)
 %  Default (0) or inverts colormap (1). Toggles without input.
 %  
-%  * cat_surf_results('background',[0..2])
+%  * cat_surf_results('background',0..2)
 %  White (1) or black (0|2) background. Toggles without input.
 %
-%  * cat_surf_results('showfilename',[0..1]); 
+%  * cat_surf_results('showfilename',0..1); 
 %  Show (1) or not show (0) surface name in figure. Toggles without input.
 %
-%  * cat_surf_results('clim',[val]);
+%  * cat_surf_results('clim',[mn mx]);
 %  Define clim to define view range. 
 %
 %  * cat_surf_results('clip',[mn mx]);
-%  Define clip to limit view range. 
+%  Define clip to limit view range. This is the range that is not displayed
+%  with colors and thresholded.
 %
-%  * cat_surf_results('threshold',[0..4]);
+%  * cat_surf_results('threshold',val);
 %  Define statistical threshold. 
 %  0 - none, -log10(0.05) - 0.05, 2 - 0.01, 3 - 0.001
 %
 %  * cat_surf_results('transparency');
 %  Disable transparency. 
 %
-%  * cat_surf_results('hide_neg',[,0..1]); 
+%  * cat_surf_results('hide_neg',0..1); 
 %  Hide negative results (1) or show everything (0). Toggles without input.
+%
+%  * cat_surf_results('print',fpart); 
+%  Save render as png image file. The parameter fpart has to be a structure
+%  with the fields 'outdir','prefix', and 'suffix' but can be optionally
+%  skipped to estimte the filename automatically.
 %
 % ______________________________________________________________________
 %
@@ -70,7 +84,7 @@ function varargout = cat_surf_results(action, varargin)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_surf_results.m 1830 2021-05-27 16:15:21Z gaser $
+% $Id: cat_surf_results.m 1984 2022-04-19 07:59:02Z gaser $
 
 global H y x
 
@@ -113,7 +127,7 @@ switch lower(action)
     H.n_surf       = 1;
     H.thresh_value = 0;
     H.cursor_mode  = 1;
-    H.text_mode    = 1;
+    H.texture_mode = 1;
     H.border_mode  = 0;
     H.str32k       = '';
     H.SPM_found    = 1;
@@ -141,7 +155,7 @@ switch lower(action)
                  [0.600 0.450+eh 0.375 0.375;  0.600 0.450+eh 0.375 0.375;  0.600 2.000+eh 0.375 0.375],... % rh medial
                  [0.600 0.025+eh 0.375 0.375;  0.600 0.025+eh 0.375 0.375;  0.675 0.350+eh 0.175 0.350],... % rh lateral
                  [0.300 0.150+eh 0.400 0.500;  0.300 2.000+eh 0.400 0.500;  0.300 2.000+eh 0.400 0.500],... % lh+rh top
-                 [0.400 0.750+eh 0.200 0.225;  0.400 0.300+eh 0.200 0.225;  0.400 0.750+eh 0.200 0.225]};   % data plot
+                 [0.400 0.725+eh 0.200 0.225;  0.400 0.300+eh 0.200 0.225;  0.400 0.725+eh 0.200 0.225]};   % data plot
     
     % change size and position of flatmaps for >= R20014b
     if spm_check_version('matlab', '8.4') >= 0
@@ -244,7 +258,7 @@ switch lower(action)
     H.surf = uicontrol(H.panel(2), ...
       'String', str, 'Units', 'normalized', ...
       'Position', H.pos{2}.surf, 'UserData', tmp, ...
-      'Style', 'PopUp', 'HorizontalAlignment', 'center', ...
+      'Style', 'PopUpMenu', 'HorizontalAlignment', 'center', ...
       'Callback', 'spm(''PopUpCB'',gcbo)', ...
       'FontSize',H.FS,...
       'ToolTipString', 'Underlying Surface', ...
@@ -260,7 +274,7 @@ switch lower(action)
     H.thresh = uicontrol(H.panel(2), ...
       'String', str, 'Units', 'normalized', ...
       'Position', H.pos{2}.thresh, 'UserData', tmp, ...
-      'Style', 'PopUp', 'HorizontalAlignment', 'center', ...
+      'Style', 'PopUpMenu', 'HorizontalAlignment', 'center', ...
       'Callback', 'spm(''PopUpCB'',gcbo)', ...
       'FontSize',H.FS,...
       'ToolTipString', 'Threshold', ...
@@ -277,7 +291,7 @@ switch lower(action)
     H.cmap = uicontrol(H.panel(2), ...
       'String', str, 'Units', 'normalized', ...
       'Position', H.pos{2}.cmap, 'UserData', tmp, ...
-      'Style', 'PopUp', 'HorizontalAlignment', 'center', ...
+      'Style', 'PopUpMenu', 'HorizontalAlignment', 'center', ...
       'Callback', 'spm(''PopUpCB'',gcbo)', ...
       'FontSize',H.FS,...
       'ToolTipString', 'Threshold', ...
@@ -292,7 +306,7 @@ switch lower(action)
     H.atlas = uicontrol(H.panel(2), ...
       'String', str, 'Units', 'normalized', ...
       'Position', H.pos{2}.atlas, 'UserData', tmp, ...
-      'Style', 'PopUp', 'HorizontalAlignment', 'center', ...
+      'Style', 'PopUpMenu', 'HorizontalAlignment', 'center', ...
       'Callback', 'spm(''PopUpCB'',gcbo)', ...
       'FontSize',H.FS,...
       'ToolTipString', 'Atlas Labeling', ...
@@ -315,7 +329,7 @@ switch lower(action)
     H.cursor = uicontrol(H.panel(2), ...
       'String', str, 'Units', 'normalized', ...
       'Position', H.pos{2}.cursor, 'UserData', tmp, ...
-      'Style', 'PopUp', 'HorizontalAlignment', 'center', ...
+      'Style', 'PopUpMenu', 'HorizontalAlignment', 'center', ...
       'Callback', 'spm(''PopUpCB'',gcbo)', ...
       'FontSize',H.FS,...
       'ToolTipString', 'Data Cursor Mode', ...
@@ -330,21 +344,22 @@ switch lower(action)
     H.mview = uicontrol(H.panel(2), ...
       'String', str, 'Units', 'normalized', ...
       'Position', H.pos{2}.mview, 'UserData', tmp, ...
-      'Style', 'PopUp', 'HorizontalAlignment', 'center', ...
+      'Style', 'PopUpMenu', 'HorizontalAlignment', 'center', ...
       'Callback', 'spm(''PopUpCB'',gcbo)', ...
       'FontSize',H.FS,...
       'ToolTipString', 'Select View', ...
       'Interruptible', 'on', 'Enable', 'off');
     
-    str = {'Underlay', 'Mean curvature', 'Sulcal depth'};
+    str = {'Underlay', 'Mean curvature', 'Sulcal depth', 'Nothing'};
     tmp = {{@select_texture, 1}, ...
-           {@select_texture, 2}};
-    
+           {@select_texture, 2}, ...
+           {@select_texture, 3}};
+   
     % underlying texture
     H.text = uicontrol(H.panel(2), ...
       'String', str, 'Units', 'normalized', ...
       'Position', H.pos{2}.text, 'UserData', tmp, ...
-      'Style', 'PopUp', 'HorizontalAlignment', 'center', ...
+      'Style', 'PopUpMenu', 'HorizontalAlignment', 'center', ...
       'Callback', 'spm(''PopUpCB'',gcbo)', ...
       'FontSize',H.FS,...
       'ToolTipString', 'Select Underlying Texture', ...
@@ -361,7 +376,7 @@ switch lower(action)
     H.border = uicontrol(H.panel(2), ...
       'String', str, 'Units', 'normalized', ...
       'Position', H.pos{2}.border, 'UserData', tmp, ...
-      'Style', 'PopUp', 'HorizontalAlignment', 'center', ...
+      'Style', 'PopUpMenu', 'HorizontalAlignment', 'center', ...
       'Callback', 'spm(''PopUpCB'',gcbo)', ...
       'FontSize',H.FS,...
       'ToolTipString', 'Atlas Border Overlay', ...
@@ -623,7 +638,7 @@ switch lower(action)
       end
 
       % Don't allow plot functions for RGB maps or if SPM.mat was not found
-      if (H.n_surf > 1 && H.SPM_found) | H.isvol(1)
+      if (H.n_surf > 1 && H.SPM_found) || H.isvol(1)
         str = {'Data Cursor', 'Disable data cursor', 'Atlas regions: All atlases',...
           'Atlas regions: Desikan-Killiany DK40', 'Atlas regions: Destrieux 2009',...
           'Atlas region: HCP Multi-Modal Parcellation', 'Enable/Disable rotate3d'};
@@ -775,7 +790,15 @@ switch lower(action)
     if nargout, varargout{1} = y; end
      %}
     
-    
+  %-ColourMapTitle
+  %======================================================================
+  case {'ctitle'}
+
+    if ~H.disable_cbar
+      
+      title(H.cbar, varargin{1}, 'Color', 1 - H.bkg_col);
+    end
+
   %-ColourMap
   %======================================================================
   case {'colourmap', 'colormap'}
@@ -815,58 +838,51 @@ switch lower(action)
     
   %-CLim
   %======================================================================
-  case 'clim'
-    if isempty(varargin), varargin{1} = gca; end
-    H = getHandles(varargin{1});
-    if length(varargin) == 1
-      c = getappdata(H.patch, 'clim');
-      if ~isempty(c), c = c(2:3); end
-      varargout = {c};
-      return;
-    else
-      if strcmp(varargin{2}, 'on') || isempty(varargin{2}) || any(~isfinite(varargin{2}))
-        setappdata(H.patch, 'clim', [false NaN NaN]);
-      else
-        setappdata(H.patch, 'clim', [true varargin{2}]);
-      end
-      d = getappdata(H.patch, 'data');
-      H = updateTexture(H, d);
-      
+  case 'clim'      
+    
+    caxis(H.axis, varargin{1});
+    for ind = 1:5
+      setappdata(H.patch(ind), 'clim', [true varargin{1}]);
+      d = getappdata(H.patch(ind), 'data');
+      col = getappdata(H.patch(ind), 'col');
+      H = updateTexture(H, ind, d, col, H.show_transp);
+    end    
+
+    if ~H.isvol(H.results_sel)
+      set(H.atlas, 'Enable', 'on');
+    end
+
+    if ~H.disable_cbar
+      H = show_colorbar(H);
     end
     
-    if nargin > 1 && isnumeric(varargin{2}) && numel(varargin{2}) == 2
-      caxis(H.axis, varargin{2});
-    else
-      caxis(H.axis, [min(d), max(d)])
-    end
-    
-    
-  %-CLip
+%-CLip
   %======================================================================
   case 'clip'
-    if isempty(varargin), varargin{1} = gca; end
-    H = getHandles(varargin{1});
-    if length(varargin) == 1
-      c = getappdata(H.patch, 'clip');
+
+    if nargin < 2
+      c = getappdata(H.patch(5), 'clip');
       if ~isempty(c), c = c(2:3); end
       varargout = {c};
       return;
     else
-      if isempty(varargin{2}) || any(~isfinite(varargin{2}))
-        for ind = 1:5
-          setappdata(H.patch(ind), 'clip', [false NaN NaN]);
-        end
+      if isempty(varargin{1}) || any(~isfinite(varargin{1}))
+        H.clip = [false NaN NaN];
       else
-        for ind = 1:5
-          setappdata(H.patch(ind), 'clip', [true varargin{2}]);
-        end
+        H.clip = [true varargin{1}];
       end
       for ind = 1:5
-        d = getappdata(H.patch, 'data');
-        H = updateTexture(H, ind, d);
+        setappdata(H.patch(ind), 'clip', H.clip);
+      end
+      for ind = 1:5
+        col = getappdata(H.patch(ind), 'col');
+        H = updateTexture(H, ind);
       end
     end
-  
+
+    if ~H.disable_cbar
+      H = show_colorbar(H);
+    end
     
   %-CLims
   %======================================================================
@@ -912,8 +928,8 @@ switch lower(action)
 
     %% update textures of each patch
     for j=1:numel(H.patch) 
-    setappdata(H.patch(j), 'clim',H.clim);
-    H = updateTexture(H, j); 
+      setappdata(H.patch(j), 'clim',H.clim);
+      H = updateTexture(H, j); 
     end
     if isvalid(H.str_min)
       set(H.str_min, 'String', sprintf('%g',H.clim(2)));
@@ -992,36 +1008,36 @@ switch lower(action)
           side = getappdata(H.patch( i*2 - 1 ), 'data');
 
           if ~all(isnan(side))
-          % histogram plot may fail due to NAN or whatever ...
-          [d,h] = hist( side(~isinf(side(:)) & ~isnan(side(:)) & side(:)<3.4027e+38 & side(:)>-3.4027e+38 & side(:)<H.clim(3) & side(:)>H.clim(2) ), ...
-            H.clim(2) : diff(H.clim(2:3))/100 : H.clim(3) );
-          d = d./numel(side);
-          % plot histogram line and its median
-          med = cat_stat_nanmedian(side(:));
-          quantile = [h(find(cumsum(d)/sum(d)>0.25,1,'first')),h(find(cumsum(d)/sum(d)>0.75,1,'first'))]; 
-          % print histogram
-          line(H.histax,h,d,'color',color{i},'LineWidth',1);
-          % print median
-          line(H.histax,[med med],[0 d(find(h>=med,1,'first'))],'color',color{i},'linestyle',linet{i});
-          % print quantile 
-          if numel(quantile)>1
-            fill(H.histax,[quantile(1)   quantile(2)   quantile(2)      quantile(1)],...
-                  max(d)*(0.08*[i i (i+1) (i+1)] + 0.16),color{i});
-            %
-            if mode
-            H.dtxt(i).ax  = axes('Parent', H.panel(1), 'Position',tpos{i}, 'Visible', 'off','tag','cat_surf_results_text');
-            H.dtxt(i).txt = text(0,1,sprintf('%10.3f %s %0.3f\n%10.3f - %0.3f\n',...
-              cat_stat_nanmean(side(:)),char(177),cat_stat_nanstd(side(:)),...
-              min(side(:)),max(side(:)),med),...
-              'color',color{i},'HorizontalAlignment','center','Parent',H.dtxt(i).ax);
-            else
-            text(0,1,sprintf('%s%0.3f',sprintf(repmat('\n',1,i*2)),min(side(:))),'color',color{i},'HorizontalAlignment','center','Parent',H.dtxt(3).ax(2));
-            text(0,1,sprintf('%s%0.3f%s%0.3f',sprintf(repmat('\n',1,i*2)),cat_stat_nanmean(side(:)),char(177),...
-              cat_stat_nanstd(side(:))),'color',color{i},'HorizontalAlignment','center','Parent',H.dtxt(3).ax(3));
-            text(0,1,sprintf('%s%0.3f',sprintf(repmat('\n',1,i*2)),cat_stat_nanmedian(side(:))),'color',color{i},'HorizontalAlignment','center','Parent',H.dtxt(3).ax(4));
-            text(0,1,sprintf('%s%0.3f',sprintf(repmat('\n',1,i*2)),max(side(:))),'color',color{i},'HorizontalAlignment','right','Parent',H.dtxt(3).ax(5));
+            % histogram plot may fail due to NAN or whatever ...
+            [d,h] = hist( side(~isinf(side(:)) & ~isnan(side(:)) & side(:)<3.4027e+38 & side(:)>-3.4027e+38 & side(:)<H.clim(3) & side(:)>H.clim(2) ), ...
+              H.clim(2) : diff(H.clim(2:3))/100 : H.clim(3) );
+            d = d./numel(side);
+            % plot histogram line and its median
+            med = cat_stat_nanmedian(side(:));
+            quantile = [h(find(cumsum(d)/sum(d)>0.25,1,'first')),h(find(cumsum(d)/sum(d)>0.75,1,'first'))]; 
+            % print histogram
+            line(H.histax,h,d,'color',color{i},'LineWidth',1);
+            % print median
+            line(H.histax,[med med],[0 d(find(h>=med,1,'first'))],'color',color{i},'linestyle',linet{i});
+            % print quantile 
+            if numel(quantile)>1
+              fill(H.histax,[quantile(1)   quantile(2)   quantile(2)      quantile(1)],...
+                    max(d)*(0.08*[i i (i+1) (i+1)] + 0.16),color{i});
+              %
+              if mode
+              H.dtxt(i).ax  = axes('Parent', H.panel(1), 'Position',tpos{i}, 'Visible', 'off','tag','cat_surf_results_text');
+              H.dtxt(i).txt = text(0,1,sprintf('%10.3f %s %0.3f\n%10.3f - %0.3f\n',...
+                cat_stat_nanmean(side(:)),char(177),cat_stat_nanstd(side(:)),...
+                min(side(:)),max(side(:)),med),...
+                'color',color{i},'HorizontalAlignment','center','Parent',H.dtxt(i).ax);
+              else
+              text(0,1,sprintf('%s%0.3f',sprintf(repmat('\n',1,i*2)),min(side(:))),'color',color{i},'HorizontalAlignment','center','Parent',H.dtxt(3).ax(2));
+              text(0,1,sprintf('%s%0.3f%s%0.3f',sprintf(repmat('\n',1,i*2)),cat_stat_nanmean(side(:)),char(177),...
+                cat_stat_nanstd(side(:))),'color',color{i},'HorizontalAlignment','center','Parent',H.dtxt(3).ax(3));
+              text(0,1,sprintf('%s%0.3f',sprintf(repmat('\n',1,i*2)),cat_stat_nanmedian(side(:))),'color',color{i},'HorizontalAlignment','center','Parent',H.dtxt(3).ax(4));
+              text(0,1,sprintf('%s%0.3f',sprintf(repmat('\n',1,i*2)),max(side(:))),'color',color{i},'HorizontalAlignment','right','Parent',H.dtxt(3).ax(5));
+              end
             end
-          end
           end
         end
 
@@ -1048,15 +1064,24 @@ switch lower(action)
   %- set texture 
   %======================================================================
   case 'texture'
-    texure = varargin{1};
-    if any(texure == 1:2)
-      select_texture(texure);
-    elseif texure == 0
+    texture = varargin{1};
+    if any(texture == 1:3)
+      select_texture(texture);
+    elseif texture == 0
       cat_surf_results('transparency',0);
     end
   
     
-  %- set view 
+  %- set texture 
+  %======================================================================
+  case 'border'
+    border_mode = varargin{1};
+    if any(border_mode == 0:3)
+      select_border(border_mode);
+    end
+  
+    
+  %- set view
   %======================================================================
   case 'view'
     view = varargin{1};
@@ -1210,39 +1235,17 @@ switch lower(action)
       fparts.suffix = '';
     end
     
-    if nargin>2
-      imgs = varargin{2};
-    else
-      imgs = inf; 
-    end
-    maximg = numel(H.S1.info);
-    if isinf(imgs), imgs = 1:maximg; end 
-    imgs(imgs<0 | imgs>maximg) = []; 
-    
-    %% print images
-    for fi=1:numel(imgs)
-      if fi>1, select_results(imgs(fi)); end
-      
-      [pp,ff] = spm_fileparts( H.S1.name(imgs(fi),:) );
-      if isempty(fparts.outdir{1})
+    if iscell(fparts.outdir), fparts.outdir{1}; end
+    [pp,ff] = spm_fileparts( H.S1.name );
+    if isempty(fparts.outdir)
       fparts.outdir{1} = pp; 
-      end
-      filenames{imgs(fi)} = fullfile(fparts.outdir{1},[fparts.prefix ff fparts.suffix '.png']); %#ok<AGROW>
-      
-      save_image(1,1,filenames{imgs(fi)});
-      
-      % display image
-      fprintf('  Display %s\n',...
-      spm_file(filenames{imgs(fi)},'link',[...
-        'try, delete(314); end; fh=figure(314); img = imread(''%s''); pos = get(fh,''Position'');'...
-        'pos(4) = pos(3) * size(img,1)./size(img,2);' ...
-        'set(fh,''name'',''cat_surf_result_png'', '...
-        '  ''menubar'',''none'',''toolbar'',''none'',''Position'',pos); '...
-        'image(img); set(gca,''Position'',[0 0 1 1],''visible'',''off''); '])); 
     end
+    [tmp, pathname, ext] = spm_fileparts(pp);
+    filenames = fullfile(fparts.outdir,[pathname ext '_' fparts.prefix ff fparts.suffix '.png']); %#ok<AGROW>
+
+    save_image(1,1,filenames);
     
     varargout{1} = filenames; 
-    
     
   otherwise   
     error('Unknown action "%s"!\n',action); 
@@ -1258,9 +1261,9 @@ global H
 H.thresh_value = thresh;
 H.clip = [true -thresh thresh];
 
-if H.logP(H.results_sel) & (H.S{1}.thresh < -log10(0.05))
+if H.logP(H.results_sel) && (H.S{1}.thresh < -log10(0.05))
   set(H.thresh, 'Enable', 'on');
-  if min(min(H.S{1}.Y(:)), min(H.S{2}.Y(:))) < 0 & H.n_surf == 1
+  if min(min(H.S{1}.Y(:)), min(H.S{2}.Y(:))) < 0 && H.n_surf == 1
     set(H.hide_neg, 'Enable', 'on');
 %    set(H.hide_neg, 'Value', 0);
   end
@@ -1375,7 +1378,7 @@ switch cmap
         % get sure that min/max is between 0..1
         mn = min(col(:));
         mx = max(col(:));
-        if mx > 1 | mn<0
+        if mx > 1 || mn<0
           col = (col-mn)/(mx-mn);
         end
       catch
@@ -1404,7 +1407,7 @@ global H
 % get threshold from clipping
 thresh = [0 0];
 if ~isempty(H.clip)
-  if ~isnan(H.clip(2)) & ~isnan(H.clip(3))
+  if ~isnan(H.clip(2)) && ~isnan(H.clip(3))
     thresh = [H.clip(2:3)];
   end
 end
@@ -1449,8 +1452,8 @@ for ind = [1 3]
       fprintf('\n%s', spm_str_manip(H.S{round(ind / 2)}.info(indsurf).fname, 'k50d'));
       fprintf('\n______________________________________________________\n\n');
       
-      if H.logP(H.results_sel), fprintf('%7s\t%8s\t%s\n', 'P-value', 'Size', 'Overlap of atlas region');
-      else, fprintf('%7s\t%8s\t%s\n', 'Value  ', 'Size', 'Overlap of atlas region'); end
+      if H.logP(H.results_sel), fprintf('%7s\t%16s\t%s\n', 'P-value', 'Cluster-Size', 'Overlap of atlas region');
+      else, fprintf('%7s\t%16s\t%s\n', 'Value  ', 'Cluster-Size', 'Overlap of atlas region'); end
       
       for i = 1:max(C)
         N = find(C == i);
@@ -1458,8 +1461,8 @@ for ind = [1 3]
         
         dmax = d(indp); dmax = max(dmax(N));
         
-        if H.logP(H.results_sel), fprintf('\n%1.5f\t%8d', 10^(-dmax), k);
-        else, fprintf('\n%6.1f\t%8d', dmax, k); end
+        if H.logP(H.results_sel), fprintf('\n%1.5f\t%16d', 10^(-dmax), k);
+        else, fprintf('\n%6.1f\t%16d', dmax, k); end
         
         Nrdata = rdata2(N);
         roi_size = zeros(size(rcsv, 1) - 1, 1);
@@ -1476,7 +1479,7 @@ for ind = [1 3]
         for j = 1:length(jj)
           if roi_size(jj(j)) > 1
             if j == 1, fprintf('\t%3.0f%s\t%s\n', roi_size(jj(j)), '%', rcsv{jj(j) + 1, 2});
-            else, fprintf('%7s\t%8s\t%3.0f%s\t%s\n', '       ', '        ', ...
+            else, fprintf('%7s\t%16s\t%3.0f%s\t%s\n', '       ', '        ', ...
                 roi_size(jj(j)), '%', rcsv{jj(j) + 1, 2});
             end
           end
@@ -1496,16 +1499,16 @@ for ind = [1 3]
       fprintf('\n%s', spm_str_manip(H.S{round(ind / 2)}.info(indsurf).fname, 'k50d'));
       fprintf('\n______________________________________________________\n\n');
       
-      if H.logP(H.results_sel), fprintf('%7s\t%8s\t%s\n', 'P-value', 'Size', 'Overlap of atlas region');
-      else, fprintf('%7s\t%8s\t%s\n', 'Value  ', 'Size', 'Overlap of atlas region'); end
+      if H.logP(H.results_sel), fprintf('%7s\t%16s\t%s\n', 'P-value', 'Cluster-Size', 'Overlap of atlas region');
+      else, fprintf('%7s\t%16s\t%s\n', 'Value  ', 'Cluster-Size', 'Overlap of atlas region'); end
       
       for i = 1:max(C)
         N = find(C == i);
         k = length(N);
         
         dmin = d(indn); dmin = min(dmin(N));
-        if H.logP(H.results_sel), fprintf('\n%1.5f\t%8d', 10^(dmin), k);
-        else, fprintf('\n%6.1f\t%8d', -dmin, k); end
+        if H.logP(H.results_sel), fprintf('\n%1.5f\t%16d', 10^(dmin), k);
+        else, fprintf('\n%6.1f\t%16d', -dmin, k); end
         
         Nrdata = rdata2(N);
         roi_size = zeros(size(rcsv, 1) - 1, 1);
@@ -1521,7 +1524,7 @@ for ind = [1 3]
         for j = 1:length(jj)
           if roi_size(jj(j)) > 1
             if j == 1, fprintf('\t%3.0f%s\t%s\n', roi_size(jj(j)), '%', rcsv{jj(j) + 1, 2});
-            else, fprintf('%7s\t%8s\t%3.0f%s\t%s\n', '       ', '        ', ...
+            else, fprintf('%7s\t%16s\t%3.0f%s\t%s\n', '       ', '        ', ...
                 roi_size(jj(j)), '%', rcsv{jj(j) + 1, 2});
             end
           end
@@ -1556,7 +1559,7 @@ ind1 = find(H.S{1}.Y(:) ~= 0);
 ind2 = find(H.S{2}.Y(:) ~= 0);
 
 % estimate min value > 0 and min/max values
-if ~isempty(ind1) && ~isempty(ind2)
+if any(ind1) && any(ind2)
   H.S{1}.thresh = min(abs(H.S{1}.Y(abs(H.S{1}.Y(:)) > 0)));
   H.S{1}.thresh = min(H.S{1}.thresh, min(abs(H.S{2}.Y(abs(H.S{2}.Y(:)) > 0))));
   H.S{1}.min = min(min(H.S{1}.Y(~isinf(H.S{1}.Y))), min(H.S{2}.Y(~isinf(H.S{2}.Y))));
@@ -1596,7 +1599,7 @@ else
 end
 
 % only apply thresholds that are slightly larger than zero
-if H.S{1}.thresh > 0.00015 & H.thresh_value == 0
+if H.S{1}.thresh > 0.00015 && H.thresh_value == 0
   H.clip = [true -H.S{1}.thresh H.S{1}.thresh];
 else
   H.clip = [true -H.thresh_value H.thresh_value];
@@ -1665,7 +1668,7 @@ checkbox_info;
 
 % only show threshold popup if log-name was found and minimal value > 0 is
 % < -log10(0.05)
-if H.logP(H.results_sel) & (H.S{1}.thresh < -log10(0.05))
+if H.logP(H.results_sel) && (H.S{1}.thresh < -log10(0.05))
   set(H.thresh, 'Enable', 'on');
 else
   set(H.thresh, 'Enable', 'off');
@@ -1868,9 +1871,10 @@ set(H.figure, 'Renderer', 'OpenGL');
 for i = 1:2
   g1 = gifti(fullfile(spm('dir'), 'toolbox', 'cat12', ['templates_surfaces' H.str32k], [H.S{i}.info(1).side '.mc.freesurfer.gii']));
   g2 = gifti(fullfile(spm('dir'), 'toolbox', 'cat12', ['templates_surfaces' H.str32k], [H.S{i}.info(1).side '.sqrtsulc.freesurfer.gii']));
-  H.S{i}.curv = cell(2, 1);
+  H.S{i}.curv = cell(3, 1);
   H.S{i}.curv{1} = g1.cdata;
   H.S{i}.curv{2} = g2.cdata;
+  H.S{i}.curv{3} = zeros(size(g2.cdata));
 end
 
 if H.view == 1 % top view
@@ -1890,23 +1894,23 @@ try axes(H.dataplot); end
 axis off
 
 % check whether data for left or right hemipshere are all non-zero
-ind1 = find(H.S{1}.Y(:) ~= 0);
-ind2 = find(H.S{2}.Y(:) ~= 0);
+ind1 = H.S{1}.Y(:) ~= 0;
+ind2 = H.S{2}.Y(:) ~= 0;
 
 % estimate min value > 0 and min/max values
-if ~isempty(ind1) && ~isempty(ind2)
+if any(ind1) && any(ind2)
   H.S{1}.thresh = min(abs(H.S{1}.Y(abs(H.S{1}.Y(:)) > 0)));
   H.S{1}.thresh = min(H.S{1}.thresh, min(abs(H.S{2}.Y(abs(H.S{2}.Y(:)) > 0))));
-  H.S{1}.min = min(min(H.S{1}.Y(~isinf(H.S{1}.Y))), min(H.S{2}.Y(~isinf(H.S{2}.Y))));
-  H.S{1}.max = max(max(H.S{1}.Y(~isinf(H.S{1}.Y))), max(H.S{2}.Y(~isinf(H.S{2}.Y))));
-elseif isempty(ind1)
+  H.S{1}.min = min(min(H.S{1}.Y(~isinf(H.S{1}.Y) & ind1)), min(H.S{2}.Y(~isinf(H.S{2}.Y) & ind2)));
+  H.S{1}.max = max(max(H.S{1}.Y(~isinf(H.S{1}.Y) & ind1)), max(H.S{2}.Y(~isinf(H.S{2}.Y) & ind2)));
+elseif all(ind1==0)
   H.S{1}.thresh = min(abs(H.S{2}.Y(abs(H.S{2}.Y(:)) > 0)));
-  H.S{1}.min = min(H.S{2}.Y(~isinf(H.S{2}.Y)));
-  H.S{1}.max = max(H.S{2}.Y(~isinf(H.S{2}.Y)));
-elseif isempty(ind2)
+  H.S{1}.min = min(H.S{2}.Y(~isinf(H.S{2}.Y) & ind2));
+  H.S{1}.max = max(H.S{2}.Y(~isinf(H.S{2}.Y) & ind2));
+elseif all(ind2==0)
   H.S{1}.thresh = min(abs(H.S{1}.Y(abs(H.S{1}.Y(:)) > 0)));
-  H.S{1}.min = min(H.S{1}.Y(~isinf(H.S{1}.Y)));
-  H.S{1}.max = max(H.S{1}.Y(~isinf(H.S{1}.Y)));
+  H.S{1}.min = min(H.S{1}.Y(~isinf(H.S{1}.Y) & ind1));
+  H.S{1}.max = max(H.S{1}.Y(~isinf(H.S{1}.Y) & ind1));
 end
 
 % deal with neg. values
@@ -1917,11 +1921,13 @@ if H.S{1}.min < 0
 end
 
 % add 10% to min/max values
-H.S{1}.max = round(1100 * H.S{1}.max) / 1000;
+if 0
+  H.S{1}.max = round(1100 * H.S{1}.max) / 1000;
 if H.S{1}.min < 0
   H.S{1}.min = round(1100 * H.S{1}.min) / 1000;
 else
   H.S{1}.min = round(900 * H.S{1}.min) / 1000;
+end
 end
 
 H.clim = [true H.S{1}.min H.S{1}.max];
@@ -1946,16 +1952,16 @@ if isfield(H,'Pvol_sel')
 end
 
 % only show threshold popup if log-name was found and minimal value > 0 is < -log10(0.05)
-if H.logP(H.results_sel) & (H.S{1}.thresh < -log10(0.05))
+if H.logP(H.results_sel) && (H.S{1}.thresh < -log10(0.05))
   set(H.thresh, 'Enable', 'on');
 end
 
-if min(min(H.S{1}.Y(:)), min(H.S{2}.Y(:))) < 0 & H.n_surf == 1
+if min(min(H.S{1}.Y(:)), min(H.S{2}.Y(:))) < 0 && H.n_surf == 1
   set(H.hide_neg, 'Enable', 'on');
   set(H.hide_neg, 'Value', 0);
 end
 
-if H.n_surf == 1 & ~H.isvol(H.results_sel)
+if H.n_surf == 1 && ~H.isvol(H.results_sel)
   % get sure that image is thresholded and there are at least 20% zero/NaN areas
   if (sum(d ~= 0) / numel(d) < 0.8)
     set(H.atlas, 'Enable', 'on');
@@ -1977,31 +1983,33 @@ if H.n_surf == 1
     mnx = [0 max_abs];
   end
   
-  [H.slider_min, tmp, H.str_min] = sliderPanel( ...
-    'Parent', H.panel(2), ...
-    'Title', 'Overlay min', ...
-    'Position', H.pos{2}.ovmin, ...
-    'Backgroundcolor', H.col(1,:), ...
-    'Min', mnx(1), ...
-    'Max', mnx(2), ...
-    'Value', H.S{1}.min, ...
-    'FontName', 'Verdana', ...
-    'FontSize', H.FS-1, ...
-    'NumFormat', '%g', ...
-    'Callback', @slider_clim_min);
-  
-  [H.slider_max, tmp, H.str_max] = sliderPanel( ...
-    'Parent', H.panel(2), ...
-    'Title', 'Overlay max', ...
-    'Position', H.pos{2}.ovmax, ...
-    'Backgroundcolor', H.col(1,:), ...
-    'Min', mnx(1), ...
-    'Max', mnx(2), ...
-    'Value', H.S{1}.max, ...
-    'FontName', 'Verdana', ...
-    'FontSize', H.FS-1, ...
-    'NumFormat', '%g', ...
-    'Callback', @slider_clim_max);
+  try
+    [H.slider_min, tmp, H.str_min] = sliderPanel( ...
+      'Parent', H.panel(2), ...
+      'Title', 'Overlay min', ...
+      'Position', H.pos{2}.ovmin, ...
+      'Backgroundcolor', H.col(1,:), ...
+      'Min', mnx(1), ...
+      'Max', mnx(2), ...
+      'Value', H.S{1}.min, ...
+      'FontName', 'Verdana', ...
+      'FontSize', H.FS-1, ...
+      'NumFormat', '%g', ...
+      'Callback', @slider_clim_min);
+
+    [H.slider_max, tmp, H.str_max] = sliderPanel( ...
+      'Parent', H.panel(2), ...
+      'Title', 'Overlay max', ...
+      'Position', H.pos{2}.ovmax, ...
+      'Backgroundcolor', H.col(1,:), ...
+      'Min', mnx(1), ...
+      'Max', mnx(2), ...
+      'Value', H.S{1}.max, ...
+      'FontName', 'Verdana', ...
+      'FontSize', H.FS-1, ...
+      'NumFormat', '%g', ...
+      'Callback', @slider_clim_max);
+  end
 end
 
 %-----------------------------------------------------------------------
@@ -2275,15 +2283,15 @@ if ~exist('FaceColor', 'var') || isempty(FaceColor), FaceColor = 'interp'; end
 %-Get curvature
 %--------------------------------------------------------------------------
 if ind < 5 % single hemisphere views
-  curv = H.S{round(ind / 2)}.curv{H.text_mode};
+  curv = H.S{round(ind / 2)}.curv{H.texture_mode};
 else
-  curv = [H.S{1}.curv{H.text_mode}; H.S{2}.curv{H.text_mode}];
+  curv = [H.S{1}.curv{H.texture_mode}; H.S{2}.curv{H.texture_mode}];
 end
 
-if size(curv, 2) == 1
+if size(curv,2) == 1
   
   % emphasize mean curvature values by using sqrt
-  %  if H.text_mode==1
+  %  if H.texture_mode==1
   if 1
     indneg = find(curv < 0);
     curv(indneg) = - ((-curv(indneg)).^0.5);
@@ -2296,7 +2304,7 @@ if size(curv, 2) == 1
   curv = curv / max(curv(:));
   
   % for sulcal depth (with no neg. values) use inverted values
-  if H.text_mode == 2
+  if H.texture_mode == 2
     curv = 1 - curv;
   end
 end
@@ -2305,7 +2313,7 @@ end
 %--------------------------------------------------------------------------
 C = zeros(size(v, 2), 3);
 clim = getappdata(H.patch(ind), 'clim');
-if isempty(clim), clim = [false NaN NaN]; end
+if isempty(clim) || numel(clim)==1, clim = [false NaN NaN]; end
 mi = clim(2); ma = clim(3);
 
 if any(v(:))
@@ -2357,6 +2365,10 @@ else
   C(ind0) = 0;
 end
 
+if H.texture_mode == 3
+    C(ind0) = 0.5;
+end
+
 %-Add/delete atlas border
 %--------------------------------------------------------------------------
 
@@ -2373,7 +2385,12 @@ if ~H.border_mode
   end
 end
 
-set(H.patch(ind), 'FaceVertexCData', C, 'FaceColor', FaceColor);
+
+set(H.patch(ind), 'FaceVertexCData', C, 'FaceColor', FaceColor, 'FaceLighting','none');
+
+if H.texture_mode == 3
+  set(H.patch(ind), 'FaceLighting','none');
+end
 
 if H.border_mode
   if ind == 1
@@ -2494,10 +2511,10 @@ for i = 1:n
     Pout      = fullfile(pp,['mesh.',ff '.resampled_32k.gii']);
         
     % map 3D volume to template surface inside cortical band with maxabs mapping function
-    cmd = sprintf('CAT_3dVol2Surf -linear -maxabs -steps 7 -start -0.5 -end 0.5 -thickness "%s" "%s" "%s" "%s"',Pthick_lh, Pmesh_lh, Pvol, Pout_lh);
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
-    cmd = sprintf('CAT_3dVol2Surf -linear -maxabs -steps 7 -start -0.5 -end 0.5 -thickness "%s" "%s" "%s" "%s"',Pthick_rh, Pmesh_rh, Pvol, Pout_rh);
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+    cmd = sprintf('CAT_3dVol2Surf -linear -maxabs -steps 7 -start -0.6 -end 0.6 -thickness "%s" "%s" "%s" "%s"',Pthick_lh, Pmesh_lh, Pvol, Pout_lh);
+    cat_system(cmd,0);
+    cmd = sprintf('CAT_3dVol2Surf -linear -maxabs -steps 7 -start -0.6 -end 0.6 -thickness "%s" "%s" "%s" "%s"',Pthick_rh, Pmesh_rh, Pvol, Pout_rh);
+    cat_system(cmd,0);
 
     % combine left and right hemipshere data
     M_lh = gifti(Pout_lh);
@@ -2565,7 +2582,8 @@ if ~exist('filename', 'var')
   
   nm = H.S{1}.info(1).ff;
   [pp, nm] = spm_fileparts(H.S{1}.name);
-  filename = [nm '.png'];
+  pathname = spm_fileparts(pp);
+  filename = [pathname '_' nm '.png'];
   
   % end with _0???.ext?
   if length(nm) > 4
@@ -2642,7 +2660,7 @@ fprintf('Image %s saved.\n',filename);
 update_slice_overlay(H,fullfile(newpth,['slices_' filename]))
 
 % write dataplot window
-if isfield(H, 'dataplot') & strcmpi(get(H.dataplot,'Visible'),'on')
+if isfield(H, 'dataplot') && strcmpi(get(H.dataplot,'Visible'),'on')
   filename = ['plot_' filename];
   pos = round(getpixelposition(H.dataplot)); 
   
@@ -2784,7 +2802,7 @@ for ind = 1:5
 end
 
 % correct value of slider if no values are exceeding threshold
-if min_d > -thresh & H.n_surf == 1
+if min_d > -thresh && H.n_surf == 1
   set(H.slider_min, 'Value', 0);
   set(H.str_min, 'String', 0);
   set(H.slider_min, 'Min', 0);
@@ -2906,7 +2924,7 @@ end
 function H = getHandles(H)
 
 if ~nargin || isempty(H), H = gca; end
-if ishandle(H) & ~isappdata(H, 'handles')
+if ishandle(H) && ~isappdata(H, 'handles')
   a = H; clear H;
   H.axis = a;
   H.figure = ancestor(H.axis, 'figure');
@@ -2948,17 +2966,13 @@ if view ~= H.view
 end
 
 %==========================================================================
-function select_texture(text_mode)
+function select_texture(texture_mode)
 global H
 
 % check that view changed
-if text_mode ~= H.text_mode
+if texture_mode ~= H.texture_mode
   
-  if text_mode == 1 % mean curvature
-    H.text_mode = 1;
-  else % sulcal depth
-    H.text_mode = 2;
-  end
+  H.texture_mode = texture_mode;
   
   for ind = 1:5
     col = getappdata(H.patch(ind), 'col');
@@ -3007,7 +3021,7 @@ switch H.cursor_mode
     clearDataCursorPlot(H);
   case {1, 2, 3, 4}
     clearDataCursorPlot(H);
-    set(dcm_obj, 'Enable', 'on', 'SnapToDataVertex', 'on', ...
+    set(dcm_obj, 'Enable', 'on', 'SnapToDataVertex', 'on', 'Interpreter', 'none', ...
       'DisplayStyle', 'datatip', 'Updatefcn', {@myDataCursorAtlas, H});
   case {5, 6}
     
@@ -3058,7 +3072,7 @@ switch H.cursor_mode
     end
 
     if SPM_found
-      set(dcm_obj, 'Enable', 'on', 'SnapToDataVertex', 'on', ...
+      set(dcm_obj, 'Enable', 'on', 'SnapToDataVertex', 'on', 'Interpreter', 'none', ...
         'DisplayStyle', 'datatip', 'Updatefcn', {@myDataCursorCluster});
       if H.predicted > -2
         fprintf('The values are available at the MATLAB command line as variable ''y''\n');
@@ -3109,7 +3123,7 @@ end
 % get threshold from clipping
 thresh = [0 0];
 if ~isempty(H.clip)
-  if ~isnan(H.clip(2)) & ~isnan(H.clip(3))
+  if ~isnan(H.clip(2)) && ~isnan(H.clip(3))
     thresh = [H.clip(2:3)];
   end
 end
@@ -3148,7 +3162,7 @@ if plot_mean
   end
   
   % go through neg. effects if no node was found
-  if ~isempty(indn) & isempty(found_node)
+  if ~isempty(indn) && isempty(found_node)
     
     C = find_connected_component(A, dn);
     C = C(indn);
@@ -3204,7 +3218,7 @@ ind = 1;
 [y, cbeta, CI] = get_cluster_data(H, XYZ, ind);
 
 % if no cluster was selected set data to zero
-if plot_mean & isempty(found_node)
+if plot_mean && isempty(found_node)
   y(:) = 0;
   cbeta(:) = 0;
   CI(:) = 0;
@@ -3264,7 +3278,7 @@ else
   covariate = 0;
   
   % check for covariates
-  if ~isempty(H.SPM{1}.xX.iC) & numel(ind_X) <= 2
+  if ~isempty(H.SPM{1}.xX.iC) && numel(ind_X) <= 2
     for i=1:numel(ind_X)
       % contrast is defined at entries of iC
       if ~isempty(find(ind_X(i) == H.SPM{1}.xX.iC))
@@ -3277,14 +3291,14 @@ else
   c0 = c0(ind_X,:);
 
   % show scatter plot and linear fit
-  if covariate & numel(ind_X)<=2
+  if covariate && numel(ind_X)<=2
     axes(H.dataplot);
     cla
     
     xx = cell(numel(ind_X),1);
     
     % use existing x-variable if available
-    if exist('x','var') & numel(x)==size(X,1)
+    if exist('x','var') && numel(x)==size(X,1)
       xx_array = [min(x) max(x)]; 
       for i=1:numel(ind_X)
         xx{i} = X(H.SPM{1}.xX.I(:,3)==i);
@@ -3325,7 +3339,7 @@ else
     ylim(H.dataplot,'auto')
     set(H.dataplot,'XTickMode','auto');
     
-  elseif ~isempty(iH) & numel(iH)>1 & (H.predicted < 0)
+  elseif ~isempty(iH) && numel(iH)>1 && (H.predicted < 0)
     yy = cell(numel(iH),1);
     
     for i=1:numel(iH)
@@ -3346,7 +3360,7 @@ else
 end
 
 % plot group coding for Anovas with more than 1 group and native data
-if 0 %~isempty(iH) & numel(iH)>1 & (H.predicted < 0) & isempty(xX.iB)
+if 0 %~isempty(iH) && numel(iH)>1 && (H.predicted < 0) && isempty(xX.iB)
   yl = get(H.dataplot,'YLim');
   pcol = gray(numel(iH)+2);
   for i=1:numel(iH)
@@ -3361,7 +3375,7 @@ if 0 %~isempty(iH) & numel(iH)>1 & (H.predicted < 0) & isempty(xX.iB)
 end
 
 if ~isempty(Ic)
-  xlabel(H.dataplot, H.SPM{round(ind / 2)}.xCon(Ic).name, 'FontSize', H.FS+3, 'Color', 1 - H.bkg_col)
+  xlabel(H.dataplot, H.SPM{round(ind / 2)}.xCon(Ic).name, 'FontSize', H.FS+3, 'Color', 1 - H.bkg_col, 'Interpreter', 'none')
 end
 
 if plot_mean
@@ -3451,7 +3465,7 @@ else
       covariate = 0;
       
       % check for covariates
-      if ~isempty(SPM.xX.iC) & numel(ind_X) <= 2
+      if ~isempty(SPM.xX.iC) && numel(ind_X) <= 2
         for i=1:numel(ind_X)
           % contrast is defined at entries of iC
           if ~isempty(find(ind_X(i) == SPM.xX.iC))
@@ -3481,7 +3495,7 @@ else
       end
 
       n_groups = max(SPM.xX.I(:,3));
-      if repeated_anova | ((n_groups > 1) & covariate)
+      if repeated_anova || ((n_groups > 1) && covariate)
         beta0  = spm_data_read(SPM.Vbeta,'xyz',XYZ);
         beta   = mean(beta0,2);
         mean_group = zeros(n_groups,1);
@@ -3541,7 +3555,7 @@ if H.cursor_mode > 1
   rdata_pos = H.rdata{sel_atlas}(node, ind);
   
   if rdata_pos == 0
-    txt={''};
+    txt = {''};
     return
   end
   
@@ -3568,7 +3582,7 @@ else
     
     rdata_pos = H.rdata{sel_atlas}(node, ind);
     if rdata_pos == 0
-      txt={''};
+      txt = {''};
       return
     end
 
@@ -3581,7 +3595,7 @@ else
       end
     end
   end
-  txt=txt(2:4);
+  txt = txt(2:4);
 end
 
 %==========================================================================

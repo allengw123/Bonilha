@@ -19,7 +19,7 @@ function [Affine2,Yb,Ymi,Ym0] = cat_run_job_APRGs(Ysrc,Ybg,VF,Pb,Pbt,Affine,vx_v
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_run_job_APRGs.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_run_job_APRGs.m 1935 2022-01-28 12:47:57Z dahnke $
 
   dbs = dbstatus; debug = 0; for dbsi=1:numel(dbs), if strcmp(dbs(dbsi).name,mfilename); debug = 1; break; end; end
  
@@ -34,9 +34,9 @@ function [Affine2,Yb,Ymi,Ym0] = cat_run_job_APRGs(Ysrc,Ybg,VF,Pb,Pbt,Affine,vx_v
   [Ysrc,BB] = cat_vol_resize(Ysrc,'reduceBrain',vx_vol,round(20/mean(vx_vol)),Yb0);
   Ybg       = cat_vol_resize(Ybg ,'reduceBrain',vx_vol,round(20/mean(vx_vol)),Yb0);
   Yb0       = cat_vol_resize(Yb0 ,'reduceBrain',vx_vol,round(20/mean(vx_vol)),Yb0);
-  [Ysrc,rV] = cat_vol_resize(Ysrc,'reduceV',vx_vol,1.5,32);
-  Ybg       = cat_vol_resize(Ybg ,'reduceV',vx_vol,1.5,32);
-  Yb0       = cat_vol_resize(Yb0 ,'reduceV',vx_vol,1.5,32);
+  [Ysrc,rV] = cat_vol_resize(Ysrc,'reduceV',vx_vol,1.5,64);
+  Ybg       = cat_vol_resize(Ybg ,'reduceV',vx_vol,1.5,64);
+  Yb0       = cat_vol_resize(Yb0 ,'reduceV',vx_vol,1.5,64);
   
   vx_vol    = rV.vx_volr;
   
@@ -193,7 +193,7 @@ function [Affine2,Yb,Ymi,Ym0] = cat_run_job_APRGs(Ysrc,Ybg,VF,Pb,Pbt,Affine,vx_v
   Ybd  = cat_vbdist(single(smooth3(Yb)>0.5),~Ybg,vx_vol);
   mnhd = cat_stat_kmeans( Ybd( cat_vol_morph(Ybg,'d') & Ybd<10 ) ); 
   Ybgd = cat_vbdist(single(Ybg | Ybd>mnhd),~Yb,vx_vol);
-  Ymx  = Ybgd./(Ybd+Ybgd);
+  Ymx  = min(1,Ybgd./(Ybd+Ybgd));
     
   
   %% cutting parameter
@@ -288,11 +288,26 @@ end
   % do registration
   if ~isfield( job , 'useprior' ) || isempty( job.useprior )
     warning('off','MATLAB:RandStream:ActivatingLegacyGenerators')
-    [Affine2,ll]  = spm_maff8(obj2.image, obj2.samp ,obj2.fwhm ,obj2.tpm ,Affine ,job.opts.affreg ,80);
+    % try to use the newer version that is updated in SPM12
+    try
+      [Affine2,ll]  = spm_maff8(obj2.image, obj2.samp ,obj2.fwhm ,obj2.tpm ,Affine ,job.opts.affreg ,80);
+    catch
+      fprintf('Please update SPM12!\n');
+      [Affine2,ll]  = spm_maff8(obj2.image, obj2.samp ,obj2.fwhm ,obj2.tpm ,Affine ,job.opts.affreg);
+    end
     if det(Affine \ Affine2)>1.5 || det(Affine2 \ Affine)>1.5 % || ll<0.9 % RD202007: add this maybe later
-      Affine2  = spm_maff8(obj2.image, obj2.samp ,obj2.fwhm ,obj2.tpm ,Affine , 'none'  ,80);
+      % try to use the newer version that is updated in SPM12
+      try
+        Affine2  = spm_maff8(obj2.image, obj2.samp ,obj2.fwhm ,obj2.tpm ,Affine , 'none', 80);
+      catch
+        fprintf('Please update SPM12!\n');
+        Affine2  = spm_maff8(obj2.image, obj2.samp ,obj2.fwhm ,obj2.tpm ,Affine , 'none');
+      end
     end
   else
+    Affine2 = Affine; 
+  end
+  if any( isnan( Affine2(:) ) )
     Affine2 = Affine; 
   end
   

@@ -1,6 +1,6 @@
 function Y=cat_vol_ctype(Y,type)
 % ______________________________________________________________________
-% Y=cat_vol_conv(Y[,type])
+% Y=cat_vol_ctype(Y[,type])
 %
 % Convert datatype with checking of min/max, nan, and rounding for 
 % [u]int[8|16], single, double, and char. Default round type is 'uint8'. 
@@ -17,7 +17,7 @@ function Y=cat_vol_ctype(Y,type)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_vol_ctype.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_vol_ctype.m 1855 2021-07-01 13:56:52Z dahnke $
 % ______________________________________________________________________
  
   if nargin==0, help cat_vol_ctype; return; end

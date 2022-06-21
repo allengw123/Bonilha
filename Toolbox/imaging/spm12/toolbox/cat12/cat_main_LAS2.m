@@ -20,7 +20,7 @@ function [Yml,Ymg,Ycls,Ycls2,T3th] = ...
 % ______________________________________________________________________
 %
 %   [Yml,Ymg,Ycls,Ycls2,T3th] = ...
-%     cat_main_LAS(Ysrc,Ycls,Ym,Yb0,Yy,T3th,res,vx_vol,extopts,Tth) 
+%     cat_main_LAS2(Ysrc,Ycls,Ym,Yb0,Yy,T3th,res,vx_vol,extopts,Tth) 
 %
 %   Yml     .. local  intensity normalized image
 %   Ymg     .. global intensity normalized image
@@ -45,7 +45,7 @@ function [Yml,Ymg,Ycls,Ycls2,T3th] = ...
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_main_LAS2.m 1842 2021-06-01 14:41:58Z gaser $
+% $Id: cat_main_LAS2.m 1902 2021-10-30 14:32:01Z dahnke $
 
 
 
@@ -572,20 +572,22 @@ function [Yml,Ymg,Ycls,Ycls2,T3th] = ...
   
   % Add head tissue if it is available. 
   if cat_stat_nanmean(Ym(Ygwc))>0.1 && cat_stat_nanmean(Ysrc(Ycls{6}(:)>128))>T3th(1)
-    % definion of head tissue
-    Ygwh = Ycls{6}>128 & ~Ygwc & ~Ygwg & Yg<0.5 & abs(Ydiv)<0.1 & ...
-      Ysrc>min( res.mn(res.lkp==6) * 0.5 ) & Ysrc<max( res.mn(res.lkp==6) * 1.5 ); 
-    % remove outlier such as defaced areas in high intensity background ... let's start wit 2 std ...
-    Ygwhn = Ysrc < ( cat_stat_nanmedian( Ysrc(Ygwh(:)) )  - 2 * cat_stat_nanstd( Ysrc(Ygwh(:)) )  ) | ...
-            Ysrc > ( cat_stat_nanmedian( Ysrc(Ygwh(:)) )  + 2 * cat_stat_nanstd( Ysrc(Ygwh(:)) )  ); 
-    Ygwh( Ygwhn ) = false; clear Ygwhn
-    %% go to low resolution
-    [Ygi,resTB] = cat_vol_resize(Ysrc .* Ygwh * T3th(3)/mean(Ysrc(Ygwh(:))),'reduceV',vx_vol,mres,32,'meanm');
-    % additional approximation
-    Ygi = cat_vol_approx(Ygi,'nh',resTB.vx_volr,2); Ygi = cat_vol_smooth3X(Ygi,2 * LASfs);
-    Ygi = Ygwh .* max(eps,cat_vol_resize(Ygi,'dereduceV',resTB)); 
-    Yi(Yi==0) = Ygi(Yi==0); 
-    if debug==0; clear Ygwh; end
+    try % no skull-stripped
+      % definion of head tissue
+      Ygwh = Ycls{6}>128 & ~Ygwc & ~Ygwg & Yg<0.5 & abs(Ydiv)<0.1 & ...
+        Ysrc>min( res.mn(res.lkp==6) * 0.5 ) & Ysrc<max( res.mn(res.lkp==6) * 1.5 ); 
+      % remove outlier such as defaced areas in high intensity background ... let's start wit 2 std ...
+      Ygwhn = Ysrc < ( cat_stat_nanmedian( Ysrc(Ygwh(:)) )  - 2 * cat_stat_nanstd( Ysrc(Ygwh(:)) )  ) | ...
+              Ysrc > ( cat_stat_nanmedian( Ysrc(Ygwh(:)) )  + 2 * cat_stat_nanstd( Ysrc(Ygwh(:)) )  ); 
+      Ygwh( Ygwhn ) = false; clear Ygwhn
+      %% go to low resolution
+      [Ygi,resTB] = cat_vol_resize(Ysrc .* Ygwh * T3th(3)/mean(Ysrc(Ygwh(:))),'reduceV',vx_vol,mres,32,'meanm');
+      % additional approximation
+      Ygi = cat_vol_approx(Ygi,'nh',resTB.vx_volr,2); Ygi = cat_vol_smooth3X(Ygi,2 * LASfs);
+      Ygi = Ygwh .* max(eps,cat_vol_resize(Ygi,'dereduceV',resTB)); 
+      Yi(Yi==0) = Ygi(Yi==0); 
+      if debug==0; clear Ygwh; end
+    end
   end
   if debug==0, clear Ygwg Ygwc; end
   
@@ -722,7 +724,7 @@ function [Yml,Ymg,Ycls,Ycls2,T3th] = ...
   
   
  %% 
- if ~res.ppe.affreg.highBG 
+ if isfield(res,'affreg') && isfield(res.affreg,'highBG') && ~res.ppe.affreg.highBG 
   %% CSF & BG 
   %  The differentiation of CSF and Background is not allway good. In some
   %  images with low intensity (especially for defacing/skull-stripping)
@@ -810,8 +812,17 @@ function [Yml,Ymg,Ycls,Ycls2,T3th] = ...
   % final scaling of GM and CSF (not required for WM)
   Ylab{1} = Ylab{1} .* T3th(2) / cat_stat_kmeans( Ylab{1}(Ygm(:)>0.5), 1); 
   Ylab{3} = Ylab{3} .* T3th(1) / cat_stat_kmeans( Ylab{3}(Ycm(:)>0.5), 1); 
-  Ylab{6} = Ylab{6} .* cat_stat_kmeans( Ysrc(Ynb(:)>0.5) , 1) / cat_stat_kmeans( Ylab{6}(Ynb(:)>0.5) , 1); 
   
+  % RD202110: corrected cases with incorrect background region Ynb
+  if sum(Ynb(:)>0.5)>0
+    Ynb   = smooth3( Ycls{6})>128 & Yg<0.3; 
+  end
+  if sum(Ynb(:)>0.5)>0
+    Ylab{6} = Ylab{6} .* cat_stat_kmeans( Ysrc(Ynb(:)>0.5) , 1) / max(eps,cat_stat_kmeans( Ylab{6}(Ynb(:)>0.5) , 1)); 
+  else
+    Ylab{6} = min(Ysrc(:)); 
+  end
+ 
   %% restore original resolution
   if exist('resT0','var')
     Ycls = Yclso2; clear Yclso2; 
@@ -823,7 +834,7 @@ function [Yml,Ymg,Ycls,Ycls2,T3th] = ...
   %% local intensity modification of the original image
   % --------------------------------------------------------------------
   cat_io_cmd('  Intensity transformation','g5','',verb,stime); 
-  fprintf('\n')
+
   Yml = zeros(size(Ysrc)); 
   Yml = Yml + ( (Ysrc>=Ylab{2}                ) .* (3 + (Ysrc - Ylab{2}) ./ max(eps,Ylab{2} - Ylab{3})) );
   Yml = Yml + ( (Ysrc>=Ylab{1} & Ysrc<Ylab{2} ) .* (2 + (Ysrc - Ylab{1}) ./ max(eps,Ylab{2} - Ylab{1})) );
@@ -871,6 +882,7 @@ function [Yml,Ymg,Ycls,Ycls2,T3th] = ...
   Yncm = ~Ygm & ~Ywm & ((Yml/3)>1/6 | Ycls{3}>128) & (Yml/3)<0.5 & Yb2;
   if debug==0, clear Ywm Ygm; end
   
+  % cleanup outer GM that was mislabeled as WM 
   Yp0     = single( Ycls{1} )/255*2 + single( Ycls{2} )/255*3 + single( Ycls{3} )/255;  % recreate label map
   Ycls{2} = cat_vol_ctype(single(Ycls{2}) + (Ynwm & ~Yngm & Yp0>=1.5)*256 - (Yngm & ~Ynwm & Yp0>=2)*256,'uint8');
   Ycls{1} = cat_vol_ctype(single(Ycls{1}) - (Ynwm & ~Yngm & Yp0>=1.5)*256 + (Yngm & ~Ynwm & Yp0>=2)*256,'uint8');

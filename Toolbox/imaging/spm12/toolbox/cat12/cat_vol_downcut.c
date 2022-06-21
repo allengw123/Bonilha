@@ -32,12 +32,13 @@
  * Departments of Neurology and Psychiatry
  * Jena University Hospital
  * ______________________________________________________________________
- * $Id: cat_vol_downcut.c 1791 2021-04-06 09:15:54Z gaser $ 
+ * $Id: cat_vol_downcut.c 1923 2021-12-20 16:53:15Z dahnke $ 
  */
  
 #include "mex.h"   
 #include "math.h"
 #include "float.h"
+/* #include "matrix.h" */
 
 /*
 #ifndef isnan
@@ -49,9 +50,9 @@
 
 /* estimate x,y,z position of index i in an array size sx,sxy=sx*sy... */
 void ind2sub(int i,int *x,int *y, int *z, int sxy, int sy) {
-  *z = (int)floor( i / (double)sxy ) +1; 
+  *z = (int)floor( (double)i / (double)sxy ) +1; 
    i = i % (sxy);
-  *y = (int)floor( i / (double)sy ) +1;        
+  *y = (int)floor( (double)i / (double)sy ) +1;        
   *x = i % sy + 1;
 }
 
@@ -61,9 +62,10 @@ int sub2ind(int x,int y, int z, const int s[]) {
   return i;
 }
 
-float abs2(float n) {	if (n<0) return -n; else return n; }
-float sign(float n) {	if (n<0) return 1; else return 0; }
+float abs2(float n) {	if (n<0.0) return -n; else return n; }
+float sign(float n) {	if (n<0.0) return 1.0; else return 0.0; }
 float max2(float a, float b) { if (a>b) return a; else return b; }
+float min2(float a, float b) { if (a<b) return a; else return b; }
 
 /* MAINFUNCTION */
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -76,7 +78,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   if (nrhs==4 && mxIsDouble(prhs[3])==0)                           mexErrMsgTxt("ERROR:cat_vol_downcut: fourth  input must be an double matrix\n");
   if (nrhs==4 && mxGetNumberOfElements(prhs[3])!=3)                mexErrMsgTxt("ERROR:cat_vol_downcut: fourth input must have 3 Elements");
   if (nrhs==5 && mxIsDouble(prhs[4])==0)                           mexErrMsgTxt("ERROR:cat_vol_downcut: fifth input must be an double matrix\n");
-  if (nrhs==5 && mxGetNumberOfElements(prhs[4])!=2)                mexErrMsgTxt("ERROR:cat_vol_downcut: fifht input must have 2 Elements");
+  if (nrhs==5 && mxGetNumberOfElements(prhs[4])!=2)                mexErrMsgTxt("ERROR:cat_vol_downcut: fifth input must have 2 Elements");
     
   /* main information about input data (size, dimensions, ...) */
   const mwSize *sL = mxGetDimensions(prhs[0]); 
@@ -90,8 +92,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   mxArray *SS  = mxCreateNumericArray(2,sSS, mxDOUBLE_CLASS,mxREAL); double*S  = mxGetPr(SS);
   mxArray *dsv = mxCreateNumericArray(2,sdsv,mxDOUBLE_CLASS,mxREAL); double*dd = mxGetPr(dsv);
   float dI=0.0; double*SEGd; if (nrhs>=3) {SEGd=mxGetPr(prhs[2]); dI=(float) SEGd[0];}; 
-  if (nrhs<4) {S[0]=1; S[1]=1; S[2]=1;} else {S=mxGetPr(prhs[3]);}
-  if (nrhs<5) {dd[0]=0.1; dd[1]=10;}    else {dd=mxGetPr(prhs[4]);}
+  if (nrhs<4) {S[0]=1.0; S[1]=1.0; S[2]=1.0;} else {S=mxGetPr(prhs[3]);}
+  if (nrhs<5) {dd[0]=0.1; dd[1]=10;}    else {dd=mxGetPr(prhs[4]);} /* THIS SEAMS TO BE INOPTIMAL IN THE SIMPLE EXAMPLES - DO FURTHER TESTS */
+  /* if (nrhs<5) {dd[0]=10; dd[1]=0.1;}    else {dd=mxGetPr(prhs[4]);} */
   
   float s1 = abs2((float)S[0]),s2 = abs2((float)S[1]),s3 = abs2((float)S[2]);
   const float   s12  = sqrt( s1*s1  + s2*s2); /* xy - voxel size */
@@ -103,9 +106,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   const int   NI[]  = {  1, -1,  x, -x, xy,-xy, -x-1,-x+1,x-1,x+1, -xy-1,-xy+1,xy-1,xy+1, -xy-x,-xy+x,xy-x,xy+x,  -xy-x-1,-xy-x+1,-xy+x-1,-xy+x+1, xy-x-1,xy-x+1,xy+x-1,xy+x+1};  
   const float ND[]  = { s1, s1, s2, s2, s3, s3,  s12, s12,s12,s12,   s13,  s13, s13, s13,   s23,  s23, s23, s23,     s123,   s123,   s123,   s123,   s123,  s123,  s123,  s123};
  
-  int         i,n,ni,u,v,w,nu,nv,nw;
+  int         ni,u,v,w,nu,nv,nw;
     
-  /* main volumes - actual without memory optimation ... */
+  /* main volumes - actual without memory optimization ... */
   plhs[0] = mxCreateNumericArray(dL,sL,mxSINGLE_CLASS,mxREAL); /* label map  */
   plhs[1] = mxCreateNumericArray(dL,sL,mxSINGLE_CLASS,mxREAL); /* tissue map (speed) */
     
@@ -123,32 +126,42 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	float DISTN;
 	
 	/* initialisation of parameter volumes */
-	for (i=0;i<nL;i++) { 
+	for (int i=0;i<nL;i++) { 
 		SLAB[i] = ALAB[i]; 
-		if (mxIsNaN(SLAB[i])) SLAB[i]=0;
-		if (SLAB[i]==0) 					{DIST[i]= FLT_MAX; } 
+		if (mxIsNaN(SLAB[i])) 
+      SLAB[i] = 0.0;
+		if (SLAB[i] == 0.0) 
+      DIST[i] = FLT_MAX; 
 		else {
-			if (SLAB[i]==-FLT_MAX) {DIST[i]=-FLT_MAX; }
-			else 										{DIST[i]=0; nCV++;} } 
+			if (SLAB[i] == -FLT_MAX) 
+        DIST[i] = -FLT_MAX;
+			else {
+        DIST[i] = 0.0; 
+        nCV++;
+      } 
+    } 
 	}
+  
+  
+  
 	/* diffusion */
 	int   nC = nCV;
 	kll=0;
 	while ( nCV>0 && kll<kllv && nC>0 ) {
 		kll++; nC=0;
 	
-		for (i=0;i<nL;i++) { 
+		for (int i=0;i<nL;i++) { 
 			if ( (DIST[i]<=0) && (DIST[i]!=-FLT_MAX ) ) { 
 				if (DIST[i]<0) DIST[i]=-DIST[i]; 
 				nCV--; /* demark points - also the with zero distance */
 				
 				ind2sub(i,&u,&v,&w,xy,x); 
-				for (n=0;n<26;n++) {
+				for (int n=0;n<26;n++) {
 					ni = i+NI[n]; ind2sub(ni,&nu,&nv,&nw,xy,x);
 					
-					if ( ((ni<0) || (ni>=nL) || (abs(nu-u)>1) || (abs(nv-v)>1) || (abs(nw-w)>1) )==0 && (SEG[i]+dI>=(SEG[ni])) && ALAB[ni]==0 ) {
-            if (nrhs==5) DISTN = DIST[i] + (float)dd[0]*ND[n] + (float)dd[1]*max2(0,SEG[ni]);  
-            else         DISTN = DIST[i] + (float)dd[0]*ND[n] + (float)dd[1]*max2(0,4-SEG[ni]);
+					if (((ni<0) || (ni>=nL) || (abs(nu-u)>1) || (abs(nv-v)>1) || (abs(nw-w)>1) )==0 && (SEG[i]+dI)>=(SEG[ni]) && ALAB[ni]==0.0 ) {
+            if (nrhs==5) DISTN = DIST[i] + ((float) dd[0])*ND[n] + ((float) dd[1]) * max2(0.0,min2(1.0,SEG[ni]));  
+            else         DISTN = DIST[i] + ((float) dd[0])*ND[n] + ((float) dd[1]) * max2(0.0,4.0 - max2(0.0,SEG[ni]));
             
 						/*if ( DISTN>0 && (abs2(DIST[ni])>abs2(DISTN)) &&  (( (ni<0) || (ni>=nL) || (abs(nu-u)>1) || (abs(nv-v)>1) || (abs(nw-w)>1) )==0)  )  { */
 						if (  (DIST[ni]!=-FLT_MAX) && (abs2(DIST[ni])>abs2(DISTN)) )  {	
@@ -158,14 +171,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 						}
 					}				
 				}
-				if (DIST[i]==0) DIST[i]=-FLT_MAX; /* demark start points */
+				if (DIST[i]==0.0) DIST[i]=-FLT_MAX; /* demark start points */
 				
 			}
 		}
 		
 	}
-
-	/*for (int i=0;i<nL;i++) { if (DIST[i]==-FLT_MAX) {DIST[i] = 0; SLAB[i]++; } } */
-
 	/*printf("(%d,%d)",nCV,kll); */
+
+  /* clear internal variables 
+  mxDestroyArray(plhs[1]);
+  mxDestroyArray(plhs[2]);
+  */
+
 }

@@ -1255,6 +1255,9 @@ if ~exist('verbose', 'var'),
 end;
 fslEnvSub;
 cmd = fslCmdSub(command);
+cmd = ['export FSLDIR=',fslDirSub,'; ',cmd]
+% Add "export FSLDIR" - AJC edit
+
 if verbose
     fprintf('Running \n %s\n', cmd);
     [status,cmdout]  = system(cmd,'-echo');

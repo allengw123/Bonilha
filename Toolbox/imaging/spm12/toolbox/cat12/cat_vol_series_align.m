@@ -14,29 +14,32 @@ function out = cat_vol_series_align(job)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_vol_series_align.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_vol_series_align.m 1959 2022-03-01 14:22:21Z dahnke $
 
 N = numel(job.data);
 
 if numel(job.noise)==1
-    noise = repmat(job.noise,[N,1]);
+  noise = repmat(job.noise,[N,1]);
 elseif numel(job.noise) ~= N
-    error('Incompatible numbers of noise estimates and scans.');
+  error('Incompatible numbers of noise estimates and scans.');
 else
-    noise = job.noise(:);
+  noise = job.noise(:);
 end
 
 prec   = noise.^(-2);
 
 if isfield(job.reg,'nonlin')
+  cat_io_cprintf('blue','Non-linear Registration!\n');
   tim = job.reg.nonlin.times(:);
   if all(isfinite(tim))
-    if numel(tim) ~= N,
+    if numel(tim) == 1
+        tim = (1:N)';
+    elseif numel(tim) ~= N
         error('Incompatible numbers of times and scans.');
     end
-    if any(abs(diff(tim)) > 50),
+    if any(abs(diff(tim)) > 50)
         error('Time differences should be in years.');
-    end;
+    end
     wparam0   = job.reg.nonlin.wparam;
     
     midtim = median(tim);
@@ -45,7 +48,7 @@ if isfield(job.reg,'nonlin')
     s_settings = round(3*abs(tim)+2);
   else % use default regularization if tim is set to NAN
     w_settings = job.reg.nonlin.wparam;
-    s_settings = 6;
+    s_settings = 6; %round( job.reg.nonlin.wparam(5) / 25);
   end
 else
   w_settings = [Inf Inf Inf Inf Inf];
@@ -77,7 +80,20 @@ else
   reduce = job.reduce;
 end
 
-out = cat_vol_groupwise_ls(Nii, output, prec, w_settings, b_settings, s_settings, ord, use_brainmask, reduce);
+if ~isfield(job,'setCOM')
+  setCOM = 1;
+else
+  setCOM = job.setCOM;
+end
+
+% force isotropic average resolution (0-default,1-best,2-worst,3-optimal)
+if ~isfield(job,'isores')
+  isores = 0;
+else
+  isores = job.isores;
+end
+
+out = cat_vol_groupwise_ls(Nii, output, prec, w_settings, b_settings, s_settings, ord, use_brainmask, reduce, setCOM, isores);
 
 return
 

@@ -26,11 +26,11 @@ function varargout = cat_stat_marks(action,uselevel,varargin)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_stat_marks.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_stat_marks.m 1982 2022-04-12 11:09:13Z dahnke $
 
 %#ok<*NASGU,*STRNU>
 
-  rev = '$Rev: 1791 $';
+  rev = '$Rev: 1982 $';
   
   
 % used measures and marks:
@@ -71,6 +71,7 @@ function varargout = cat_stat_marks(action,uselevel,varargin)
   % - resolution - 
    'qualitymeasures'  'res_vx_vol'            'linear'    [  0.50   3.00]  'voxel dimensions'
    'qualitymeasures'  'res_RMS'               'linear'    [  0.50   3.00]  'RMS error of voxel size'
+   'qualitymeasures'  'res_grad'              'linear'    [  0.00   0.30]  'normalized gradient slope of the white matter boundary'
   %'qualitymeasures'  'res_MVR'               'linear'    [  0.50   3.00]  'mean voxel resolution'
   %'qualitymeasures'  'res_vol'               'linear'    [  0.125    27]  'voxel volume'
   %'qualitymeasures'  'res_isotropy'          'linear'    [  1.00   8.00]  'voxel isotropy'
@@ -92,7 +93,7 @@ function varargout = cat_stat_marks(action,uselevel,varargin)
   %'qualitymeasures'  'MPC'                   'linear'    [  0.11   0.33]  'mean preprocessing change map - difference between optimal T1 and p0'
   %'qualitymeasures'  'MJD'                   'linear'    [  0.05   0.15]  'mean Jacobian determinant'
   %'qualitymeasures'  'STC'                   'linear'    [  0.05   0.15]   'difference between template and label'
-   'qualitymeasures'  'SurfaceEulerNumber'    'linear'    [     2    100]  'average number of Euler defects of created surfaces'
+   'qualitymeasures'  'SurfaceEulerNumber'    'linear'    [     2    100]  'average Euler number (characteristic)'
    'qualitymeasures'  'SurfaceDefectArea'     'linear'    [     0     20]  'average area of topological defects'
    'qualitymeasures'  'SurfaceDefectNumber'   'linear'    [     0    100]  'average number of defects'
    'qualitymeasures'  'SurfaceIntensityRMSE'  'linear'    [  0.05    0.3]  'RMSE of the expected boundary intensity Ym of the IS, OS, and CS'
@@ -164,7 +165,7 @@ function varargout = cat_stat_marks(action,uselevel,varargin)
  
   mark2rps    = @(mark) min(100,max(0,105 - mark*10));
   grades      = {'A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-','E+','E','E-','F'};
-  mark2grad   = @(mark) grades{min(numel(grades),max(max(isnan(mark)*numel(grades),1),round((mark+2/3)*3-3)))};
+  mark2grad   = @(mark) grades{max(1,min(numel(grades),max(max(isnan(mark)*numel(grades),1),round((mark+2/3)*3-3))))};
   
   rms         = @(a,fact)   max(0,cat_stat_nanmean(a.^fact).^(1/fact));
   rmsw        = @(a,fact,w) max(0,(cat_stat_nansum((a.*w).^fact)/cat_stat_nansum(w)).^(1/fact));
@@ -257,7 +258,7 @@ function varargout = cat_stat_marks(action,uselevel,varargin)
 %       BWP.NCRm = evallinear(QA.qualitymeasures.NCR    ,0.05,0.35,6);
 %       BWP.MVRm = evallinear(QA.qualitymeasures.res_RMS,0.50,3.00,6);    
       
-      QAM.qualityratings.IQR = rms([QAM.qualityratings.NCR QAM.qualityratings.res_RMS],8);
+      QAM.qualityratings.IQR = rms([QAM.qualityratings.NCR  QAM.qualityratings.res_RMS  QAM.qualityratings.res_grad],8);
       QAM.subjectratings.SQR = rms([QAM.subjectratings.vol_rel_CGW],8);
       
       varargout{1} = QAM;
@@ -265,7 +266,7 @@ function varargout = cat_stat_marks(action,uselevel,varargin)
     
     case 'init'    % ausgabe einer leeren struktur
       varargout{1} = QS;
-      varargout{2} = {'NCR','ICR','res_RMS','contrastr'}; 
+      varargout{2} = {'NCR','ICR','res_RMS','res_grad','contrastr'}; 
     
       
     case 'marks'    % ausgabe einer leeren struktur

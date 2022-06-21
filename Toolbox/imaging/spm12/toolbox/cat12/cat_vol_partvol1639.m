@@ -47,7 +47,7 @@ function [Ya1,Ycls,YMF,Ycortex] = cat_vol_partvol1639(Ym,Ycls,Yb,Yy,vx_vol,extop
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_vol_partvol1639.m 1842 2021-06-01 14:41:58Z gaser $
+% $Id: cat_vol_partvol1639.m 1902 2021-10-30 14:32:01Z dahnke $
 
 % ______________________________________________________________________
 %
@@ -158,7 +158,7 @@ function [Ya1,Ycls,YMF,Ycortex] = cat_vol_partvol1639(Ym,Ycls,Yb,Yy,vx_vol,extop
   
 
   % use addition FLAIR images
-  if exist('job','var') && isfield(job,'data_wmh') && ~isempty(job.data_wmh) && numel(job.data_wmh)>=job.subj
+  if exist('job','var') && isfield(job,'data_wmh') && ~isempty(job.data_wmh) && isfield(job,'subj') && numel(job.data_wmh)>=job.subj
     %%
     [pp,ff,ee] = spm_fileparts(job.data_wmh{job.subj}); 
     Pflair = fullfile(pp,[ff ee]); 

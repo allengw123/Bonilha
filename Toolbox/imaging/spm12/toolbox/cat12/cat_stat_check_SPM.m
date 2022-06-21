@@ -22,7 +22,7 @@ function cat_stat_check_SPM(job)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_stat_check_SPM.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_stat_check_SPM.m 1929 2022-01-07 17:06:57Z gaser $
 
 if nargin == 0
     file = spm_select(1,'SPM.mat','Select SPM.mat'); 
@@ -141,20 +141,12 @@ if check_cov
     end
     
     % select data for each sample
-    if mesh_detected
-        job_check_cov.data_surf = cell(n_samples,1);
-        for i=1:n_samples
-            ind = find(xX.I(:,cl)==i);
-            job_check_cov.data_surf{i} = char(VY(ind).fname);
-        end
-    else
-        job_check_cov.data_vol = cell(n_samples,1);
-        for i=1:n_samples
-            ind = find(xX.I(:,cl)==i);
-            job_check_cov.data_vol{i} = char(VY(ind).fname);
-        end
-        job_check_cov.gap = 3;
+    job_check_cov.data_vol = cell(n_samples,1);
+    for i=1:n_samples
+        ind = find(xX.I(:,cl)==i);
+        job_check_cov.data_vol{i} = char(VY(ind).fname);
     end
+    job_check_cov.gap = 3;
     
     % don't use parameter files for quality measures
     job_check_cov.data_xml = '';
@@ -188,7 +180,7 @@ if check_ortho
     fprintf('-------------------------------------------\n');
     h = check_orthogonality(SPM.xX);
     
-    if nargin > 0 && isfield(job.check_SPM_cov.do_check_cov,'save')
+    if nargin > 0 && isfield(job.check_SPM_cov,'do_check_cov') && isfield(job.check_SPM_cov.do_check_cov,'save')
       %%
       if ~isempty(job.check_SPM_cov.do_check_cov.fname)
         dpi = cat_get_defaults('print.dpi'); 
@@ -249,8 +241,8 @@ X(:,[xX.iC xX.iG]) = X(:,[xX.iC xX.iG]) - repmat(mean(X(:,[xX.iC xX.iG])), nScan
 tmp = sqrt(sum(X.^2));
 O   = X'*X./kron(tmp',tmp);
 tmp = sum(X);
-tmp     = abs(tmp)<eps*1e5;
-bC      = kron(tmp',tmp);
+tmp = abs(tmp)<eps*1e5;
+bC  = kron(tmp',tmp);
 
 
 %-Display

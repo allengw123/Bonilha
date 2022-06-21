@@ -1,5 +1,5 @@
 function FO = cat_io_handle_pre(F,pre,addpre,existfile)
-% Remove all known cat prefix typs from a filename (and check if this file exist). 
+% Remove all known cat prefix types from a filename (and check if this file exist). 
 % ______________________________________________________________________
 %
 % Christian Gaser, Robert Dahnke
@@ -7,7 +7,7 @@ function FO = cat_io_handle_pre(F,pre,addpre,existfile)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_io_handle_pre.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_io_handle_pre.m 1873 2021-08-26 06:58:44Z gaser $
 
   if nargin<4, existfile = 1; end
   if nargin<3, addpre    = 0; end

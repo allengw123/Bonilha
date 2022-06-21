@@ -22,7 +22,7 @@ function varargout = cat_surf_surf2roi(job)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_surf_surf2roi.m 1791 2021-04-06 09:15:54Z gaser $ 
+% $Id: cat_surf_surf2roi.m 1981 2022-04-04 07:23:37Z gaser $ 
 
 
 % ______________________________________________________________________
@@ -52,7 +52,7 @@ function varargout = cat_surf_surf2roi(job)
     
   % split job and data into separate processes to save computation time
   if isfield(job,'nproc') && job.nproc>0 && (~isfield(job,'process_index'))
-    cat_parallelize(job,mfilename,'cat_surf_surf2roi');
+    cat_parallelize(job,mfilename,'cdata'); %,'cat_surf_surf2roi');
     return
   elseif isfield(job,'printPID') && job.printPID 
     cat_display_matlab_PID
@@ -90,8 +90,8 @@ function varargout = cat_surf_surf2roi(job)
         clear vertices colortable;
       case 'gii'
         % gifti and csv-files
-        rrdata = gifti(job.rdata{ri});
-        lrdata = gifti(char(cat_surf_rename(rinfo,'side','rh'))); 
+        lrdata = gifti(job.rdata{ri});
+        rrdata = gifti(char(cat_surf_rename(rinfo,'side','rh'))); 
         
         rdatacsv = cat_vol_findfiles(strrep(rinfo.pp,'atlases_surfaces',pth_templates),[rinfo.dataname '*.csv']);
         if ~isempty(rdatacsv{1})
@@ -119,16 +119,33 @@ function varargout = cat_surf_surf2roi(job)
         
         if all(~cell2mat(strfind({'central','hull','sphere','sphere.reg','resampledBySurf2roi'},sinfo.dataname)))
           
-          if size(lrdata,1) > 150000
+          % RD202108: resampled data but without given filename information
+          if size(lrdata,1) == 163842 
             type = '164k';
-          else
+          elseif size(lrdata,1) == 32492
             type = '32k';
           end
           
+          % RD202108: data without structured filename
+          if isempty(sinfo.name)
+            sinfo.name = sinfo.ff;
+          end
+          
           % load surface cdata 
-          if job.resamp && sinfo.resampled==0 % do temporary resampling
+          if job.resamp && (sinfo.resampled==0 && sinfo.resampled_32k==0) % do temporary resampling
             lCS = get_resampled_values(job.cdata{ti}{si},job.debug,type);
             rCS = get_resampled_values(cat_surf_rename(sinfo,'side','rh'),job.debug,type); 
+          elseif strcmp(sinfo.side,'mesh')
+            switch sinfo.ee
+              case '.gii'
+                CS  = gifti(job.cdata{ti}{si});
+                CS  = export(CS,'patch');
+                CS  = CS.facevertexcdata;
+              otherwise
+                CS = cat_io_FreeSurfer('read_surf_data',job.cdata{ti}{si});
+            end
+            lCS.cdata = CS(1:32492);
+            rCS.cdata = CS(32492:end); 
           else
             switch sinfo.ee
               case '.gii'
@@ -136,7 +153,7 @@ function varargout = cat_surf_surf2roi(job)
                 rCS = gifti(char(cat_surf_rename(sinfo,'side','rh'))); 
               otherwise
                 lCS = cat_io_FreeSurfer('read_surf_data',job.cdata{ti}{si});
-                rCS = cat_io_FreeSurfer('read_surf_data',cat_surf_rename(sinfo,'side','rh')); 
+                rCS = cat_io_FreeSurfer('read_surf_data',char(cat_surf_rename(sinfo,'side','rh')));
             end
           end
 
@@ -166,6 +183,9 @@ function varargout = cat_surf_surf2roi(job)
               else
                 fieldname = sprintf('%s_%s',FN{ai},sinfo.dataname);
               end
+              if strcmpi(spm_check_version,'octave'), maxchar = 127; else, maxchar = 1023; end
+              fieldname = cat_io_strrep(fieldname,num2cell(char([33:47,124:maxchar])),'_');
+              fieldname = cat_io_strrep(fieldname,'__','_');
               switch FN{ai}
                 case {'min','max'},           nanfunc = ''; 
                 case {'mean','median','std'}, nanfunc = 'cat_stat_nan';
@@ -185,7 +205,7 @@ function varargout = cat_surf_surf2roi(job)
               end
               
               % write xml data
-              xmlname{si} = fullfile(strrep(sinfo.pp,[filesep surffolder],''),labelfolder,['catROIs_' sinfo.name '.xml']);
+              xmlname{si} = fullfile(strrep(sinfo.pp,surffolder,labelfolder),['catROIs_' sinfo.name '.xml']);
               cat_io_xml(xmlname{si},catROI{si},'write+'); 
               
               % delete temporarily resampled files
@@ -241,7 +261,7 @@ function resamp = get_resampled_values(P,debug,type)
         
     % resample values using warped sphere 
     cmd = sprintf('CAT_ResampleSurf "%s" "%s" "%s" "%s" "%s" "%s"',Pcentral,Pspherereg,Pfsavg,Presamp,P,Pvalue);
-    [ST, RS] = cat_system(cmd); err = cat_check_system_output(ST,RS,debug,0);
+    err = cat_system(cmd,debug,0);
     delete(Presamp);
 
   end

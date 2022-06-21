@@ -1,5 +1,3427 @@
 ------------------------------------------------------------------------
-r1844 | gaser | 2021-06-03 01:40:50
+r1987 | gaser | 2022-04-25 14:27:55
+
+Changed paths:
+M       CHANGES.txt
+M       cat_system.m
+M       spm_cat12.m
+
+(1) Changed: Added check to spm_cat12.m to check whether mex-files on MAC OS
+             are blocked.
+------------------------------------------------------------------------
+r1986 | gaser | 2022-04-25 13:45:39 +0200 (Mon, 25 Apr 2022) | 8 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_stat_analyze_ROIs.m
+ M      html/cat_shell.html
+
+(1) Changed: Added check to cat_stat_analyze_ROI.m to indicate ROI values that
+             have low relative values and should be care with caution.
+
+------------------------------------------------------------------------
+r1985 | gaser | 2022-04-25 09:18:54 +0200 (Mon, 25 Apr 2022) | 15 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_parallelize.m
+M       cat_plot_histogram.m
+M       cat_vol_img2mip.m
+MM      cat_vol_sanlm2.m
+M       standalone/cat_standalone.sh
+MM      standalone/cat_standalone_get_TIV.m
+
+(1) Changed: Prevent heavy use of nano editor in cat_parallelize.m in 
+             headless mode without GUI.
+(2) Fixed:   Corrected bug in cat_vol_img2mip.m that was caused if one view
+             was empty.
+
+
+------------------------------------------------------------------------
+r1984 | gaser | 2022-04-19 09:59:02 +0200 (Tue, 19 Apr 2022) | 49 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_amap.mex
+M       cat_conf_factorial.m
+M       cat_io_xml.m
+M       cat_long_main.m
+M       cat_ornlm.mex
+M       cat_parallelize.m
+M       cat_run.m
+M       cat_sanlm.mex
+M       cat_stat_TIV.m
+M       cat_surf_results.m
+M       cat_vbdist.mex
+M       cat_vol_downcut.mex
+M       cat_vol_eidist.mex
+M       cat_vol_genus0.mex
+M       cat_vol_gradient3.mex
+M       cat_vol_interp3f.mex
+M       cat_vol_laplace3.mex
+M       cat_vol_laplace3R.mex
+M       cat_vol_localstat.mex
+M       cat_vol_median3.mex
+M       cat_vol_median3c.mex
+M       cat_vol_pbtp.mex
+M       cat_vol_simgrow.mex
+M       html/cat.txt
+M       html/cat_licences.html
+A       html/cat_shell.html
+M       internal/cat_vol_cMRegularizarNLM3D.mex
+M       standalone/cat_standalone.sh
+
+(1) Changed: Extended cat_standalone.sh to also allow calling any SPM12/CAT12 
+             batch in standard Matlab.
+(2) Changed: Extended cat_surf_results to set title of colorbar and to
+             automatically estimate path and filename for saving.
+(3) Changed: Option for independence in cat_conf_factorial.m is now visible.
+(4) Fixed:   Corrected bug in cat_stat_TIV.m where filename could not be 
+             estimated using xml-structure.
+(5) Fixed:   Added check for defects file in cat_surf_createCS2.m that is 
+             sometimes missing for some unknown reason.
+(6) Fixed:   Corrected bug cat_run.m where octave options were not correctly
+             considered for spatial registration. 
+(7) Fixed:   Deleting temporary files in cat_long_main.m was not working
+             for some options of prepavg.
+(8) Fixed:   Some octave options in cat_io_xml.m for checking java were not
+             working.
+(9) Fixed:   Use of edit-command not only worked for all systems in 
+             cat_parallelize.m.
+
+------------------------------------------------------------------------
+r1983 | dahnke | 2022-04-14 16:18:41 +0200 (Thu, 14 Apr 2022) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_main.m
+
+(1) Fixed:     Corrected filter setting in cat_long_main. 
+
+------------------------------------------------------------------------
+r1982 | dahnke | 2022-04-12 13:09:13 +0200 (Tue, 12 Apr 2022) | 27 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_long_report.m
+M       cat_main_reportfig.m
+M       cat_stat_marks.m
+M       cat_vol_groupwise_ls.m
+M       cat_vol_qa.m
+M       cat_vol_resize.m
+M       cat_vol_sanlm.m
+A       cat_vol_sanlm2.m
+
+(1) Fixed:     Corrected some bugs in cat_vol_qa when it is called as batch.
+               Corrected bias-correction WM threshold in case of batch input.
+(2) Fixed:     Corrected dependencies of QC batch in cat_conf_tools.
+(3) New:       Added res_grad measure scaling in cat_    
+(4) Fixed:     Corrections in cat_long_report in case of missing xml data. 
+               Added missing default settings in cat_main_reportfig. 
+(5) New:       Renamed cat_vol_sanlm to cat_vol_sanlm2 and create a new batch
+               in cat_conf_tools.
+               Added low-resolution filter test to avoid overfiltering, and              
+               new resolution measure and further outputs. 
+(6) Reset:     Revert cat_vol_sanlm to revision 1936. 
+(7) Changed:   Small adaptions in cat_vol_groupwise_ls to control the 
+               average resolution.
+
+
+------------------------------------------------------------------------
+r1981 | gaser | 2022-04-04 09:23:37 +0200 (Mon, 04 Apr 2022) | 30 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat12.m
+M       cat_surf_createCS2.m
+M       cat_surf_surf2roi.m
+M       html/cat.html
+M       standalone/cat_standalone.sh
+M       standalone/cat_standalone_deface.m
+M       standalone/cat_standalone_dicom2nii.m
+M       standalone/cat_standalone_get_ROI_values.m
+A       standalone/cat_standalone_get_TIV.m
+M       standalone/cat_standalone_get_quality.m
+M       standalone/cat_standalone_resample.m
+M       standalone/cat_standalone_segment.m
+M       standalone/cat_standalone_segment_enigma.m
+M       standalone/cat_standalone_segment_long.m
+M       standalone/cat_standalone_simple.m
+M       standalone/cat_standalone_smooth.m
+M       standalone/cat_standalone_tfce.m
+
+(1) Changed: Updated help text for standalone tools.
+(2) Changed: Added standalone tool for estimating TIV.
+(3) Changed: Replaced matlab.lang.makeUniqueStrings by older genvarname to
+             ensure compatibility with older Matlab versions in cat12.m.
+(4) Fixed:   Corrected handling different atlases in cat_surf_surf2roi.m.
+(5) Fixed:   Added check for defects file in cat_surf_createCS2.m that is 
+             sometimes missing for some unknown reason.
+
+
+------------------------------------------------------------------------
+r1980 | gaser | 2022-03-30 16:40:08 +0200 (Wed, 30 Mar 2022) | 12 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_roi_fun.m
+M       cat_run_job.m
+M       html/cat.html
+
+(1) Changed: Removed catROI(2)_ from output filename for writing csv files
+             to summarize ROI measures.
+(2) Fixed:   Removed comment in cat_run_job.m that caused trouble for compiling.
+
+
+------------------------------------------------------------------------
+r1979 | gaser | 2022-03-30 16:12:01 +0200 (Wed, 30 Mar 2022) | 20 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       Makefile
+M       cat_conf_stools.m
+M       cat_stat_analyze_ROIs.m
+M       cat_vol_sanlm.m
+M       html/cat.html
+M       html/cat_versions.html
+M       standalone/cat_standalone.sh
+M       standalone/cat_standalone_segment_long.m
+
+(1) Changed: Updated standalone tools and help text.
+(2) Changed: Hide option for merging hemipsheres in "Resample & Smooth".
+(3) Fixed:   Corrected handling of additional arguments in cat_standalone.sh.
+(4) Fixed:   Corrected error in Holm-Bonferroni correction in 
+             cat_stat_analyze_ROIs.m
+(5) Fixed:   Corrected handling of floating values in expert mode in 
+             cat_vol_sanlm.m.
+
+------------------------------------------------------------------------
+r1978 | gaser | 2022-03-25 22:51:43 +0100 (Fri, 25 Mar 2022) | 17 lines
+
+Changed paths:
+M       CAT12-Manual.pdf
+M       CHANGES.txt
+M       Contents.m
+M       Makefile
+M       cat_stat_check_cov.m
+M       cat_surf_results.m
+M       html/cat.html
+M       html/cat_versions.html
+M       spm_cat12.m
+
+(1) Changed: Updated manual and version information.
+(2) Fixed:   Removed bug in cat_stat_check_cov.m if no text-interpreter could
+             be found for data cursor.
+(3) Fixed:   Corrected handling of surface data in cat_surf_results.m where
+             no texture data are available.
+
+------------------------------------------------------------------------
+r1977 | dahnke | 2022-03-22 14:24:14 +0100 (Tue, 22 Mar 2022) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_report.m
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+
+(1) Fixed:     Corrected bugs in long pipeline in case of BIDS data.
+(2) Fixed:     Corrected prior setup in longitudinal timepoints in 
+               cat_main_updateSPM(1639) in case of BIDS data.
+
+------------------------------------------------------------------------
+r1976 | gaser | 2022-03-21 13:38:34 +0100 (Mon, 21 Mar 2022) | 16 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_batch_cat.sh
+M       cat_batch_long.m
+M       cat_batch_long.sh
+M       cat_conf_output.m
+M       cat_defaults.m
+M       cat_main_reportfig.m
+M       cat_plot_glassbrain.m
+M       standalone/cat_parallelize.sh
+M       standalone/cat_standalone.sh
+
+(1) Changed: Updated help text in several functions.
+(2) Changed: Added flag for using BIDS to cat_defaults.m.
+(3) Changed: Added flag for using BIDS to shell-scripts.
+
+------------------------------------------------------------------------
+r1975 | dahnke | 2022-03-21 09:00:58 +0100 (Mon, 21 Mar 2022) | 19 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_long.m
+M       cat_long_main.m
+M       cat_long_report.m
+M       cat_main_reportfig.m
+M       cat_main_reportstr.m
+M       cat_surf_display.m
+M       cat_surf_info.m
+
+(1) Fixed:     Limited use of the longitudinal development model to developer
+               (cat_conf_long)
+(2) New:       Extended todo list and comments in cat_long_main.
+(3) New:       Extended cat_long_report (cat_main_reportstr, cat_main_reportfig)
+               by longitudinal parameters.
+(4) Fixed:     Tried to correct use of internal subject-specific surface data in 
+               case of resampled surface in cat_surf_display and cat_surf_info.                               
+                 
+
+------------------------------------------------------------------------
+r1974 | dahnke | 2022-03-16 16:14:54 +0100 (Wed, 16 Mar 2022) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_multi_run.m
+
+(1) Fixed:     Corrected bug with jobs variable in cat_long_multi_run.
+
+------------------------------------------------------------------------
+r1973 | dahnke | 2022-03-16 15:32:01 +0100 (Wed, 16 Mar 2022) | 20 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_io_volctype.m
+M       cat_long_main.m
+M       cat_long_multi_run.m
+M       cat_long_report.m
+M       cat_main_reportfig.m
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+M       cat_surf_create_TPM_hull_surface.m
+
+(1) Fixed:     Corrected trimming and sanlm batch setup in cat_long_main.
+(2) Fixed:     Corrected skull-stripping bug in cat_main_updateSPM again.
+(3) Fixed:     Corrected display bugs in cat_io_volctype.
+(4) Changed:   Improved differentiation of TPM cases in 
+               cat_surf_create_TPM_hull_surface. 
+(5) New:       Added creation of catlong XML file to save longitudinal
+               parameters in cat_long_multi_run and cat_long_report.              
+
+
+------------------------------------------------------------------------
+r1972 | dahnke | 2022-03-16 11:32:57 +0100 (Wed, 16 Mar 2022) | 13 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_vol_headtrimming.m
+
+(1) Fixed:     Corrected bugs in cat_vol_headtrimming in case of multiple inputs 
+               per subject. Removed average parameter (also in cat_conf_tools). 
+(2) Fixed:     Improved handling of background detection in case of skull-
+               stripped images in cat_run_job(1639).
+
+
+------------------------------------------------------------------------
+r1971 | gaser | 2022-03-08 13:43:17 +0100 (Tue, 08 Mar 2022) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_stat_check_cov.m
+M       check_pipeline_homogeneity.m
+M       html/cat.html
+
+(1) Changed: Updated check_pipeline_homogeneity.m to ignore older versions.
+(2) Fixed:   Corrected indexing of data_vol field in cat_stat_check_cov.m.
+
+------------------------------------------------------------------------
+r1970 | gaser | 2022-03-08 11:01:28 +0100 (Tue, 08 Mar 2022) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_stat_confplot_spm.m
+M       cat_vol_avg.m
+M       cat_vol_slice_overlay.m
+
+(1) Changed: Updated help text for cat_vol_slice_overlay.m.
+(2) Changed: Added interactive call to cat_vol_avg.m.
+(3) Changed: Changed default boxplot to density plot in cat_stat_confplot_spm.m.
+
+------------------------------------------------------------------------
+r1969 | dahnke | 2022-03-07 21:58:24 +0100 (Mon, 07 Mar 2022) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_io_volctype.m
+M       cat_vol_headtrimming.m
+
+(1) Fixed:   Extended intensity scaling setup of trimming batch to support 
+             unscaled cases and extended reports and warnings. E.g. in case of 
+             severe cut-offs by selecting inoptimal data types or scaling range.
+
+------------------------------------------------------------------------
+r1968 | dahnke | 2022-03-06 21:21:34 +0100 (Sun, 06 Mar 2022) | 19 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_io_volctype.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_stat_histth.m
+M       cat_surf_createCS2.m
+M       cat_vol_headtrimming.m
+M       cat_vol_sanlm.m
+
+(1) Fixed:   Reversed unwanded submission of cat_surf_createCS in previous version.
+(2) Fixed:   Corrected problems in cat_io_volctype with small changes in 
+             cat_stat_histth and cat_io_headtrimming.
+(3) Fixed:   Added missed variable in cat_vol_sanlm. 
+(4) Changed: Modified handling of detected skull in case of inactive 
+             skull-stripping in cat_run_job(1639).
+
+
+------------------------------------------------------------------------
+r1967 | dahnke | 2022-03-06 21:05:57 +0100 (Sun, 06 Mar 2022) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_vol_sanlm.m
+
+(1) Changed:  Added new filter setups to filter images that should be averaged.
+              Added further denoising measures also for lower resolution.
+(2) Fixed:    Corrected data type bug in cat_conf_tools.  
+
+
+------------------------------------------------------------------------
+r1966 | dahnke | 2022-03-05 15:26:08 +0100 (Sat, 05 Mar 2022) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_vol_sanlm.m
+
+(1) Fixed:   Corrected bug in cat_vol_sanlm due to missing datafield. 
+
+------------------------------------------------------------------------
+r1965 | dahnke | 2022-03-05 13:44:38 +0100 (Sat, 05 Mar 2022) | 7 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_vol_sanlm.m
+
+(1) Fixed:   Corrected settings of parameters in cat_vol_sanlm. 
+
+------------------------------------------------------------------------
+r1964 | dahnke | 2022-03-03 14:01:45 +0100 (Thu, 03 Mar 2022) | 9 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_run_job1639.m
+M       cat_surf_createCS2.m
+M       cat_vol_groupwise_ls.m
+
+(1) Fixed:   Corrected bug in the estimation of isotropic resolutions in the 
+             longitidunal average creation cat_vol_groupwise_ls.
+
+------------------------------------------------------------------------
+r1963 | dahnke | 2022-03-03 10:51:09 +0100 (Thu, 03 Mar 2022) | 7 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_surf_info.m
+M       cat_surf_render2.m
+
+(1) Fixed:   Corrected bugs in displaying surface textures.
+
+------------------------------------------------------------------------
+r1962 | gaser | 2022-03-02 14:49:28 +0100 (Wed, 02 Mar 2022) | 7 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_vol_sanlm.m
+
+Fixed: For skull-stripped data noise while using sanlm-filter was added even 
+       in zero-valued areas.
+
+------------------------------------------------------------------------
+r1961 | gaser | 2022-03-02 14:11:59 +0100 (Wed, 02 Mar 2022) | 9 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_vol_sanlm.m
+M       html/cat.html
+
+Fixed: For skull-stripped data noise while using sanlm-filter was added even 
+       in zero-valued areas.
+
+------------------------------------------------------------------------
+r1960 | dahnke | 2022-03-01 17:31:23 +0100 (Tue, 01 Mar 2022) | 7 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_main.m
+M       cat_long_report.m
+
+(1) Fixed:   Corrected bugs in cat_long_main and cat_long_report.
+
+------------------------------------------------------------------------
+r1959 | dahnke | 2022-03-01 15:22:21 +0100 (Tue, 01 Mar 2022) | 12 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_vol_groupwise_ls.m
+M       cat_vol_series_align.m
+
+(1) New:      Added parameter to force isotropic resolution in longitudinal 
+              average estimation in cat_vol_groupwise_ls controlled in 
+              cat_vol_series_align. Currently, the optimized version is active
+              that will optimize the resolution if the input resolution is not
+              isotropic.
+
+
+------------------------------------------------------------------------
+r1958 | dahnke | 2022-02-28 22:42:18 +0100 (Mon, 28 Feb 2022) | 11 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_long.m
+M       cat_long_main.m
+
+(1) New:      Added new longitudinal development model (0) that focuses on the 
+              cross-sectional pipeline. The model includes use of an average 
+              based TPM creation to improve the longitudinal processing. 
+              Major changes in cat_long_main and cat_conf_long.
+
+
+------------------------------------------------------------------------
+r1957 | dahnke | 2022-02-28 21:10:19 +0100 (Mon, 28 Feb 2022) | 14 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_io_file_move.m
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+M       cat_surf_fun.m
+
+(1) New:      Added handling of copyto the same directory in cat_io_file_move.
+(2) Fixed:    Corrected test for TPM in cat_run_job(1639).
+(3) Fixed:    Corrected small bug in cat_main_updateSPM(1639) for longitudinal 
+              skull-stripping with prior. 
+(4) New:      Added tnear function in cat_surf_fun. 
+
+
+------------------------------------------------------------------------
+r1956 | dahnke | 2022-02-28 20:48:23 +0100 (Mon, 28 Feb 2022) | 20 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_report.m
+M       cat_main_reportcmd.m
+M       cat_main_reportfig.m
+M       cat_stat_check_cov.m
+MM      cat_surf_flipvalues.m
+M       cat_surf_info.m
+MM      cat_surf_laterality_index.m
+M       cat_surf_rename.m
+
+(1) New:      Added internal resampling of cross-sectional input meshes in 
+              cat_long_report. No output of difference maps by default. 
+(2) Fixed:    Corrected tiny bugs in cat_main_reportcmd and cat_main_reportfig.
+(3) Fixed:    Tiny correction in cat_stat_check_cov.
+(4) Fixed:    Corrected problem of loading individual surface mesh rather than
+              the FS average and incorrect setting of resampled32k suraces in
+              cat_surf_info and cat_surf_rename.
+
+
+------------------------------------------------------------------------
+r1955 | dahnke | 2022-02-28 14:59:17 +0100 (Mon, 28 Feb 2022) | 22 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_main.m
+M       cat_main1639.m
+M       cat_main_write.m
+M       cat_run.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_run_newcatch.m
+M       cat_stat_getCSVXMLfield.m
+M       cat_vol_resize.m
+
+(1) Fixed:    Added try-catch-block around ROI export in cat_main(1639).
+(2) Fixed:    Correded bug in cat_main_write to handle atlas home directories in 
+              non-human cases.
+(3) Fixed:    Corrected bug in cat_run in displaying processing errors of 
+              running parallel jobs.              
+(4) Fixed:    Corrected MRI directory bug in cat_run_newcatch. 
+(5) Fixed:    Path corrections in cat_stat_getCSVXMLfield.
+(6) Fixed:    Corrected small data type bug in cat_vol_resize.
+
+
+------------------------------------------------------------------------
+r1954 | dahnke | 2022-02-28 12:04:43 +0100 (Mon, 28 Feb 2022) | 22 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_report.m
+M       cat_main_reportfig.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_spm_preproc8.m
+
+(1) Fixed:   Corrected longitudinal structural plot in cat_long_report and 
+             cat_main_reportfig.
+(2) Changed: Extended SPM US stop criteria in cat_spm_preproc8 to avoid too 
+             early stops, i.e. after strong recent improvements. Added command
+             line output of ll parameters for outer loops in developer mode.  
+             Added control variable in cat_run_job(1639) to switch between major
+             settings. However, the differences between the even very low number
+             and high number of iterations are relative small. Hence, I reduced 
+             the number of inner interactions and reset the increased amount of 
+             minimum outer iterations from 20 to 10 to speed up the process. 
+(3) Fixed:   Corrected bug where ll becomes nan in cat_spm_preproc8.
+
+
+
+------------------------------------------------------------------------
+r1953 | gaser | 2022-02-27 22:03:20 +0100 (Sun, 27 Feb 2022) | 8 lines
+
+Changed paths:
+M       CHANGES.txt
+MM      cat_vol_img2mip.m
+M       cat_vol_morph.m
+
+Fixed: Corrected output of cat_vol_morph.m that was not correctly returned
+       for multiple calls.
+
+------------------------------------------------------------------------
+r1952 | gaser | 2022-02-23 16:42:07 +0100 (Wed, 23 Feb 2022) | 15 lines
+
+Changed paths:
+M       CHANGES.txt
+A       cat_surf_flipvalues.m
+A       cat_surf_laterality_index.m
+M       cat_surf_rename.m
+M       cat_vol_morph.m
+
+(1) Changed: Added wrapper to interactively call vat_vol_morph.m.
+(2) Fixed:   Corrected handling of 32k-meshes in cat_surf_rename.m 
+(3) Added:   New function cat_surf_flipvalues to flip values in resampled
+             32k-meshes.
+(4) Added:   New function cat_surf_laterality_index to calculate laterality
+             index in resampled 32k-meshes.
+
+
+------------------------------------------------------------------------
+r1951 | gaser | 2022-02-23 09:45:57 +0100 (Wed, 23 Feb 2022) | 15 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_spm_results_ui.m
+M       cat_surf_results.m
+A       cat_vol_img2mip.m
+ M      templates_MNI152NLin2009cAsym/suit.csv
+ M      templates_MNI152NLin2009cAsym/suit.nii
+MM      templates_MNI152NLin2009cAsym/suit.txt
+
+(1) Changed: Updated help text in cat_surf_results.m
+(2) Changed: Enabled eigenvariate and CVA function in cat_spm_results_ui.m.
+(3) Fixed:   Added check that directory that is saved in SPM.mat really exists
+             to cat_spm_results_ui.m.
+           
+
+------------------------------------------------------------------------
+r1950 | gaser | 2022-02-21 21:10:37 +0100 (Mon, 21 Feb 2022) | 15 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_conf_ROI.m
+M       cat_conf_long.m
+M       html/cat.html
+M       templates_MNI152NLin2009cAsym/suit.csv
+M       templates_MNI152NLin2009cAsym/suit.nii
+
+(1) Changed: Changed default value for prepavg in longitudinal pipeline to 2.
+(2) Changed: Updated default license for SUIT atlas.
+(3) Fixed:   Corrected orientation of SUIT atlas  where x-voxel size was not 
+             negative (neurological orientation).
+           
+
+------------------------------------------------------------------------
+r1949 | gaser | 2022-02-20 23:55:40 +0100 (Sun, 20 Feb 2022) | 16 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_conf_ROI.m
+M       cat_defaults.m
+M       cat_run.m
+M       cat_vol_avg.m
+M       html/cat.html
+M       html/cat_licences.html
+M       html/cat_methods_RBM.html
+A       templates_MNI152NLin2009cAsym/suit.csv
+A       templates_MNI152NLin2009cAsym/suit.nii
+A       templates_MNI152NLin2009cAsym/suit.txt
+
+Changed: Added SUIT atlas of the human cerebellum.
+
+------------------------------------------------------------------------
+r1948 | dahnke | 2022-02-16 16:39:23 +0100 (Wed, 16 Feb 2022) | 16 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_io_volctype.m
+M       cat_long_main.m
+M       cat_main_updateSPM.m
+M       cat_run_job1639.m
+M       cat_vol_headtrimming.m
+
+(1) Changed:  Small unfinished corrections to solve datatype bug 
+              in cat_io_volctype, cat_vol_headtripping.
+(2) Fixed:    Corrected bug in cat_main_updateSPM. 
+(3) Changed:  Prototype for non-linear AVG for the developmental  
+              longitudinal model in cat_long_main.
+(4) Changed:  Tiny modification of the cml output in cat_run_job1639.
+            
+
+------------------------------------------------------------------------
+r1947 | dahnke | 2022-02-15 14:50:24 +0100 (Tue, 15 Feb 2022) | 16 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_main.m
+M       cat_long_report.m
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+M       cat_run_job1639.m
+M       html/cat_methods_catlongreport.html
+
+(1) Fixed:   Added development case to longitudinal report (unfinished).
+(2) Fixed:   Corrected tiny bug in the setup of the development pipeline. 
+(3) Changed: Added development case to longitudinal help page (unfinished).   
+(4) Changed: Setup parameters to clear temporary report data.
+ 
+
+
+------------------------------------------------------------------------
+r1946 | dahnke | 2022-02-14 12:23:23 +0100 (Mon, 14 Feb 2022) | 30 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_long.m
+M       cat_long_main.m
+M       cat_main_amap.m
+M       cat_main_amap1639.m
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_vol_groupwise_ls.m
+M       cat_vol_series_align.m
+
+(1) Fixed:   Updated setup of the initial segmentation setup of the AMAP 
+             to prevent errors in cat_main_amap. 
+(2) Fixed:   Corrected definition of the longitudinal brain mask in case 
+             of internally interpolated images that finally crashed the 
+             AMAP segmentation above (e.g., in NIH-NBD but not in ADNI).              
+(3) New:     Added longitudinal development model that is quite similar as 
+             the longitudinal aging model but uses a time point independent 
+             affine registration to adapt for brain/head growth. 
+             Changes in cat_conf_long (model setup), cat_long_main (affreg
+             settings), cat_run_job[1639] (affreg handling).
+(4) Fixed:   Corrected settings of the longitudinal deformation model to 
+             create the average (not used yet) in cat_long_main and in 
+             cat_vol_series_align. Further comments in cat_vol_groupwise_ls.
+(5) Fixed:   Deactivated surface output if no prior surface but time point
+             specific surfaces are used.   
+
+
+------------------------------------------------------------------------
+r1945 | dahnke | 2022-02-07 22:40:22 +0100 (Mon, 07 Feb 2022) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_main.m
+
+(1) New:     Corrected typos in cat_long_main.
+
+------------------------------------------------------------------------
+r1944 | dahnke | 2022-02-07 18:49:38 +0100 (Mon, 07 Feb 2022) | 16 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_long.m
+M       cat_conf_tools.m
+MM      cat_io_file_move.m
+M       cat_long_biascorr.m
+M       cat_long_main.m
+M       cat_parallelize.m
+
+(1) New:     Added detection of broken longitudinal batches in case
+             of parallel processing in cat_parallelize.
+(2) Fixed:   Added prepavg and avgLASWMHC parameters in cat_conf_long
+             and cat_long_main for the further test in the developer mode.
+(3) Fixed:   Corrected bugs in the renaming batch in cat_conf_tools. 
+             
+
+------------------------------------------------------------------------
+r1943 | dahnke | 2022-02-04 17:53:42 +0100 (Fri, 04 Feb 2022) | 22 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_long_main.m
+M       cat_long_report.m
+M       cat_main_reportfig.m
+M       cat_main_updateSPM1639.m
+M       cat_plot_glassbrain.m
+M       cat_vol_groupwise_ls.m
+M       cat_vol_set_com.m
+
+(1) Fixed:   Further improvements of the CAT long report in
+             cat_long_report and cat_main_reportfig.
+(2) Fixed:   Create symmetric colormap image in cat_plot_glassbrain 
+             to allow simple scaling in cat_vol_reportfig.                
+(3) Fixed:   Corrected a bug in cat_main_upateSPM in case of low resolution 
+             data in the longitudinal preprocessing.              
+(4) Changed: Tiny corrections in cat_vol_set_com and cat_vol_groupwise_ls.
+                
+             
+
+
+------------------------------------------------------------------------
+r1942 | gaser | 2022-02-03 17:16:54 +0100 (Thu, 03 Feb 2022) | 13 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_long_main.m
+M       cat_stat_check_cov.m
+M       cat_vol_groupwise_ls.m
+M       cat_vol_series_align.m
+
+(1) Changed: Added support for setting origin using center-of-mass in 
+             longitudinal registration.
+(2) Fixed:   Corrected axis scaling in cat_stat_check_cov.m for some cases.
+           
+
+------------------------------------------------------------------------
+r1941 | dahnke | 2022-02-03 16:25:50 +0100 (Thu, 03 Feb 2022) | 18 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+A       cat_io_file_move.m
+M       cat_long_biascorr.m
+M       cat_long_main.m
+M       cat_long_report.m
+M       cat_main_reportfig.m
+
+(1) Fixed:   Corrected directory bug in cat_long_main that moved all 
+             time points to the first directory. 
+(2) Changed: Replace first volume plot of a possible error map by save WM 
+             change plot and removed the WM plot batches in cat_long_main. 
+(3) New:     Added a copy of the SPM IO filename batch to rename filenames
+             without changing the directory that is required to avoid the 
+             directory bug (see (1) ).
+             
+
+------------------------------------------------------------------------
+r1940 | gaser | 2022-02-02 16:39:30 +0100 (Wed, 02 Feb 2022) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_report.m
+M       cat_stat_check_cov.m
+
+(1) Fixed: Added additional check for raw thickness data to cat_stat_check_cov.m.
+           and added check for missing gap-field.
+(2) Fixed: Changed wrong data field for cat_stat_check_cov in cat_long_report.m. 
+           
+
+------------------------------------------------------------------------
+r1939 | gaser | 2022-02-02 10:50:35 +0100 (Wed, 02 Feb 2022) | 9 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_main.m
+M       cat_stat_check_cov.m
+
+(1) Changed: Corrected data field in cat_stat_check_cov which is the same for
+             volume as well as surface data.
+
+
+------------------------------------------------------------------------
+r1938 | dahnke | 2022-02-02 09:11:40 +0100 (Wed, 02 Feb 2022) | 34 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_biascorr.m
+M       cat_long_main.m
+MM      cat_long_report.m
+M       cat_main_reportfig.m
+M       cat_main_reportstr.m
+MM      cat_plot_glassbrain.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+ M      html/cat_methods_catlongreport.html
+MM      html/images/cat_long_report_plasticity-aging_ADNI011S0003.jpg
+ M      html/images/cat_long_report_scannerdifferences_ADNI002S0559.jpg
+ M      html/images/catlongreportj_mwp1r.jpg
+
+(1) Fixed:   Corrected typos in plasticity-aging figure. 
+(2) Changed: Corrections in cat_long_biascorr to improve the longitudinal 
+             bias correction by replacing the median-based tissue threshold
+             estimation by kmeans and further filtering terms to create a 
+             smoother bias-correction field. 
+             Also added a new further internal option to remove protocol-
+             depending intensity changes by a simplified LAS approach.
+             Although both elements work, recent tests did not show the 
+             hoped for improvements in the ADNI test data. 
+(3) Fixed:   Added further setting to detect XML files and improved handling
+             of some fields in cat_long_report and cat_main_reportstr.             
+(4) Fixes:   Corrected many small display bugs in cat_main_reportfig.               
+(5) Tested:  Checked processing of longitudinal models.            
+(6) Fixed:   Corrected tiny bugs in cat_long_main.
+(7) Fixed:   Corrected settings of resolution warnings in cat_run[1639].
+(8) Fixed:   Corrected bug that avoid printing of the long report if only 
+             the aging model was used. 
+             
+
+------------------------------------------------------------------------
+r1937 | gaser | 2022-01-31 12:48:19 +0100 (Mon, 31 Jan 2022) | 37 lines
+
+Changed paths:
+M       CAT.maca64/CAT_3dVol2Surf
+M       CAT.maca64/CAT_AddValuesToSurf
+M       CAT.maca64/CAT_AverageSurfaces
+M       CAT.maca64/CAT_BlurSurfHK
+M       CAT.maca64/CAT_Central2Pial
+M       CAT.maca64/CAT_DeformSurf
+M       CAT.maca64/CAT_DumpCurv
+M       CAT.maca64/CAT_DumpSurfArea
+M       CAT.maca64/CAT_DumpSurfaceRatio
+M       CAT.maca64/CAT_FixTopology
+M       CAT.maca64/CAT_FractalDimension
+M       CAT.maca64/CAT_Hausdorff
+M       CAT.maca64/CAT_Isometize
+M       CAT.maca64/CAT_MarkDefects
+M       CAT.maca64/CAT_RefineMesh
+M       CAT.maca64/CAT_ResampleSphericalSurf
+M       CAT.maca64/CAT_ResampleSphericalSurfSPH
+M       CAT.maca64/CAT_ResampleSurf
+M       CAT.maca64/CAT_SelfIntersect
+M       CAT.maca64/CAT_SeparatePolygon
+M       CAT.maca64/CAT_SmoothConvexity
+M       CAT.maca64/CAT_SulcusDepth
+M       CAT.maca64/CAT_Surf2Sphere
+M       CAT.maca64/CAT_Surf2Vol
+M       CAT.maca64/CAT_SurfDistance
+M       CAT.maca64/CAT_WarpSurf
+M       CHANGES.txt
+M       Makefile
+M       cat_long_main.m
+M       cp_binaries.sh
+
+(1) Changed: Recompiled CAT-binaries for Apple ARM processors.
+(2) Changed: Updated folder for binaries in Makefile and cp_binaries.
+(3) Fixed:   Corrected expert-dependent parameters in cat_long_main.m. 
+
+
+------------------------------------------------------------------------
+r1936 | dahnke | 2022-01-28 15:37:43 +0100 (Fri, 28 Jan 2022) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_report.m
+
+(1) Fixed:   Corrected tiny bugs in cat_long_report.
+
+------------------------------------------------------------------------
+r1935 | dahnke | 2022-01-28 13:47:57 +0100 (Fri, 28 Jan 2022) | 54 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_long_main.m
+A       cat_long_report.m
+M       cat_main_reportcmd.m
+M       cat_main_reportfig.m
+M       cat_main_reportstr.m
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+A       cat_plot_glassbrain.m
+M       cat_run.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_run_job_APRGs.m
+M       cat_stat_check_cov.m
+M       cat_surf_createCS.m
+M       cat_surf_display.m
+M       cat_vol_groupwise_ls.m
+M       cat_vol_headtrimming.m
+M       cat_vol_qa.m
+M       cat_vol_series_align.m
+M       html/cat.html
+M       html/cat_methods.html
+M       html/cat_methods_LP.html
+M       html/cat_methods_affreg.html
+A       html/cat_methods_catlongreport.html
+A       html/images/cat_long_report_plasticity-aging_ADNI011S0003.jpg
+A       html/images/cat_long_report_scannerdifferences_ADNI002S0559.jpg
+A       html/images/catlongreportj_mwp1r.jpg
+
+(1) New:      Added first prototype of a longitudinal report to cat_conf_tools and 
+              cat_long_main. This also includes all updates in cat_main_reportfig,
+              cat_main_reportstr and cat_plot_glassbrain. Included also a HTML help
+              page.
+(2) New:      Added SANLM filter, timing, intensity scaling, and file renaming batches 
+              before SPM long processing in cat_long_main (on the top) that also include 
+              different batch dependencies settings. Added refined SPM preprocessing
+              settings to cat_run in case of job.extopts.new_release.
+(3) Fixed:    Corrected WMHC and LAS parameter settings in the longitudinal average case
+              in cat_long_main to avoid double corrections.
+(4) Fixed:    Corrected bugs in cat_main_reportcmd and cat_vol_qa.              
+(5) Fixed:    Corrected bug in the brain-masking in case of internally interpolated 
+              longitudinal data with  in cat_main_updateSPM[1639] (also corrected a typo).
+(6) New:      Extend cat_stat_check_cov to read native surface for longitudinal analysis. 
+(7) Fixed:    Small corrections in cat_run_job_APRGs to avoid reductions in very small 
+              brains.             
+(8) Fixed:    Added missing variable in cat_surf_createCS.
+(9) Fixed:    Small corrections in cat_vol_groupwise_ls in case of deformation-average.              
+(10) Fixed:   Small correction in cat_vol_headtrimming if no new file is written.  
+(11) Fixed:   Corrected small bug in filename settings in cat_vol_qa.  
+(12) Fixed:   Corrected small rare bug in cat_run_job[1639]. 
+
+
+------------------------------------------------------------------------
+r1934 | gaser | 2022-01-28 10:48:48 +0100 (Fri, 28 Jan 2022) | 17 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Makefile
+M       cat_stat_spm2x.m
+M       cat_vol_slice_overlay.m
+M       cat_vol_slice_overlay_ui.m
+
+(1) Changed: Updated help text and examples for cat_vol_slice_overlay_ui.m
+             to cover all options.
+(2) Changed: Extended cat_vol_slice_overlay to automatically define output 
+             images with either one column or one row.
+             options.
+(3) Changed: Updated help text in Makefile. 
+(4) Fixed:   Corrected bug in atlas output for cat_stat_spm2x where header 
+             information wasn't correct in some cases.
+             
+
+------------------------------------------------------------------------
+r1933 | gaser | 2022-01-25 23:05:50 +0100 (Tue, 25 Jan 2022) | 13 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_main_updateSPM1639.m
+M       cat_stat_spm2x.m
+M       cat_vol_set_com.m
+M       html/cat.html
+
+(1) Changed: Updated help text for cat_stat_set_com.m and removed output if
+             not necessary.
+(2) Fixed:   Output for cat_stat_spm2x was also written for empty results.
+             
+
+------------------------------------------------------------------------
+r1932 | gaser | 2022-01-13 00:24:44 +0100 (Thu, 13 Jan 2022) | 30 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_amap.mexa64
+M       cat_ornlm.mexa64
+M       cat_plot_histogram.m
+M       cat_sanlm.mexa64
+M       cat_stat_spm2x.m
+M       cat_vbdist.mexa64
+M       cat_vol_downcut.mexa64
+M       cat_vol_eidist.mexa64
+M       cat_vol_genus0.mexa64
+M       cat_vol_gradient3.mexa64
+M       cat_vol_interp3f.mexa64
+M       cat_vol_laplace3.mexa64
+M       cat_vol_laplace3R.mexa64
+M       cat_vol_localstat.mexa64
+M       cat_vol_median3.mexa64
+M       cat_vol_median3c.mexa64
+M       cat_vol_pbtp.mexa64
+M       cat_vol_simgrow.mexa64
+M       html/cat.html
+
+(1) Changed: Extended cat_stat_spm2x.m to handle null distribution files from
+             TFCE toolbox.
+(2) Changed: Extended cat_plot_histogram.m to treat effect size maps like
+             T maps.
+(3) Fixed:   Recompiled unix mex-files for compatibilty.
+             
+
+------------------------------------------------------------------------
+r1931 | gaser | 2022-01-07 23:39:22 +0100 (Fri, 07 Jan 2022) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_main_reportfig.m
+
+Fixed: Yet annother trial to handle unclear crashes in cat_main_reportfig.m.
+
+------------------------------------------------------------------------
+r1930 | gaser | 2022-01-07 19:19:19 +0100 (Fri, 07 Jan 2022) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       Makefile
+M       check_pipeline/batch_surface_pipeline.m
+M       html/cat.html
+
+(1) Changed: Updated batch_surface_pipeline.m to work with new check sample
+             homogeneity tool.
+
+------------------------------------------------------------------------
+r1929 | gaser | 2022-01-07 18:06:57 +0100 (Fri, 07 Jan 2022) | 35 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat12.m
+M       cat_amap.mexa64
+M       cat_batch_cat.sh
+M       cat_conf_stools.m
+M       cat_conf_tools.m
+M       cat_ornlm.mexa64
+M       cat_sanlm.mexa64
+M       cat_stat_check_SPM.m
+M       cat_stat_check_cov.m
+M       cat_vbdist.mexa64
+M       cat_vol_downcut.mexa64
+M       cat_vol_eidist.mexa64
+M       cat_vol_genus0.mexa64
+M       cat_vol_gradient3.mexa64
+M       cat_vol_gradient3.mexmaci64
+M       cat_vol_interp3f.mexa64
+M       cat_vol_laplace3.mexa64
+M       cat_vol_laplace3R.mexa64
+M       cat_vol_localstat.mexa64
+M       cat_vol_median3.mexa64
+M       cat_vol_median3c.mexa64
+M       cat_vol_pbtp.mexa64
+M       cat_vol_simgrow.mexa64
+M       html/cat.html
+
+(1) Changed: Compiled Linux mex-files.
+(2) Changed: Merged check sample homogeneity tools for volumes and surfaces.
+(3) Changed: Changed GUI and batch files to only use one check sample
+             homogeneity tool.
+(4) Fixed:   Corrected handling of dartel export option in cat_batch_cat.sh.
+
+
+------------------------------------------------------------------------
+r1928 | gaser | 2022-01-07 17:54:20 +0100 (Fri, 07 Jan 2022) | 25 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_amap.mexw64
+M       cat_io_colormaps.m
+M       cat_ornlm.mexw64
+M       cat_plot_histogram.m
+M       cat_sanlm.mexw64
+M       cat_vbdist.mexw64
+M       cat_vol_downcut.mexw64
+M       cat_vol_eidist.mexw64
+M       cat_vol_genus0.mexw64
+M       cat_vol_gradient3.mexw64
+M       cat_vol_interp3f.mexw64
+M       cat_vol_laplace3.mexw64
+M       cat_vol_laplace3R.mexw64
+M       cat_vol_localstat.mexw64
+M       cat_vol_median3.mexw64
+M       cat_vol_median3c.mexw64
+M       cat_vol_pbtp.mexw64
+M       cat_vol_simgrow.mexw64
+
+Changed: Compiled Windows mex-files.
+Changed: Prepared cat_plot_histogram.m to also support data as input and not 
+         only files.
+
+------------------------------------------------------------------------
+r1927 | dahnke | 2022-01-04 11:25:27 +0100 (Tue, 04 Jan 2022) | 32 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_io_lazy.m
+M       cat_io_rerun.m
+M       cat_long_main.m
+M       cat_main_reportcmd.m
+M       cat_main_reportfig.m
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+M       cat_run.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+
+(1) Changed:  cat_run_lazy/rerun are now only verbose if no reprocessing is used.
+(2) Changed:  Adapted longTPM filter strength parameter in cat_long_main
+              and fixed strengthrong biased correction in single time points in  
+              cat_run to have the full benefit of the individual TPM. 
+(3) Fixed:    Small correction in cat_main_reportcmd. 
+(4) Changed:  Optimized background of the segmentation map in the CAT report in 
+              cat_main_reportfig. 
+(5) Fixed:    Multiple corrections in cat_main_updateSPM[1639] to handle the 
+              brainmasking in longitudinal processing.               
+(6) Changed:  Prepared stronger bias correction in longitudinal processing in 
+              cat_run (new_release).              
+(7) Fixed:    Corrected handling of background in longitudinal cases in 
+              cat_run_job[1639] to avoid problems due to the harder background
+              definition that causes problems with the unified segmentation 
+              that was not able to get the real background values.            
+(8) Changed:  Optimized command line output of SPM tissue peaks in developer  
+              mode in cat_run_job[1639]. 
+
+
+------------------------------------------------------------------------
+r1926 | gaser | 2021-12-21 17:10:56 +0100 (Tue, 21 Dec 2021) | 38 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       Makefile
+M       cat_amap.mex
+M       cat_amap.mexmaci64
+M       cat_io_rerun.m
+M       cat_ornlm.mexmaci64
+MM      cat_plot_histogram.m
+M       cat_sanlm.mexmaci64
+M       cat_stat_check_cov.m
+M       cat_vbdist.mexmaci64
+M       cat_vol_downcut.mexmaci64
+M       cat_vol_eidist.mexmaci64
+M       cat_vol_genus0.mexmaci64
+M       cat_vol_gradient3.c
+M       cat_vol_gradient3.mex
+M       cat_vol_gradient3.mexmaci64
+M       cat_vol_interp3f.mexmaci64
+M       cat_vol_laplace3.mexmaci64
+M       cat_vol_laplace3R.mexmaci64
+M       cat_vol_localstat.mexmaci64
+M       cat_vol_median3.mex
+M       cat_vol_median3.mexmaci64
+M       cat_vol_median3c.mexmaci64
+M       cat_vol_pbtp.mexmaci64
+M       cat_vol_pbtp2.mexmaci64
+M       cat_vol_simgrow.mexmaci64
+M       html/cat.html
+M       internal/cat_vol_cMRegularizarNLM3D.mexmaci64
+
+(1) Changed: Added cd to check_pipeline folder in Makefile.
+(2) Fixed:   Corrected handling of filenames for meshes and nifti-files in 
+             cat_stat_check_cov.m
+(3) Fixed:   Corrected deletion of hlps in cat_vol_gradient3.c.
+(4) Fixed:   Added missing Amap.h again to cat_amap.c.
+(5) Fixed:   Corrected check for missing "force" variable in cat_io_rerun.m.
+
+------------------------------------------------------------------------
+r1925 | dahnke | 2021-12-21 16:57:11 +0100 (Tue, 21 Dec 2021) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_amap.c
+M       cat_io_lazy.m
+M       cat_io_rerun.m
+M       cat_vol_gradient3.c
+
+(1) Fixed:   Corrected stupid bugs in cat_amap.c, cat_vol_gradient3.c,
+             cat_io_rerun and cat_io_lazy. 
+
+------------------------------------------------------------------------
+r1924 | dahnke | 2021-12-21 16:25:44 +0100 (Tue, 21 Dec 2021) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_vol_median3.c
+M       cat_vol_median3.m
+
+(1) Fixed:   Corrected severe bug in cat_vol_median3.
+(2) New:     Extended cat_vol_median3 to replace local NANs/INFs
+             if the neighbors and mask allow it.
+
+
+------------------------------------------------------------------------
+r1923 | dahnke | 2021-12-20 17:53:15 +0100 (Mon, 20 Dec 2021) | 27 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_amap.c
+M       cat_io_colormaps.m
+M       cat_io_lazy.m
+M       cat_io_rerun.m
+M       cat_long_createTPM.m
+M       cat_main_reportfig.m
+M       cat_surf_create_TPM_hull_surface.m
+M       cat_vbdist.c
+M       cat_vol_downcut.c
+M       cat_vol_eidist.c
+M       cat_vol_gradient3.c
+M       cat_vol_laplace3.c
+M       cat_vol_laplace3R.c
+M       cat_vol_pbtp.c
+M       cat_vol_simgrow.c
+
+(1) Fixed:   Prepared to manually free the memory in the c-functions of larger 
+             matrixes (currently commented). 
+(2) Changed: Refined settings in cat_long_createTPM and reset minimum class 
+             probability for further tests.   
+(3) Changed: Extended cat_io_lazy and cat_io_rerun by a force option to use this 
+             function in special save cases to avoid reprocessing of some files
+             even in normal user modes, e.g. in cat_surf_create_TPM_hull_surface.             
+             
+
+------------------------------------------------------------------------
+r1922 | gaser | 2021-12-16 19:00:43 +0100 (Thu, 16 Dec 2021) | 13 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat12.m
+M       cat_conf_long.m
+M       cat_plot_histogram.m
+M       cat_stat_check_SPM.m
+M       cat_stat_check_cov.m
+
+(1) Changed: Imporved speed for nifti files in cat_stat_check_cov.m
+(2) Changed: Added option to expert mode to save both longmodels in 
+             cat_conf_long.m.
+(3) Changed: Added option to extract IQR values to CAT12 GUI.
+
+------------------------------------------------------------------------
+r1921 | dahnke | 2021-12-13 14:31:32 +0100 (Mon, 13 Dec 2021) | 40 lines
+
+Changed paths:
+M       Amap.c
+M       Amap.h
+M       CHANGES.txt
+M       MrfPrior.c
+M       cat_amap.c
+M       cat_amap.m
+M       cat_amap.mexmaci64
+M       cat_io_csv.m
+M       cat_io_xml.m
+M       cat_main1639.m
+M       cat_main_amap.m
+M       cat_main_amap1639.m
+M       cat_main_kamap.m
+M       cat_main_reportfig.m
+M       cat_main_reportstr.m
+M       cat_main_roi.m
+M       cat_run.m
+M       cat_run_job1639.m
+M       cat_surf_createCS.m
+M       cat_surf_createCS2.m
+M       cat_surf_create_TPM_hull_surface.m
+M       cat_surf_surf2roi.m
+M       cat_vol_qa.m
+M       compile.m
+
+(1) Fixed:   Corrected handling AMAP output variables in cat_main_[k]amap[1639].
+             Added mean, std, and verb variables in cat_amap.c, MrfPrior.c, Amap.c/h
+             cat_main_amap and cat_main_kamap. 
+(2) Fixed:   Further Octave correction in cat_surf_createCS[2] by full   
+             deactivation of surface correction collisions that creates a warning. 
+(3) Fixed:   As Shooting is yet not running under Octave, we switch to Dartel in 
+             cat_run and print a warning.              
+(4) Fixed:   Added further Octave corrections in cat_io_csv, cat_io_xml, compile,
+             cat_main_reportstr, cat_main_reportfig, cat_surf_surf2roi.m, and cat_run.               
+(5) Fixed:   Corrected bugs under Octave for hull surface creation in 
+             cat_surf_create_TPM_hull_surface.               
+(6) Fixed:   Corrected missing definitions for Octave in cat_vol_qa.             
+             
+
+------------------------------------------------------------------------
+r1920 | gaser | 2021-12-13 14:01:39 +0100 (Mon, 13 Dec 2021) | 11 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_io_colormaps.m
+M       cat_plot_boxplot.m
+A       cat_plot_histogram.m
+
+(1) Changed: Added many new categorical colormaps to cat_io_colormaps.
+(2) Changed: Changed default colormap in cat_plot_boxplot to nejm.
+(3) Added:   Added new function to plot multiple histograms 
+             cat_plot_histograms.m
+
+------------------------------------------------------------------------
+r1919 | gaser | 2021-12-10 17:51:40 +0100 (Fri, 10 Dec 2021) | 11 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_batch_long.sh
+M       cat_long_main.m
+M       cat_stat_check_cov.m
+
+(1) Changed: Updated help text for cat_batch_long.sh.
+(2) Fixed:   Variable prep_str was not defined for all cases in 
+             cat_stat_check_cov.m.
+(3) Fixed:   Corrected cat_long_main.m to allow saving of both longmodels.          
+
+------------------------------------------------------------------------
+r1918 | gaser | 2021-12-09 16:32:10 +0100 (Thu, 09 Dec 2021) | 31 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_amap.mex
+M       cat_batch_long.m
+M       cat_batch_long.sh
+M       cat_long_main.m
+M       cat_main_amap.m
+M       cat_main_amap1639.m
+M       cat_ornlm.mex
+M       cat_sanlm.mex
+M       cat_stat_check_cov.m
+M       cat_vbdist.mex
+M       cat_vol_downcut.mex
+M       cat_vol_eidist.mex
+M       cat_vol_genus0.mex
+M       cat_vol_gradient3.mex
+M       cat_vol_interp3f.mex
+M       cat_vol_laplace3.mex
+M       cat_vol_laplace3R.mex
+M       cat_vol_localstat.mex
+M       cat_vol_median3.mex
+M       cat_vol_median3c.mex
+M       cat_vol_pbtp.mex
+M       cat_vol_simgrow.mex
+M       internal/cat_vol_cMRegularizarNLM3D.mex
+
+(1) Changed: Corrected text interpreter in cat_stat_check_cov.m.
+(2) Changed: Extended cat_long_main.m to correctly save both long. models.
+(3) Changed: Many changes to cat_batch_long.sh and cat_batch_long.m to consider
+             new options.          
+
+------------------------------------------------------------------------
+r1917 | gaser | 2021-12-06 16:37:22 +0100 (Mon, 06 Dec 2021) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_batch_long.m
+M       cat_batch_long.sh
+MM      cat_vol_pbtp2.m
+
+Changed: Extended cat_batch_long.* by option to save affine registered
+         segmentations for Dartel.
+            
+
+------------------------------------------------------------------------
+r1916 | dahnke | 2021-12-02 10:51:53 +0100 (Thu, 02 Dec 2021) | 21 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_io_addwarning.m
+M       cat_main_amap.m
+M       cat_main_amap1639.m
+M       cat_surf_createCS.m
+M       cat_surf_createCS2.m
+M       cat_surf_fun.m
+M       cat_vol_resize.m
+
+(1) Fixed:   Corrected bugs in Octave in cat_main_amap[1639] because 
+             Octaves evalc function does not catch the output of the 
+             called AMAP c-function.
+(2) Fixed:   Corrected Octave char warning in cat_io_addwarning and 
+             corrected output behavior that differs from Matlab. 
+(3) Fixed:   Corrected Octave meshgrid in cat_vol_resize.m
+(4) Fixed:   Replaced outdated call of flipdim by flip in cat_surf_fun. 
+(5) Fixed:   Skipping of the second fine collision correction in 
+             cat_surf_createCS[2] in Octave.
+ 
+
+------------------------------------------------------------------------
+r1915 | gaser | 2021-11-30 16:28:08 +0100 (Tue, 30 Nov 2021) | 17 lines
+
+Changed paths:
+M       Amap.c
+M       CAT12-Manual.pdf
+M       CHANGES.txt
+M       cat_vol_downcut.c
+M       cat_vol_pbtp.c
+M       cat_vol_pbtp2.c
+M       cat_vol_resize.m
+M       cat_vol_simgrow.c
+M       compile.m
+M       html/cat.html
+M       html/cat_starting.html
+
+(1) Changed: Added OCTAVE Macro to Amap.c to allow running original code under 
+             Matlab.
+(2) Changed: Extended help text for Quick start guide.
+
+------------------------------------------------------------------------
+r1914 | dahnke | 2021-11-30 14:40:04 +0100 (Tue, 30 Nov 2021) | 69 lines
+
+Changed paths:
+M       Amap.c
+M       CHANGES.txt
+M       Kmeans.c
+M       MrfPrior.c
+M       Pve.c
+M       cat_amap.c
+M       cat_amap.m
+M       cat_amap.mex
+M       cat_amap.mexmaci64
+M       cat_main_amap.m
+M       cat_main_amap1639.m
+M       cat_main_kamap.m
+M       cat_ornlm.mex
+M       cat_ornlm.mexmaci64
+M       cat_sanlm.mex
+M       cat_sanlm.mexmaci64
+M       cat_vbdist.mex
+M       cat_vbdist.mexmaci64
+M       cat_vol_ROIval.c
+M       cat_vol_ROIval.mexmaci64
+M       cat_vol_downcut.mex
+M       cat_vol_downcut.mexmaci64
+M       cat_vol_eidist.mex
+M       cat_vol_eidist.mexmaci64
+D       cat_vol_eikonal3.c
+D       cat_vol_eikonal3.m
+M       cat_vol_genus0.mex
+M       cat_vol_genus0.mexmaci64
+M       cat_vol_gradient3.mex
+M       cat_vol_gradient3.mexmaci64
+M       cat_vol_interp3f.mex
+M       cat_vol_interp3f.mexmaci64
+M       cat_vol_laplace3.c
+M       cat_vol_laplace3.mex
+M       cat_vol_laplace3.mexmaci64
+M       cat_vol_laplace3R.mex
+M       cat_vol_laplace3R.mexmaci64
+M       cat_vol_localstat.m
+M       cat_vol_localstat.mex
+M       cat_vol_localstat.mexmaci64
+M       cat_vol_median3.c
+M       cat_vol_median3.mex
+M       cat_vol_median3.mexmaci64
+M       cat_vol_median3c.c
+M       cat_vol_median3c.mex
+M       cat_vol_median3c.mexmaci64
+M       cat_vol_pbtp.c
+M       cat_vol_pbtp.mex
+M       cat_vol_pbtp.mexmaci64
+M       cat_vol_pbtp2.c
+A       cat_vol_pbtp2.m
+M       cat_vol_pbtp2.mexmaci64
+M       cat_vol_simgrow.mex
+M       cat_vol_simgrow.mexmaci64
+M       compile.m
+M       internal/cat_vol_cMRegularizarNLM3D.mex
+M       internal/cat_vol_cMRegularizarNLM3D.mexmaci64
+
+(1) Deleted:   Remove unused function cat_vol_eikonal3.c.
+(2) Fixed:     Corrected cat_vol_ROIval.c, cat_vol_pbtp2.c.
+(3) Fixed:     Corrected bugs in cat_vol_laplace3.c and
+               cat_vol_median3.c.
+(4) Fixed:     Corrected octave bugs in compile.  
+(5) Fixed:     Corrected octave issues in cat_amap.c, 
+               Amap.c, kmeans.c, MrfPrior.c, Pve.c and
+               cat_main_amap[1639].
+
+
+------------------------------------------------------------------------
+r1913 | dahnke | 2021-11-28 21:44:47 +0100 (Sun, 28 Nov 2021) | 23 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_vol_downcut.c
+M       cat_vol_downcut.mexmaci64
+M       cat_vol_gradient3.c
+M       cat_vol_gradient3.mexmaci64
+M       cat_vol_median3.c
+M       cat_vol_median3.m
+M       cat_vol_median3.mexmaci64
+M       cat_vol_median3c.c
+M       cat_vol_median3c.m
+M       cat_vol_median3c.mexmaci64
+M       cat_vol_pbtp.c
+M       cat_vol_pbtp.mexmaci64
+
+(1) Fixed:   Corrected Octave bugs and added examples in documentation in 
+               cat_vol_laplace3(R), cat_vol_simgrow, cat_vol_gradient3, 
+               cat_vol_eikonal3, cat_vol_eidist, cat_vol_downcut,
+               cat_vol_pbtp, and cat_vol_median3(c).
+(2) Fixed:   Small adaptions for display function ds.               
+(3) New:     Added normalization parameter to cat_vol_gradient3. 
+
+
+------------------------------------------------------------------------
+r1912 | dahnke | 2021-11-27 15:14:31 +0100 (Sat, 27 Nov 2021) | 30 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_vbdist.c
+M       cat_vol_downcut.c
+M       cat_vol_downcut.m
+M       cat_vol_downcut.mexmaci64
+M       cat_vol_eidist.c
+M       cat_vol_eidist.m
+M       cat_vol_eidist.mexmaci64
+M       cat_vol_eikonal3.c
+M       cat_vol_eikonal3.m
+M       cat_vol_eikonal3.mexmaci64
+M       cat_vol_laplace3.c
+M       cat_vol_laplace3.m
+M       cat_vol_laplace3.mexmaci64
+M       cat_vol_laplace3R.c
+M       cat_vol_laplace3R.m
+M       cat_vol_laplace3R.mexmaci64
+M       cat_vol_localstat.c
+M       cat_vol_simgrow.c
+M       cat_vol_simgrow.m
+M       cat_vol_simgrow.mexmaci64
+M       ds.m
+
+(1) Fixed:   Corrected Octave bugs and added examples in documentation in 
+               cat_vol_laplace3(R), cat_vol_simgrow, cat_vol_gradient3, 
+               cat_vol_eikonal3, cat_vol_eidist, cat_vol_downcut.
+(2) Fixed:   Small adaptions for display function ds.               
+ 
+
+------------------------------------------------------------------------
+r1911 | dahnke | 2021-11-26 15:33:25 +0100 (Fri, 26 Nov 2021) | 44 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat12.m
+M       cat_main.m
+M       cat_main1639.m
+M       cat_run_job_APRGs.m
+M       cat_surf_fun.m
+M       cat_vbdist.c
+M       cat_vbdist.m
+M       cat_vbdist.mexmaci64
+M       cat_vol_div.m
+M       cat_vol_grad.m
+M       cat_vol_localstat.c
+M       cat_vol_localstat.m
+M       cat_vol_localstat.mexmaci64
+M       compile.m
+M       ds.m
+M       spm_cat12.m
+
+(1) Fixed:   Added missing variable in catch-block in cat_main.
+(2) Fixed:   Corrected octave bugs in cat_vbdist and cat_vol_localstat.
+             Updated documentation and help.
+(3) Fixed:   Corrected median estimation in cat_vol_localstat that is
+             currently not used. 
+(4) Changed: Throw error message in case of experimental histogram functions
+             that are not used and seams not not work in a proper way.
+(5) New:     Added further functionality to cat_vol_localstat, such as
+             iterations, definition of mask area, handling of zeros,
+             that are in line with previous use.
+(6) New:     Added subfunction to debugging display function ds.              
+(7) Changed: Small changes in documentation in cat12 and spm_cat12.
+(8) Fixed:   Corrected small bug in inactive path in cat_main1639.
+(9) Changed: Did not changed undefined output from FLT_MAX to INFINITY 
+             in cat_vbdist because this may cause to many problems. Although,   
+             this changes are tiny such as in cat_run_job_APRGs, there are 
+             too many cases where it may cause further problems that are 
+             currently running.                                     
+(10) New:    Added normalization parameter and new normalization function 
+             in cat_vol_div that is not used by default.
+(11) New:    Added new functionality in cat_vol_grad to handle NANs and to 
+             normalize the gradients. Added further documentation.   
+ 
+
+
+------------------------------------------------------------------------
+r1910 | gaser | 2021-11-26 14:47:25 +0100 (Fri, 26 Nov 2021) | 7 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_stat_check_cov.m
+M       cat_stat_confplot_spm.m
+
+Changed: Updated search for corresponding xml-files in cat_stat_check_cov.m
+
+------------------------------------------------------------------------
+r1909 | gaser | 2021-11-24 12:19:25 +0100 (Wed, 24 Nov 2021) | 32 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_amap.mex
+M       cat_ornlm.mex
+M       cat_sanlm.mex
+M       cat_stat_check_cov.m
+M       cat_vbdist.mex
+M       cat_vol_downcut.c
+M       cat_vol_downcut.mex
+M       cat_vol_eidist.c
+M       cat_vol_eidist.mex
+M       cat_vol_eikonal3.c
+M       cat_vol_genus0.mex
+M       cat_vol_gradient3.c
+M       cat_vol_gradient3.mex
+M       cat_vol_interp3f.mex
+M       cat_vol_laplace3.c
+M       cat_vol_laplace3.mex
+M       cat_vol_laplace3R.c
+M       cat_vol_laplace3R.mex
+M       cat_vol_localstat.mex
+M       cat_vol_median3.mex
+M       cat_vol_median3c.mex
+M       cat_vol_pbtp.mex
+M       cat_vol_pbtp2.c
+M       cat_vol_simgrow.c
+M       cat_vol_simgrow.mex
+M       internal/cat_vol_cMRegularizarNLM3D.mex
+
+(1) Changed: Move on with cov-check if report files are incomplete.
+(2) Changed: Modified ind2sub subfunction for many c-files. 
+
+------------------------------------------------------------------------
+r1908 | gaser | 2021-11-22 12:15:04 +0100 (Mon, 22 Nov 2021) | 15 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_stat_confplot_spm.m
+M       cat_system.m
+M       html/cat.html
+M       standalone/cat_standalone_segment_long.m
+
+(1) Changed: Added check for nuisance interactions to cat_stat_confplot_spm.m
+             that will not work to plot raw data.
+(2) Fixed:   Variable catdir was missing in cat_system.m.
+(3) Fixed:   Removed UNDEFINED-field from cat_standalone_segment_long.m that 
+             caused crashes ins standalone mode for longitudinal data (thanks
+             to Felix Hofstaedter for pointing to that error).
+
+------------------------------------------------------------------------
+r1907 | gaser | 2021-11-17 23:17:30 +0100 (Wed, 17 Nov 2021) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_surf_results.m
+
+Fixed: Removed wrong interpreter option in cat_surf_results.m.
+
+------------------------------------------------------------------------
+r1906 | gaser | 2021-11-16 17:55:46 +0100 (Tue, 16 Nov 2021) | 17 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat12.m
+M       cat_check_system_output.m
+M       cat_conf_tools.m
+M       cat_stat_confplot_spm.m
+M       cat_surf_map_atlas.m
+M       cat_system.m
+M       html/cat.html
+
+(1) Changed: Added Quick Start Guide to cat_stat_confplot_spm.m.
+(2) Changed: Added additional output parameter to cat_system.m and 
+             cat_check_system_output.m.
+(3) Changed: Updated help text and GUI names for cat_conf_tools.m and cat12.m.
+(4) Fixed:   Added missing output parameter to cat_surf_map_atlas.m
+
+------------------------------------------------------------------------
+r1905 | gaser | 2021-11-15 21:08:56 +0100 (Mon, 15 Nov 2021) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_main_reportfig.m
+
+Changed: Yet another trial to prevent errors in cat_main_reportfig.m.
+
+------------------------------------------------------------------------
+r1904 | gaser | 2021-11-02 14:58:07 +0100 (Tue, 02 Nov 2021) | 20 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_plot_boxplot.m
+M       cat_run_job1639.m
+M       cat_run_newcatch.m
+M       cat_surf_results.m
+M       cat_surf_vol2surf.m
+M       cat_vol_groupwise_ls.m
+M       cat_vol_qa.m
+M       html/cat.html
+
+(1) Changed: Considered display-less occurance of errors in cat_run_newcatch.m.
+(2) Changed: Some smaller changes for compatibiliy.
+(3) Changed: Changed text interpreter to "none" in cat_surf_results.m and
+             again modified clim option.
+(4) Changed: Removed output parameters for cat_system function in 
+             cat_surf_vol2surf.m.
+(5) Fixed:   Corrected bug in size comparison in cat_vol_qa.m.
+
+------------------------------------------------------------------------
+r1903 | dahnke | 2021-11-02 09:09:12 +0100 (Tue, 02 Nov 2021) | 13 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_vol_qa.m
+
+(1) Fixed:   Corrected tiny bug due to imaginary values in cat_vol_qa.
+(2) New:     Added longitudinal skull-stripping cases in cat_main_updateSPM[1639].
+(3) New:     Added backup routine for cat_spm_preproc8 in cat_run_job[1639].
+
+
+------------------------------------------------------------------------
+r1902 | dahnke | 2021-10-30 16:32:01 +0200 (Sat, 30 Oct 2021) | 34 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_io_lazy.m
+M       cat_io_rerun.m
+M       cat_long_createTPM.m
+M       cat_main.m
+M       cat_main1639.m
+M       cat_main_LAS2.m
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_surf_createCS2.m
+M       cat_surf_create_TPM_hull_surface.m
+M       cat_vol_headtrimming.m
+M       cat_vol_partvol1639.m
+M       cat_vol_sanlm.m
+M       ds.m
+M       templates_surfaces/bh.headbrain.TPM.gii
+
+(1) Fixed:      Corrected bug in cat_io_run/lazy that avoid reprocessing of 
+                files with equal age (only used in developer mode).
+(2) Fixed:      Corrected bug due to missing lesion variable in cat_main1639 
+                that is already fixed in cat_main. 
+(3) Fixed:      Corrected handling of missing variable in cat_main_LAS2.        
+(4) Fixed:      Further corrections to handle miss-aligned backgrounds in 
+                longitudinal processing in cat_main_upateSPM[1639].
+                Further changes in cat_long_createTPM.
+(5) Fixed:      Corrected handling of variables in backup routine of 
+                cat_run_job[1639].              
+(6) Fixed:      Corrected bug in cat_surf_createCS2.
+(7) Fixed:      Corrected default setting of lazy/rerun option in 
+                cat_vol_headtrimming.
+
+------------------------------------------------------------------------
+r1901 | gaser | 2021-10-26 12:25:52 +0200 (Tue, 26 Oct 2021) | 32 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_batch_long.m
+M       cat_check_system_output.m
+M       cat_main_reportfig.m
+M       cat_surf_avg.m
+M       cat_surf_createCS.m
+M       cat_surf_createCS2.m
+M       cat_surf_flipsides.m
+M       cat_surf_fun.m
+M       cat_surf_gyrification.m
+M       cat_surf_map_atlas.m
+M       cat_surf_parameters.m
+M       cat_surf_renderv.m
+M       cat_surf_resamp.m
+M       cat_surf_resamp_freesurfer.m
+M       cat_surf_results.m
+M       cat_surf_smooth.m
+M       cat_surf_surf2roi.m
+M       cat_surf_vol2surf.m
+M       cat_system.m
+M       check_pipeline.sh
+M       html/cat.html
+M       spm_cat12.m
+
+(1) Changed: Integrated cat_check_system_output.m into cat_system.m to make
+             system calls easier.
+(2) Changed: Added check whether binaries can be executed to cat_system.m.
+(3) Changed: Changed check for render view in check_pipeline.sh.
+(4) Fixed:   Removed clearing of cat_defaults in cat_batch_long.m.
+
+------------------------------------------------------------------------
+r1900 | gaser | 2021-10-25 11:13:19 +0200 (Mon, 25 Oct 2021) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_stat_confplot_spm.m
+
+Fixed: Restricted plots of covariates in cat_stat_confplot_spm.m.
+
+------------------------------------------------------------------------
+r1899 | gaser | 2021-10-25 10:17:10 +0200 (Mon, 25 Oct 2021) | 14 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_main_LAS2.m
+M       cat_main_LASs.m
+M       cat_stat_spm2x.m
+M       cat_surf_results.m
+M       cat_vol_slice_overlay.m
+
+(1) Changed: Replaced "Size" by "Cluster-Size" in some functions to better
+             describe that parameter.
+(2) Changed: Set text interpreter to "none" in cat_surf_results.m for data tips.
+(3) Fixed:   Corrected some typos.
+
+
+------------------------------------------------------------------------
+r1898 | gaser | 2021-10-25 09:12:48 +0200 (Mon, 25 Oct 2021) | 13 lines
+
+Changed paths:
+M       CHANGES.txt
+MM      cat_roi_values2surf.m
+M       cat_stat_analyze_ROIs.m
+M       cat_stat_confplot_spm.m
+
+(1) Changed: Added check for F-contrasts for effects of interest to 
+             cat_stat_confplot_spm.m to prevent plotting of raw data for 
+             that case.
+(2) Changed: Added a break if no xml-files were found to save time in 
+             cat_stat_analyze_ROIs.m.  
+
+
+------------------------------------------------------------------------
+r1897 | dahnke | 2021-10-24 10:51:16 +0200 (Sun, 24 Oct 2021) | 16 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_main_LAS2.m
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+M       ds.m
+
+(1) Fixed:      Corrected bug in LAS2 in case of empty background class. 
+(2) Fixed:      Corrected bug in longitudinal processing of single timepoints
+                with empty backgrounds in cat_main_updateSPM[1639].
+                
+
+
+
+
+
+------------------------------------------------------------------------
+r1896 | gaser | 2021-10-22 15:42:07 +0200 (Fri, 22 Oct 2021) | 16 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat12.m
+M       cat_surf_fun.m
+M       cat_surf_results.m
+M       cat_vol_slice_overlay.m
+M       compile.m
+
+(1) Changed: Added compilation for octave to compile.m.
+(2) Fixed:   Added missing function handle to cat_vol_slice_overlay.m. 
+(3) Fixed:   Corrected use of clim in cat_surf_results.m and made some smaller
+             changes for compatibility.
+(4) Fixed:   Corrected typo in cat12.m and made some smaller changes for 
+             compatibility. 
+
+
+------------------------------------------------------------------------
+r1895 | gaser | 2021-10-15 01:49:00 +0200 (Fri, 15 Oct 2021) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+
+(1) Added:   Added new function cat_roi_values2surf.m to map ROI values to
+             surface file.
+(2) Changed: Simplified some code in cat_surf_surf2roi.m.
+(3) Fixed:   Corrected call of 'clim' in cat_surf_results.m
+(4) Fixed:   Corrected typo in cat_stat_analyze_ROIs.m
+
+
+------------------------------------------------------------------------
+r1894 | gaser | 2021-10-15 01:45:55 +0200 (Fri, 15 Oct 2021) | 93 lines
+
+Changed paths:
+ M      CAT.glnx86/CAT_3dVol2Surf
+ M      CAT.glnx86/CAT_AddValuesToSurf
+ M      CAT.glnx86/CAT_AverageSurfaces
+ M      CAT.glnx86/CAT_BlurSurfHK
+ M      CAT.glnx86/CAT_Central2Pial
+ M      CAT.glnx86/CAT_DeformSurf
+ M      CAT.glnx86/CAT_DumpCurv
+ M      CAT.glnx86/CAT_DumpSurfArea
+ M      CAT.glnx86/CAT_DumpSurfaceRatio
+ M      CAT.glnx86/CAT_FixTopology
+ M      CAT.glnx86/CAT_FractalDimension
+ M      CAT.glnx86/CAT_Hausdorff
+ M      CAT.glnx86/CAT_Isometize
+ M      CAT.glnx86/CAT_MarkDefects
+ M      CAT.glnx86/CAT_RefineMesh
+ M      CAT.glnx86/CAT_ResampleSphericalSurf
+ M      CAT.glnx86/CAT_ResampleSphericalSurfSPH
+ M      CAT.glnx86/CAT_ResampleSurf
+ M      CAT.glnx86/CAT_SelfIntersect
+ M      CAT.glnx86/CAT_SeparatePolygon
+ M      CAT.glnx86/CAT_SmoothConvexity
+ M      CAT.glnx86/CAT_SulcusDepth
+ M      CAT.glnx86/CAT_Surf2Sphere
+ M      CAT.glnx86/CAT_Surf2Vol
+ M      CAT.glnx86/CAT_SurfDistance
+ M      CAT.glnx86/CAT_WarpSurf
+ M      CAT.maci64/CAT_3dVol2Surf
+ M      CAT.maci64/CAT_AddValuesToSurf
+ M      CAT.maci64/CAT_AverageSurfaces
+ M      CAT.maci64/CAT_BlurSurfHK
+ M      CAT.maci64/CAT_Central2Pial
+ M      CAT.maci64/CAT_DeformSurf
+ M      CAT.maci64/CAT_DumpCurv
+ M      CAT.maci64/CAT_DumpSurfArea
+ M      CAT.maci64/CAT_DumpSurfaceRatio
+ M      CAT.maci64/CAT_FixTopology
+ M      CAT.maci64/CAT_FractalDimension
+ M      CAT.maci64/CAT_Hausdorff
+ M      CAT.maci64/CAT_Isometize
+ M      CAT.maci64/CAT_MarkDefects
+ M      CAT.maci64/CAT_RefineMesh
+ M      CAT.maci64/CAT_ResampleSphericalSurf
+ M      CAT.maci64/CAT_ResampleSphericalSurfSPH
+ M      CAT.maci64/CAT_ResampleSurf
+ M      CAT.maci64/CAT_SelfIntersect
+ M      CAT.maci64/CAT_SeparatePolygon
+ M      CAT.maci64/CAT_SmoothConvexity
+ M      CAT.maci64/CAT_SulcusDepth
+ M      CAT.maci64/CAT_Surf2Sphere
+ M      CAT.maci64/CAT_Surf2Vol
+ M      CAT.maci64/CAT_SurfDistance
+ M      CAT.maci64/CAT_WarpSurf
+ M      CAT.w32/CAT_3dVol2Surf.exe
+ M      CAT.w32/CAT_AddValuesToSurf.exe
+ M      CAT.w32/CAT_AverageSurfaces.exe
+ M      CAT.w32/CAT_BlurSurfHK.exe
+ M      CAT.w32/CAT_Central2Pial.exe
+ M      CAT.w32/CAT_DeformSurf.exe
+ M      CAT.w32/CAT_DumpCurv.exe
+ M      CAT.w32/CAT_DumpSurfArea.exe
+ M      CAT.w32/CAT_DumpSurfaceRatio.exe
+ M      CAT.w32/CAT_FixTopology.exe
+ M      CAT.w32/CAT_FractalDimension.exe
+ M      CAT.w32/CAT_Hausdorff.exe
+ M      CAT.w32/CAT_Isometize.exe
+ M      CAT.w32/CAT_MarkDefects.exe
+ M      CAT.w32/CAT_RefineMesh.exe
+ M      CAT.w32/CAT_ResampleSphericalSurf.exe
+ M      CAT.w32/CAT_ResampleSphericalSurfSPH.exe
+ M      CAT.w32/CAT_ResampleSurf.exe
+ M      CAT.w32/CAT_SelfIntersect.exe
+ M      CAT.w32/CAT_SeparatePolygon.exe
+ M      CAT.w32/CAT_SmoothConvexity.exe
+ M      CAT.w32/CAT_SulcusDepth.exe
+ M      CAT.w32/CAT_Surf2Sphere.exe
+ M      CAT.w32/CAT_Surf2Vol.exe
+ M      CAT.w32/CAT_SurfDistance.exe
+ M      CAT.w32/CAT_WarpSurf.exe
+M       CHANGES.txt
+M       cat_roi_roi2surf.m
+A       cat_roi_values2surf.m
+M       cat_stat_analyze_ROIs.m
+M       cat_surf_results.m
+M       cat_surf_surf2roi.m
+
+(1) Added:   Added new function cat_roi_values2surf.m to map ROI values to
+             surface file.
+(2) Changed: Simplified some code in cat_surf_surf2roi.m.
+(3) Fixed:   Corrected call of 'clim' in cat_surf_results.m
+(4) Fixed:   Corrected typo in cat_stat_analyze_ROIs.m
+
+
+------------------------------------------------------------------------
+r1893 | gaser | 2021-10-13 19:20:43 +0200 (Wed, 13 Oct 2021) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cp_binaries.sh
+
+(1) Fixed:   Corrected recognition of ROI use in tbx_cfg_cat.m 
+(2) Fixed:   Corrected use of original labelmaps in cat_surf_render2.m. 
+(3) Fixed:   Corrected YTickLabels in cat_surf_render2.m for annot files.
+(4) Fixed:   Corrected deletion of temporary files in longitudinal pipeline.
+
+
+------------------------------------------------------------------------
+r1892 | gaser | 2021-10-13 19:15:38 +0200 (Wed, 13 Oct 2021) | 35 lines
+
+Changed paths:
+M       CAT.glnx86/CAT_3dVol2Surf
+M       CAT.maci64/CAT_3dVol2Surf
+M       CAT.w32/CAT_3dVol2Surf.exe
+M       CAT.w32/CAT_AddValuesToSurf.exe
+M       CAT.w32/CAT_AverageSurfaces.exe
+M       CAT.w32/CAT_BlurSurfHK.exe
+M       CAT.w32/CAT_Central2Pial.exe
+M       CAT.w32/CAT_DeformSurf.exe
+M       CAT.w32/CAT_DumpCurv.exe
+M       CAT.w32/CAT_DumpSurfArea.exe
+M       CAT.w32/CAT_DumpSurfaceRatio.exe
+M       CAT.w32/CAT_FixTopology.exe
+M       CAT.w32/CAT_FractalDimension.exe
+M       CAT.w32/CAT_Hausdorff.exe
+M       CAT.w32/CAT_Isometize.exe
+M       CAT.w32/CAT_MarkDefects.exe
+M       CAT.w32/CAT_RefineMesh.exe
+M       CAT.w32/CAT_ResampleSphericalSurf.exe
+M       CAT.w32/CAT_ResampleSphericalSurfSPH.exe
+M       CAT.w32/CAT_ResampleSurf.exe
+M       CAT.w32/CAT_SelfIntersect.exe
+M       CAT.w32/CAT_SeparatePolygon.exe
+M       CAT.w32/CAT_SmoothConvexity.exe
+M       CAT.w32/CAT_SulcusDepth.exe
+M       CAT.w32/CAT_Surf2Sphere.exe
+M       CAT.w32/CAT_Surf2Vol.exe
+M       CAT.w32/CAT_SurfDistance.exe
+M       CAT.w32/CAT_WarpSurf.exe
+M       CHANGES.txt
+ M      cp_binaries.sh
+
+(1) Changed: Updated binaries.
+
+
+------------------------------------------------------------------------
+r1891 | gaser | 2021-10-13 19:09:04 +0200 (Wed, 13 Oct 2021) | 87 lines
+
+Changed paths:
+A       CAT.glnx86
+A       CAT.glnx86/CAT_3dVol2Surf
+A       CAT.glnx86/CAT_AddValuesToSurf
+A       CAT.glnx86/CAT_AverageSurfaces
+A       CAT.glnx86/CAT_BlurSurfHK
+A       CAT.glnx86/CAT_Central2Pial
+A       CAT.glnx86/CAT_DeformSurf
+A       CAT.glnx86/CAT_DumpCurv
+A       CAT.glnx86/CAT_DumpSurfArea
+A       CAT.glnx86/CAT_DumpSurfaceRatio
+A       CAT.glnx86/CAT_FixTopology
+A       CAT.glnx86/CAT_FractalDimension
+A       CAT.glnx86/CAT_Hausdorff
+A       CAT.glnx86/CAT_Isometize
+A       CAT.glnx86/CAT_MarkDefects
+A       CAT.glnx86/CAT_RefineMesh
+A       CAT.glnx86/CAT_ResampleSphericalSurf
+A       CAT.glnx86/CAT_ResampleSphericalSurfSPH
+A       CAT.glnx86/CAT_ResampleSurf
+A       CAT.glnx86/CAT_SelfIntersect
+A       CAT.glnx86/CAT_SeparatePolygon
+A       CAT.glnx86/CAT_SmoothConvexity
+A       CAT.glnx86/CAT_SulcusDepth
+A       CAT.glnx86/CAT_Surf2Sphere
+A       CAT.glnx86/CAT_Surf2Vol
+A       CAT.glnx86/CAT_SurfDistance
+A       CAT.glnx86/CAT_WarpSurf
+A       CAT.maci64
+A       CAT.maci64/CAT_3dVol2Surf
+A       CAT.maci64/CAT_AddValuesToSurf
+A       CAT.maci64/CAT_AverageSurfaces
+A       CAT.maci64/CAT_BlurSurfHK
+A       CAT.maci64/CAT_Central2Pial
+A       CAT.maci64/CAT_DeformSurf
+A       CAT.maci64/CAT_DumpCurv
+A       CAT.maci64/CAT_DumpSurfArea
+A       CAT.maci64/CAT_DumpSurfaceRatio
+A       CAT.maci64/CAT_FixTopology
+A       CAT.maci64/CAT_FractalDimension
+A       CAT.maci64/CAT_Hausdorff
+A       CAT.maci64/CAT_Isometize
+A       CAT.maci64/CAT_MarkDefects
+A       CAT.maci64/CAT_RefineMesh
+A       CAT.maci64/CAT_ResampleSphericalSurf
+A       CAT.maci64/CAT_ResampleSphericalSurfSPH
+A       CAT.maci64/CAT_ResampleSurf
+A       CAT.maci64/CAT_SelfIntersect
+A       CAT.maci64/CAT_SeparatePolygon
+A       CAT.maci64/CAT_SmoothConvexity
+A       CAT.maci64/CAT_SulcusDepth
+A       CAT.maci64/CAT_Surf2Sphere
+A       CAT.maci64/CAT_Surf2Vol
+A       CAT.maci64/CAT_SurfDistance
+A       CAT.maci64/CAT_WarpSurf
+A       CAT.w32
+A       CAT.w32/CAT_3dVol2Surf.exe
+A       CAT.w32/CAT_AddValuesToSurf.exe
+A       CAT.w32/CAT_AverageSurfaces.exe
+A       CAT.w32/CAT_BlurSurfHK.exe
+A       CAT.w32/CAT_Central2Pial.exe
+A       CAT.w32/CAT_DeformSurf.exe
+A       CAT.w32/CAT_DumpCurv.exe
+A       CAT.w32/CAT_DumpSurfArea.exe
+A       CAT.w32/CAT_DumpSurfaceRatio.exe
+A       CAT.w32/CAT_FixTopology.exe
+A       CAT.w32/CAT_FractalDimension.exe
+A       CAT.w32/CAT_Hausdorff.exe
+A       CAT.w32/CAT_Isometize.exe
+A       CAT.w32/CAT_MarkDefects.exe
+A       CAT.w32/CAT_RefineMesh.exe
+A       CAT.w32/CAT_ResampleSphericalSurf.exe
+A       CAT.w32/CAT_ResampleSphericalSurfSPH.exe
+A       CAT.w32/CAT_ResampleSurf.exe
+A       CAT.w32/CAT_SelfIntersect.exe
+A       CAT.w32/CAT_SeparatePolygon.exe
+A       CAT.w32/CAT_SmoothConvexity.exe
+A       CAT.w32/CAT_SulcusDepth.exe
+A       CAT.w32/CAT_Surf2Sphere.exe
+A       CAT.w32/CAT_Surf2Vol.exe
+A       CAT.w32/CAT_SurfDistance.exe
+A       CAT.w32/CAT_WarpSurf.exe
+M       CHANGES.txt
+
+(1) Changed: Added missing binaries.
+
+
+------------------------------------------------------------------------
+r1890 | gaser | 2021-10-13 19:06:57 +0200 (Wed, 13 Oct 2021) | 96 lines
+
+Changed paths:
+D       CAT.glnx86
+D       CAT.glnx86/CAT_3dVol2Surf
+D       CAT.glnx86/CAT_AddValuesToSurf
+D       CAT.glnx86/CAT_AverageSurfaces
+D       CAT.glnx86/CAT_BlurSurfHK
+D       CAT.glnx86/CAT_Central2Pial
+D       CAT.glnx86/CAT_DeformSurf
+D       CAT.glnx86/CAT_DumpCurv
+D       CAT.glnx86/CAT_DumpSurfArea
+D       CAT.glnx86/CAT_DumpSurfaceRatio
+D       CAT.glnx86/CAT_FixTopology
+D       CAT.glnx86/CAT_FractalDimension
+D       CAT.glnx86/CAT_Hausdorff
+D       CAT.glnx86/CAT_Isometize
+D       CAT.glnx86/CAT_MarkDefects
+D       CAT.glnx86/CAT_RefineMesh
+D       CAT.glnx86/CAT_ResampleSphericalSurf
+D       CAT.glnx86/CAT_ResampleSphericalSurfSPH
+D       CAT.glnx86/CAT_ResampleSurf
+D       CAT.glnx86/CAT_SelfIntersect
+D       CAT.glnx86/CAT_SeparatePolygon
+D       CAT.glnx86/CAT_SmoothConvexity
+D       CAT.glnx86/CAT_SulcusDepth
+D       CAT.glnx86/CAT_Surf2Sphere
+D       CAT.glnx86/CAT_Surf2Vol
+D       CAT.glnx86/CAT_SurfDistance
+D       CAT.glnx86/CAT_WarpSurf
+D       CAT.maci64
+D       CAT.maci64/CAT_3dVol2Surf
+D       CAT.maci64/CAT_AddValuesToSurf
+D       CAT.maci64/CAT_AverageSurfaces
+D       CAT.maci64/CAT_BlurSurfHK
+D       CAT.maci64/CAT_Central2Pial
+D       CAT.maci64/CAT_DeformSurf
+D       CAT.maci64/CAT_DumpCurv
+D       CAT.maci64/CAT_DumpSurfArea
+D       CAT.maci64/CAT_DumpSurfaceRatio
+D       CAT.maci64/CAT_FixTopology
+D       CAT.maci64/CAT_FractalDimension
+D       CAT.maci64/CAT_Hausdorff
+D       CAT.maci64/CAT_Isometize
+D       CAT.maci64/CAT_MarkDefects
+D       CAT.maci64/CAT_RefineMesh
+D       CAT.maci64/CAT_ResampleSphericalSurf
+D       CAT.maci64/CAT_ResampleSphericalSurfSPH
+D       CAT.maci64/CAT_ResampleSurf
+D       CAT.maci64/CAT_SelfIntersect
+D       CAT.maci64/CAT_SeparatePolygon
+D       CAT.maci64/CAT_SmoothConvexity
+D       CAT.maci64/CAT_SulcusDepth
+D       CAT.maci64/CAT_Surf2Sphere
+D       CAT.maci64/CAT_Surf2Vol
+D       CAT.maci64/CAT_SurfDistance
+D       CAT.maci64/CAT_WarpSurf
+D       CAT.w32
+D       CAT.w32/CAT_3dVol2Surf.exe
+D       CAT.w32/CAT_AddValuesToSurf.exe
+D       CAT.w32/CAT_AverageSurfaces.exe
+D       CAT.w32/CAT_BlurSurfHK.exe
+D       CAT.w32/CAT_Central2Pial.exe
+D       CAT.w32/CAT_DeformSurf.exe
+D       CAT.w32/CAT_DumpCurv.exe
+D       CAT.w32/CAT_DumpSurfArea.exe
+D       CAT.w32/CAT_DumpSurfaceRatio.exe
+D       CAT.w32/CAT_FixTopology.exe
+D       CAT.w32/CAT_FractalDimension.exe
+D       CAT.w32/CAT_Hausdorff.exe
+D       CAT.w32/CAT_Isometize.exe
+D       CAT.w32/CAT_MarkDefects.exe
+D       CAT.w32/CAT_RefineMesh.exe
+D       CAT.w32/CAT_ResampleSphericalSurf.exe
+D       CAT.w32/CAT_ResampleSphericalSurfSPH.exe
+D       CAT.w32/CAT_ResampleSurf.exe
+D       CAT.w32/CAT_SelfIntersect.exe
+D       CAT.w32/CAT_SeparatePolygon.exe
+D       CAT.w32/CAT_SmoothConvexity.exe
+D       CAT.w32/CAT_SulcusDepth.exe
+D       CAT.w32/CAT_Surf2Sphere.exe
+D       CAT.w32/CAT_Surf2Vol.exe
+D       CAT.w32/CAT_SurfDistance.exe
+D       CAT.w32/CAT_WarpSurf.exe
+M       CHANGES.txt
+M       cat_install_tfce.m
+M       cat_surf_createCS2.m
+M       cat_update.m
+M       cat_vol_morph.m
+A       cp_binaries.sh
+
+(1) Changed: Updated binaries.
+(2) Fixed:   Corrected help text in cat_vol_morph.c.
+(3) Fixed:   Added check for toolbox_path_cache command to cat_update.m and
+             cat_install_tfce.m.
+(4) Fixed:   Corrected handling of missing job variable in cat_surf_createCS2.m.
+
+
+------------------------------------------------------------------------
+r1889 | gaser | 2021-10-13 16:53:31 +0200 (Wed, 13 Oct 2021) | 119 lines
+
+Changed paths:
+ M      CAT.glnx86/CAT_3dVol2Surf
+ M      CAT.glnx86/CAT_AddValuesToSurf
+ M      CAT.glnx86/CAT_AverageSurfaces
+ M      CAT.glnx86/CAT_BlurSurfHK
+ M      CAT.glnx86/CAT_Central2Pial
+ M      CAT.glnx86/CAT_DeformSurf
+ M      CAT.glnx86/CAT_DumpCurv
+ M      CAT.glnx86/CAT_DumpSurfArea
+ M      CAT.glnx86/CAT_DumpSurfaceRatio
+ M      CAT.glnx86/CAT_FixTopology
+ M      CAT.glnx86/CAT_FractalDimension
+ M      CAT.glnx86/CAT_Hausdorff
+ M      CAT.glnx86/CAT_Isometize
+ M      CAT.glnx86/CAT_MarkDefects
+ M      CAT.glnx86/CAT_RefineMesh
+ M      CAT.glnx86/CAT_ResampleSphericalSurf
+ M      CAT.glnx86/CAT_ResampleSphericalSurfSPH
+ M      CAT.glnx86/CAT_ResampleSurf
+ M      CAT.glnx86/CAT_SelfIntersect
+ M      CAT.glnx86/CAT_SeparatePolygon
+ M      CAT.glnx86/CAT_SmoothConvexity
+ M      CAT.glnx86/CAT_SulcusDepth
+ M      CAT.glnx86/CAT_Surf2Sphere
+ M      CAT.glnx86/CAT_Surf2Vol
+ M      CAT.glnx86/CAT_SurfDistance
+ M      CAT.glnx86/CAT_WarpSurf
+MM      CAT.maca64/CAT_3dVol2Surf
+MM      CAT.maca64/CAT_AddValuesToSurf
+MM      CAT.maca64/CAT_AverageSurfaces
+MM      CAT.maca64/CAT_BlurSurfHK
+MM      CAT.maca64/CAT_Central2Pial
+MM      CAT.maca64/CAT_DeformSurf
+MM      CAT.maca64/CAT_DumpCurv
+MM      CAT.maca64/CAT_DumpSurfArea
+MM      CAT.maca64/CAT_DumpSurfaceRatio
+MM      CAT.maca64/CAT_FixTopology
+MM      CAT.maca64/CAT_FractalDimension
+MM      CAT.maca64/CAT_Hausdorff
+MM      CAT.maca64/CAT_Isometize
+MM      CAT.maca64/CAT_MarkDefects
+MM      CAT.maca64/CAT_RefineMesh
+MM      CAT.maca64/CAT_ResampleSphericalSurf
+MM      CAT.maca64/CAT_ResampleSphericalSurfSPH
+MM      CAT.maca64/CAT_ResampleSurf
+MM      CAT.maca64/CAT_SelfIntersect
+MM      CAT.maca64/CAT_SeparatePolygon
+MM      CAT.maca64/CAT_SmoothConvexity
+MM      CAT.maca64/CAT_SulcusDepth
+MM      CAT.maca64/CAT_Surf2Sphere
+MM      CAT.maca64/CAT_Surf2Vol
+MM      CAT.maca64/CAT_SurfDistance
+MM      CAT.maca64/CAT_WarpSurf
+ M      CAT.maci64/CAT_3dVol2Surf
+ M      CAT.maci64/CAT_AddValuesToSurf
+ M      CAT.maci64/CAT_AverageSurfaces
+ M      CAT.maci64/CAT_BlurSurfHK
+ M      CAT.maci64/CAT_Central2Pial
+ M      CAT.maci64/CAT_DeformSurf
+ M      CAT.maci64/CAT_DumpCurv
+ M      CAT.maci64/CAT_DumpSurfArea
+ M      CAT.maci64/CAT_DumpSurfaceRatio
+ M      CAT.maci64/CAT_FixTopology
+ M      CAT.maci64/CAT_FractalDimension
+ M      CAT.maci64/CAT_Hausdorff
+ M      CAT.maci64/CAT_Isometize
+ M      CAT.maci64/CAT_MarkDefects
+ M      CAT.maci64/CAT_RefineMesh
+ M      CAT.maci64/CAT_ResampleSphericalSurf
+ M      CAT.maci64/CAT_ResampleSphericalSurfSPH
+ M      CAT.maci64/CAT_ResampleSurf
+ M      CAT.maci64/CAT_SelfIntersect
+ M      CAT.maci64/CAT_SeparatePolygon
+ M      CAT.maci64/CAT_SmoothConvexity
+ M      CAT.maci64/CAT_SulcusDepth
+ M      CAT.maci64/CAT_Surf2Sphere
+ M      CAT.maci64/CAT_Surf2Vol
+ M      CAT.maci64/CAT_SurfDistance
+ M      CAT.maci64/CAT_WarpSurf
+ M      CAT.w32/CAT_3dVol2Surf.exe
+ M      CAT.w32/CAT_AddValuesToSurf.exe
+ M      CAT.w32/CAT_AverageSurfaces.exe
+ M      CAT.w32/CAT_BlurSurfHK.exe
+ M      CAT.w32/CAT_Central2Pial.exe
+ M      CAT.w32/CAT_DeformSurf.exe
+ M      CAT.w32/CAT_DumpCurv.exe
+ M      CAT.w32/CAT_DumpSurfArea.exe
+ M      CAT.w32/CAT_DumpSurfaceRatio.exe
+ M      CAT.w32/CAT_FixTopology.exe
+ M      CAT.w32/CAT_FractalDimension.exe
+ M      CAT.w32/CAT_Hausdorff.exe
+ M      CAT.w32/CAT_Isometize.exe
+ M      CAT.w32/CAT_MarkDefects.exe
+ M      CAT.w32/CAT_RefineMesh.exe
+ M      CAT.w32/CAT_ResampleSphericalSurf.exe
+ M      CAT.w32/CAT_ResampleSphericalSurfSPH.exe
+ M      CAT.w32/CAT_ResampleSurf.exe
+ M      CAT.w32/CAT_SelfIntersect.exe
+ M      CAT.w32/CAT_SeparatePolygon.exe
+ M      CAT.w32/CAT_SmoothConvexity.exe
+ M      CAT.w32/CAT_SulcusDepth.exe
+ M      CAT.w32/CAT_Surf2Sphere.exe
+ M      CAT.w32/CAT_Surf2Vol.exe
+ M      CAT.w32/CAT_SurfDistance.exe
+ M      CAT.w32/CAT_WarpSurf.exe
+M       CHANGES.txt
+M       Contents.m
+M       cat_conf_tools.m
+M       cat_long_main.m
+M       cat_surf_render2.m
+M       html/cat.html
+M       tbx_cfg_cat.m
+
+(1) Fixed:   Corrected recognition of ROI use in tbx_cfg_cat.m 
+(2) Fixed:   Corrected use of original labelmaps in cat_surf_render2.m. 
+(3) Fixed:   Corrected YTickLabels in cat_surf_render2.m for annot files.
+(4) Fixed:   Corrected deletion of temporary files in longitudinal pipeline.
+
+
+------------------------------------------------------------------------
+r1888 | gaser | 2021-10-12 15:49:25 +0200 (Tue, 12 Oct 2021) | 31 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_check_system_output.m
+M       cat_conf_stools.m
+M       cat_io_FreeSurfer.m
+M       cat_long_multi_run.m
+M       cat_main.m
+M       cat_main1639.m
+M       cat_main_LAS.m
+M       cat_main_LAS2.m
+M       cat_main_reportfig.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_surf_createCS2.m
+M       cat_surf_results.m
+M       html/cat.html
+M       spm_cat12.m
+
+(1) Changed: Added call to sudo command from spm_cat12 if execution issues for 
+             mac systems occur due to Apple gatekeeper.
+(2) Changed: Slightly changed values fpr volume to surface mapping to ensure
+             that all values are considered in the cortex.
+(3) Changed: Reformatedd cat_io_Freesurfer and added one more file check. 
+(4) Fixed:   Parameter "Affine" was sometimes not created in cat_run_job1639.m. 
+(5) Fixed:   Added some more parameter checks to cat_main_reportfig.m. 
+(6) Fixed:   Corrected progress output in cat_main_LAS.m, cat_main_LAS2.m,
+             cat_main.m and cat_main1639.m.
+(7) Fixed:   Corrected handling of BIDS structure in longitudinal data. 
+
+
+------------------------------------------------------------------------
+r1887 | gaser | 2021-10-08 11:59:30 +0200 (Fri, 08 Oct 2021) | 121 lines
+
+Changed paths:
+A       CAT.glnx86
+A       CAT.glnx86/CAT_3dVol2Surf
+A       CAT.glnx86/CAT_AddValuesToSurf
+A       CAT.glnx86/CAT_AverageSurfaces
+A       CAT.glnx86/CAT_BlurSurfHK
+A       CAT.glnx86/CAT_Central2Pial
+A       CAT.glnx86/CAT_DeformSurf
+A       CAT.glnx86/CAT_DumpCurv
+A       CAT.glnx86/CAT_DumpSurfArea
+A       CAT.glnx86/CAT_DumpSurfaceRatio
+A       CAT.glnx86/CAT_FixTopology
+A       CAT.glnx86/CAT_FractalDimension
+A       CAT.glnx86/CAT_Hausdorff
+A       CAT.glnx86/CAT_Isometize
+A       CAT.glnx86/CAT_MarkDefects
+A       CAT.glnx86/CAT_RefineMesh
+A       CAT.glnx86/CAT_ResampleSphericalSurf
+A       CAT.glnx86/CAT_ResampleSphericalSurfSPH
+A       CAT.glnx86/CAT_ResampleSurf
+A       CAT.glnx86/CAT_SelfIntersect
+A       CAT.glnx86/CAT_SeparatePolygon
+A       CAT.glnx86/CAT_SmoothConvexity
+A       CAT.glnx86/CAT_SulcusDepth
+A       CAT.glnx86/CAT_Surf2Sphere
+A       CAT.glnx86/CAT_Surf2Vol
+A       CAT.glnx86/CAT_SurfDistance
+A       CAT.glnx86/CAT_WarpSurf
+A       CAT.maca64
+A       CAT.maca64/CAT_3dVol2Surf
+A       CAT.maca64/CAT_AddValuesToSurf
+A       CAT.maca64/CAT_AverageSurfaces
+A       CAT.maca64/CAT_BlurSurfHK
+A       CAT.maca64/CAT_Central2Pial
+A       CAT.maca64/CAT_DeformSurf
+A       CAT.maca64/CAT_DumpCurv
+A       CAT.maca64/CAT_DumpSurfArea
+A       CAT.maca64/CAT_DumpSurfaceRatio
+A       CAT.maca64/CAT_FixTopology
+A       CAT.maca64/CAT_FractalDimension
+A       CAT.maca64/CAT_Hausdorff
+A       CAT.maca64/CAT_Isometize
+A       CAT.maca64/CAT_MarkDefects
+A       CAT.maca64/CAT_RefineMesh
+A       CAT.maca64/CAT_ResampleSphericalSurf
+A       CAT.maca64/CAT_ResampleSphericalSurfSPH
+A       CAT.maca64/CAT_ResampleSurf
+A       CAT.maca64/CAT_SelfIntersect
+A       CAT.maca64/CAT_SeparatePolygon
+A       CAT.maca64/CAT_SmoothConvexity
+A       CAT.maca64/CAT_SulcusDepth
+A       CAT.maca64/CAT_Surf2Sphere
+A       CAT.maca64/CAT_Surf2Vol
+A       CAT.maca64/CAT_SurfDistance
+A       CAT.maca64/CAT_WarpSurf
+A       CAT.maci64
+A       CAT.maci64/CAT_3dVol2Surf
+A       CAT.maci64/CAT_AddValuesToSurf
+A       CAT.maci64/CAT_AverageSurfaces
+A       CAT.maci64/CAT_BlurSurfHK
+A       CAT.maci64/CAT_Central2Pial
+A       CAT.maci64/CAT_DeformSurf
+A       CAT.maci64/CAT_DumpCurv
+A       CAT.maci64/CAT_DumpSurfArea
+A       CAT.maci64/CAT_DumpSurfaceRatio
+A       CAT.maci64/CAT_FixTopology
+A       CAT.maci64/CAT_FractalDimension
+A       CAT.maci64/CAT_Hausdorff
+A       CAT.maci64/CAT_Isometize
+A       CAT.maci64/CAT_MarkDefects
+A       CAT.maci64/CAT_RefineMesh
+A       CAT.maci64/CAT_ResampleSphericalSurf
+A       CAT.maci64/CAT_ResampleSphericalSurfSPH
+A       CAT.maci64/CAT_ResampleSurf
+A       CAT.maci64/CAT_SelfIntersect
+A       CAT.maci64/CAT_SeparatePolygon
+A       CAT.maci64/CAT_SmoothConvexity
+A       CAT.maci64/CAT_SulcusDepth
+A       CAT.maci64/CAT_Surf2Sphere
+A       CAT.maci64/CAT_Surf2Vol
+A       CAT.maci64/CAT_SurfDistance
+A       CAT.maci64/CAT_WarpSurf
+A       CAT.w32
+A       CAT.w32/CAT_3dVol2Surf.exe
+A       CAT.w32/CAT_AddValuesToSurf.exe
+A       CAT.w32/CAT_AverageSurfaces.exe
+A       CAT.w32/CAT_BlurSurfHK.exe
+A       CAT.w32/CAT_Central2Pial.exe
+A       CAT.w32/CAT_DeformSurf.exe
+A       CAT.w32/CAT_DumpCurv.exe
+A       CAT.w32/CAT_DumpSurfArea.exe
+A       CAT.w32/CAT_DumpSurfaceRatio.exe
+A       CAT.w32/CAT_FixTopology.exe
+A       CAT.w32/CAT_FractalDimension.exe
+A       CAT.w32/CAT_Hausdorff.exe
+A       CAT.w32/CAT_Isometize.exe
+A       CAT.w32/CAT_MarkDefects.exe
+A       CAT.w32/CAT_RefineMesh.exe
+A       CAT.w32/CAT_ResampleSphericalSurf.exe
+A       CAT.w32/CAT_ResampleSphericalSurfSPH.exe
+A       CAT.w32/CAT_ResampleSurf.exe
+A       CAT.w32/CAT_SelfIntersect.exe
+A       CAT.w32/CAT_SeparatePolygon.exe
+A       CAT.w32/CAT_SmoothConvexity.exe
+A       CAT.w32/CAT_SulcusDepth.exe
+A       CAT.w32/CAT_Surf2Sphere.exe
+A       CAT.w32/CAT_Surf2Vol.exe
+A       CAT.w32/CAT_SurfDistance.exe
+A       CAT.w32/CAT_WarpSurf.exe
+M       CHANGES.txt
+M       Contents.m
+MM      batches/cat12_postmortem.m
+M       cat_system.m
+M       html/cat.html
+ M      html/cat_methods_postmortem.html
+ M      html/images/cat_methods_downsampling.jpg
+ M      html/images/cat_methods_postmortem.jpg
+
+(1) Changed: Added support of new Apple Silicon processors to cat_system.m 
+             and added new binaries for surface tools.
+
+------------------------------------------------------------------------
+r1886 | gaser | 2021-10-07 16:55:42 +0200 (Thu, 07 Oct 2021) | 11 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_io_rerun.m
+M       cat_system.m
+M       html/cat.html
+
+(1) Changed: Added recognition of new Apple Silicon processors to cat_system.m 
+(2) Fixed:   Corrected bug in cat_vol_sanlm/cat_io_rerun that always skipped 
+             SANLM filter in the last r1885 version.
+
+------------------------------------------------------------------------
+r1885 | dahnke | 2021-10-05 12:14:25 +0200 (Tue, 05 Oct 2021) | 17 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_stat_getCSVXMLfield.m
+M       cat_stat_spm2x.m
+M       cat_surf_parameters.m
+M       cat_surf_resamp.m
+M       cat_surf_surf2roi.m
+
+(1) Fixed:    Corrected bugs in CSV/XML batch defintion and processing 
+              (cat_conf_tools & cat_stat_getCSVXMLfield).
+(2) Fixed:    Corrected batch dependency bug cat_stat_spm2x.m  
+(3) Fixed:    Corrected bugs in area & lGI dependencies in cat_surf_parameters. 
+(4) Fixed:    Corrected bugs in cat_surf_resamp.
+(5) Fixed:    Corrected export problems of special cases in cat_surf_surf2roi. 
+
+
+------------------------------------------------------------------------
+r1884 | dahnke | 2021-10-04 13:27:03 +0200 (Mon, 04 Oct 2021) | 9 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_main1639.m
+M       cat_vol_resize.m
+
+(1) Fixed:      Corrected bug with uint8 data in cat_vol_resize and resize batch.
+(2) Fixed:      Corrected calls of cat_main_gintnorm in cat_main1639. 
+
+
+------------------------------------------------------------------------
+r1883 | dahnke | 2021-10-01 15:02:31 +0200 (Fri, 01 Oct 2021) | 83 lines
+
+Changed paths:
+M       CHANGES.txt
+A       batches/cat12_postmortem.m
+M       cat_conf_opts.m
+M       cat_conf_tools.m
+M       cat_io_rerun.m
+M       cat_main.m
+M       cat_main1639.m
+M       cat_main_clean_gwc.m
+M       cat_main_gintnorm.m
+M       cat_main_registration.m
+M       cat_main_reportcmd.m
+M       cat_main_reportfig.m
+M       cat_main_reportstr.m
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+M       cat_run.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_run_newcatch.m
+M       cat_stat_marks.m
+M       cat_surf_createCS.m
+M       cat_surf_createCS2.m
+M       cat_surf_create_TPM_hull_surface.m
+M       cat_surf_fun.m
+M       cat_vol_headtrimming.m
+M       cat_vol_morph.m
+M       cat_vol_qa.m
+M       cat_vol_resize.m
+M       cat_vol_sanlm.m
+M       html/cat.html
+M       html/cat_methods.html
+A       html/cat_methods_postmortem.html
+A       html/images/cat_methods_downsampling.jpg
+A       html/images/cat_methods_postmortem.jpg
+M       templates_animals_surfaces/bh.headbrain.chimpanzee_TPM.gii
+
+This update focuses on corrections for the processing of post-mortem/skull-stripped
+PD-weighted ultra-high-resolution data for the SPM and CAT preprocessing.
+(1) Changed:  Extended cat_main_clean_cgw to support input files rather than 
+              the 4D tissue matrix (changes also in cat_main[1639]). Added new
+              parameter for additional cleanup, e.g. in PD/T2 (post-mortem) data. 
+              Added resolution depending definition that is defined by matrix size 
+              to keep it simple.  
+(2) Fixed:    Only run SPM pipeline if c1 files are selected (cat_run_job[1639]).
+(3) Fixed:    Corrected CAT report output in case of SPM input segmentation, i.e., 
+              display SPM Segmentation parameter (cat_main_report[str/fig]).
+(4) Changed:  Added auto option to create resolution-specific prefixes in 
+              cat_vol_resize and cat_conf_tools.               
+(5) Changed:  Increased number of iterations to stronger reduce self-intersections  
+              in severe cases.
+(6) Fixed:    Corrected settings for ex-vivo PD/T2 processing in cat_main_gintnorm 
+              but not cat_main_gintnorm1639 (default T1 pipeline).
+(7) Fixed:    Added handling of INF boundary box setting in cat_main_registration.
+(8) Fixed:    Extended iterations in case of high amount of self-intersections in 
+              sub-function cat_surf_collision_correction_[pbt|ry]. Added output of 
+              reminding percent of self-intersections.
+(9) Fixed:    Corrected use of expert parameters. 
+(10) New:     Added lazy parameter to denoising and trimming batch
+              (cat_vol_sanlm, cat_vol_headtrimming, cat_conf_tools)
+(11) Fixed:   Corrected handling of post-mortem / skull-stripped SPM segmentation 
+              with 3 and 4 classes in cat_run_job[1639]. 
+(12) Fixed:   Corrected vx_vol dependency for matrix enlargement of opening 
+              operations in cat_vol_morph (only relevant for resolution <0.5mm).              
+(13) Fixed:   Corrected a bug in cat_io_rerun and extended the test output (verb=1).
+(14) New:     Added HTML help page cat_methods_postmortem and two images. 
+(15) Changed: Multiple small changes in cat_main[1639] for very special cases: 
+              - Updated call of global normalization for ultra-high-resolution data.
+              - Updated call of cleanup for ultra-high-resolution data.
+              - Corrected order of processed surface. 
+              - Added Ycls Updates to cat_main_SPMpp.
+(16) Change:  Updated handling of post-mortem and ultra-high-resolution data in 
+              cat_main_updateSPM[1639].m.
+(17) Fixed:   Extend limitation of mark2grad @function in cat_run, cat_stat_marks,
+              and cat_main_reportstr.              
+(18) Fixed:   Corrected problems in different global thickness values (PBT vs. FS)
+              in cat_surf_createCS[2].
+(19) Changed: Corrected definition of brain/head average surface for CAT report in 
+              cat_surf_create_TPM_hull_surface 
+(20) Fixed:   Corrected incorrect use of exist in surface render in cat_main_reportfig.
+(21) New:     Added post-mortem batch batch/cat12_postmortem.m
+
+
+------------------------------------------------------------------------
+r1882 | gaser | 2021-09-30 12:24:45 +0200 (Thu, 30 Sep 2021) | 15 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_run_job_APRGs.m
+M       cat_stat_analyze_ROIs.m
+M       cat_surf_results.m
+M       templates_MNI152NLin2009cAsym/aal3.csv
+
+(1) Changed: Added some new command line options to cat_surf_results.m and also
+             implemented a new flat design for ROI display.         
+(2) Changed: Added option for new flat design for ROI display to 
+             cat_stat_analyze_ROIs.m
+(3) Fixed:   Corrected label for rIFGoperc which was doubled (value 6). Thanks
+             to Peter Mondrup Rasmussen for pointing to that.
+
+
+------------------------------------------------------------------------
+r1881 | gaser | 2021-09-29 16:09:02 +0200 (Wed, 29 Sep 2021) | 14 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_conf_tools.m
+M       cat_run_job_APRGs.m
+M       cat_run_newcatch.m
+M       html/cat.html
+
+(1) Changed: Updated error output for piwik to better indicated CAT release 
+             number.            
+(2) Fixed:   Use try/catch to also consider older versions of spm_maff8.m from
+             previous SPM12 updates.
+
+
+------------------------------------------------------------------------
+r1880 | gaser | 2021-09-28 14:04:36 +0200 (Tue, 28 Sep 2021) | 27 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat12.m
+M       cat_conf_factorial.m
+M       cat_install_atlases.m
+M       cat_main_reportfig.m
+M       cat_spm_results_ui.m
+M       cat_stat_marks.m
+M       cat_surf_createCS2.m
+M       html/cat.html
+
+(1) Changed: Re-structured cat_io_senderrormail.m and removed sending of zipped 
+             err-folder which was almost never used. Now the content of the 
+             resp. xml-file and optionally the log-file will be sended and will 
+             be opened in editor.            
+(2) Changed: Updated description of quality measures in help text.
+(3) Changed: Added automatical installation of CAT12 to cat_spm_results_ui.m.
+(4) Changed: Moved "Quick Start Guide" to own button in GUI.
+(5) Fixed:   Corrected error in cat_surf_createCS2.m that occurred using fast 
+             surface extraction.
+(6) Fixed:   Corrected check for existence of hSD variable and again added more 
+             try commands to catch mysterious errors o windows systems in
+             cat_surf_createCS2.m
+(7) Fixed:   Updated cat_install_atlases to correctly find ROI names.
+
+
+------------------------------------------------------------------------
+r1879 | gaser | 2021-09-03 10:24:31 +0200 (Fri, 03 Sep 2021) | 16 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_main.m
+M       cat_main_reportfig.m
+M       cat_main_roi.m
+M       cat_run_job1639.m
+M       html/cat.html
+
+(1) Fixed: Added check that affine transformation was successfully saved in
+           in xml-file for use of priors in longitudinal pipeline.
+(2) Fixed: Added check that index to FA variable is correct in cat_main_roi.m.
+(3) Fixed: Again added new checks that some variables exist in 
+           cat_main_reportfig.m.
+(4) Fixed: Added check that intensity update in cat_main.m was successful.
+
+------------------------------------------------------------------------
+r1878 | gaser | 2021-09-01 16:37:14 +0200 (Wed, 01 Sep 2021) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_multi_run.m
+
+Fixed: Removed wrong indexing in cat_long_multi_run.m
+
+------------------------------------------------------------------------
+r1877 | gaser | 2021-09-01 16:23:58 +0200 (Wed, 01 Sep 2021) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_multi_run.m
+
+Fixed: Removed debugging code from cat_long_multi_run.m
+
+------------------------------------------------------------------------
+r1876 | gaser | 2021-09-01 16:08:49 +0200 (Wed, 01 Sep 2021) | 19 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_conf_long.m
+M       cat_io_subfolders.m
+M       cat_long_multi_run.m
+M       cat_main_reportfig.m
+M       cat_run.m
+M       cat_stat_check_cov.m
+M       cat_surf_createCS2.m
+M       html/cat.html
+
+(1) Changed: Added BIDS support and support for nii.gz files to longitudinal 
+             pipeline.
+(2) Fixed:   Corrected bug in cat_stat_check_cov.m that were caused if surface 
+             measures in report file were not availble.
+(3) Fixed:   Added one more try/catch to cat_main_reportfig.m to prevent errors
+             on windows systems.
+
+------------------------------------------------------------------------
+r1875 | gaser | 2021-08-27 10:25:20 +0200 (Fri, 27 Aug 2021) | 13 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_stat_check_cov.m
+M       cat_surf_createCS2.m
+M       cat_surf_surf2roi.m
+M       cat_vol_series_align.m
+M       html/cat.html
+
+(1) Fixed: Again corrected BIDS handling in cat_surf_surf2roi.m and 
+           cat_surf_createCS2.m.
+(2) Fixed: Corrected number of xml-files in cat_stat_check_cov.m.
+
+------------------------------------------------------------------------
+r1874 | gaser | 2021-08-26 11:00:39 +0200 (Thu, 26 Aug 2021) | 9 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+MM      cat_io_load.m
+M       cat_run_job1639.m
+M       html/cat.html
+
+Fixed: Corrected bug in writing catlog file.
+
+------------------------------------------------------------------------
+r1873 | gaser | 2021-08-26 08:58:44 +0200 (Thu, 26 Aug 2021) | 18 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_io_handle_pre.m
+M       cat_io_subfolders.m
+M       cat_main1639.m
+M       cat_main_reportfig.m
+M       cat_run_newcatch.m
+M       cat_surf_createCS2.m
+M       cat_surf_surf2roi.m
+M       cat_vol_qa.m
+M       html/cat.html
+
+(1) Changed: Tried to remove annoying warning with spm_orthviews under Windows 
+             systems.
+(2) Changed: Added errfolder to cat_io_subfolder.m.
+(3) Fixed:   Corrected writing of BIDS structure.
+
+------------------------------------------------------------------------
+r1872 | gaser | 2021-08-20 17:52:58 +0200 (Fri, 20 Aug 2021) | 17 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+A       cat_io_load.m
+M       cat_main_reportfig.m
+M       cat_run_job1639.m
+M       cat_stat_analyze_ROIs.m
+M       html/cat.html
+
+(1) Changed: Added message to cat_stat_analyze_ROIs.m if no results were found
+             (also for correction for multiple comparisons).
+(2) Fixed:   Added additional check if log-file was not deleted during 
+             preprocessing in cat_run_job1639.m.
+(3) Fixed:   Added more try/catch commands to cat_main_reportfig.m because
+             of unclear crashes.
+
+
+------------------------------------------------------------------------
+r1871 | dahnke | 2021-08-03 17:03:02 +0200 (Tue, 03 Aug 2021) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_surf_createCS2.m
+
+(1) Fixed:    Corrected bug and debugging setting in cat_surf_createCS.
+
+------------------------------------------------------------------------
+r1870 | dahnke | 2021-08-02 16:41:36 +0200 (Mon, 02 Aug 2021) | 9 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_defaults.m
+M       cat_surf_createCS2.m
+
+(1) Changed:   Set parahippocampal gyrus closing as default. 
+(2) Changed:   Deactivated local smoothing of problematic surface 
+               structures (need further tests).  
+
+------------------------------------------------------------------------
+r1869 | dahnke | 2021-07-29 21:57:52 +0200 (Thu, 29 Jul 2021) | 13 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_surf_createCS2.m
+M       cat_surf_fun.m
+M       cat_vol_qa.m
+
+(1) Fixed:    Corrected a bug in the local smoothing of the ICR estimation that
+              result in severe overstimation in noisy data because the masking
+              was not working correctly. 
+(2) Fixed:    Corrected bug with internal/missing function by public one in 
+              cat_surf_createCS2 and cat_surf_fun.               
+              
+
+------------------------------------------------------------------------
+r1868 | dahnke | 2021-07-29 17:21:21 +0200 (Thu, 29 Jul 2021) | 24 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_extopts.m
+M       cat_main.m
+M       cat_main1639.m
+M       cat_main_reportstr.m
+M       cat_main_updateSPM.m
+M       cat_main_updateSPM1639.m
+M       cat_main_update_intnorm.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_surf_createCS2.m
+M       cat_surf_fun.m
+
+(1) Fixed:   Corrected problems with CSF holes in the reconstruction of the   
+             parahippocampal gyrus in the default surface creation pipeline 
+             in cat_surf_createCS. Added subfunction for local surface smoothing
+             in cat_surf_fun.
+(2) Fixed:   Corrected small bugs in cat_conf_tools and cat_vol_headtrimming. 
+(3) Changed: Debugging blocks in cat_main1639 to test surface reconstruction.
+(4) Changed: Added new skull-stripping mode for post-mortem data with CSF=BG
+             that need 3 rather than 4 classes with changes in cat_conf_extopts
+             and cat_run_job[1639], cat_main[1639]. 
+
+------------------------------------------------------------------------
+r1867 | gaser | 2021-07-27 13:22:08 +0200 (Tue, 27 Jul 2021) | 14 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_main_amap.m
+M       cat_run_job.m
+M       cat_stat_quality_measures.m
+M       html/cat.html
+M       spm_cat12.m
+
+(1) Changed: Replaced volume reading functions in cat_stat_quality_measures.m
+             by faster nifti functions.
+(2) Fixed:   Corrected bugs in backup pipeline.
+
+
+------------------------------------------------------------------------
+r1866 | dahnke | 2021-07-27 09:29:56 +0200 (Tue, 27 Jul 2021) | 14 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_main1639.m
+M       cat_surf_createCS2.m
+M       cat_vol_headtrimming.m
+
+(1) Fixed:   Corrected problems with CSF holes in the reconstruction of the   
+             parahippocampal gyrus in the default surface creation pipeline 
+             in cat_surf_createCS.
+(2) Fixed:   Corrected small bugs in cat_conf_tools and cat_vol_headtrimming. 
+(3) Changed: Debugging blocks in cat_main1639 to test surface reconstruction.
+
+
+------------------------------------------------------------------------
+r1865 | dahnke | 2021-07-24 13:06:23 +0200 (Sat, 24 Jul 2021) | 15 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_stat_getCSVXMLfield.m
+M       cat_surf_createCS2.m
+M       cat_vol_resize.m
+
+(1) Fixed:   Corrected problems in the reconstruction of the parahippocampal gyrus 
+             in the default surface creation pipeline with downsampled volumes in 
+             cat_surf_createCS2. 
+(2) Changed: Added smoothing option to for low-resolution resampling of the surface
+             map (used to control the number of vertices) in cat_vol_resize.
+(3) Changed: Added recoding setting to code variables (eg. scan site) in 
+             cat_stat_getCSVXMLfields.
+             
+
+------------------------------------------------------------------------
+r1864 | dahnke | 2021-07-20 16:41:40 +0200 (Tue, 20 Jul 2021) | 16 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_ROI.m
+M       cat_main1639.m
+M       cat_main_LAS2.m
+M       cat_main_reportstr.m
+M       cat_run.m
+M       cat_surf_createCS2.m
+M       cat_vol_resize.m
+
+(1) Changed:  Small cosmetic changes in cat_conf_ROI.
+(2) Fixed:    Corrected filling of parahippocampal wholes in cat_surf_createCS
+              and cat_main[1639] if extopts.close_parahipp is activated. 
+(3) Fixed:    Added try-catch block in cat_main_LAS2.m to avoid error in
+              SPM pipeline data.              
+
+------------------------------------------------------------------------
+r1863 | dahnke | 2021-07-20 16:19:57 +0200 (Tue, 20 Jul 2021) | 18 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_main1639.m
+M       cat_spm_results_ui.m
+M       cat_stat_check_cov.m
+M       cat_stat_getCSVXMLfield.m
+M       cat_surf_createCS2.m
+
+(1) Fixed:   Corrected surface ROI processing time output in cat_main1639. 
+(2) Fixed:   Corrected bugs in XML/CSV extraction batch and added fields to extract
+             data from filename in cat_conf_tools and cat_stat_getCSVXMLfield.
+(3) Fixed:   Corrected bug in contrast definition in cat_spm_results_ui.
+(4) Fixed:   Corrected tiny bug in cat_stat_check_cov. 
+(5) Fixed:   Catche bug in surface defect output in cat_surf_createCS2
+             that has to be corrected another time. 
+
+
+------------------------------------------------------------------------
+r1862 | gaser | 2021-07-20 09:23:43 +0200 (Tue, 20 Jul 2021) | 16 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Makefile
+M       cat_conf_stools.m
+M       cat_conf_tools.m
+M       cat_stat_check_cov.m
+M       cat_stat_quality_measures.m
+
+(1) Changed: Speed up calculation of SD and z-score in 
+             cat_stat_quality_measures.m
+(2) Changed: Added further check that xml-files exist in cat_stat_check_cov.m
+             and cat_stat_quality_measures.m.
+(3) Changed: Updated help text for sample homogeneity check.
+(4) Changed: Changed version in Makefile to CAT12.8.
+
+
+------------------------------------------------------------------------
+r1861 | gaser | 2021-07-13 09:43:37 +0200 (Tue, 13 Jul 2021) | 20 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat12.m
+M       cat_main_reportfig.m
+M       cat_stat_check_cov.m
+M       cat_stat_confplot_spm.m
+M       cat_stat_quality_measures.m
+M       cat_surf_resamp.m
+M       html/cat.html
+
+(1) Changed: Added some more try/catch commands to cat_main_reportfig.m to 
+             handle unexpected errors that some times caused.
+(2) Changed: Simplified file handling in cat_stat_quality_measures.m.
+(3) Changed: Removed option to send error messages from CAT12 GUI because this
+             is now handled automatically.
+(4) Fixed:   Corrected handling of rigid or affine transformed data in 
+             cat_stat_check_cov.m and cat_stat_quality_measures.m.
+
+
+------------------------------------------------------------------------
+r1860 | gaser | 2021-07-11 21:53:45 +0200 (Sun, 11 Jul 2021) | 15 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_io_senderrormail.m
+M       cat_run.m
+M       cat_run_newcatch.m
+
+(1) Changed: Re-structured cat_io_senderrormail.m and removed sending of zipped 
+             err-folder which was almost never used. Now the content of the 
+             resp. xml-file and optionally the log-file will be sended and will 
+             be opened in editor.
+(2) Changed: Added creation of mail report if errors occur in cat_run_newcatch.m
+             and cat_run.m. 
+
+
+------------------------------------------------------------------------
+r1859 | dahnke | 2021-07-09 16:08:57 +0200 (Fri, 09 Jul 2021) | 11 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_main.m
+M       cat_main1639.m
+M       cat_main_roi.m
+
+(1) Fixed:   Corrected bug in ROI export that removed the first 
+             region as header in cat_main_roi.
+(2) Fixed:   Corrected unmeant deletion of FreeSurfer average files  
+             in case of preview surfaces in cat_main[1639].            
+
+------------------------------------------------------------------------
+r1858 | dahnke | 2021-07-09 12:44:07 +0200 (Fri, 09 Jul 2021) | 9 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_extopts.m
+M       cat_conf_tools.m
+M       cat_stat_getCSVXMLfield.m
+
+(1) Changed:  Updated configuration of XML/CSV batch in cat_conf_tools
+              and cat_stat_getCSVXMLfield.              
+
+------------------------------------------------------------------------
+r1857 | gaser | 2021-07-05 12:59:44 +0200 (Mon, 05 Jul 2021) | 10 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat12.m
+M       html/cat.html
+
+(1) Changed: Removed call to counter.html from cat12.m.
+(1) Fixed:   Added *.freesurfer.gii files again to templates_surfaces
+
+
+------------------------------------------------------------------------
+r1856 | gaser | 2021-07-01 22:31:09 +0200 (Thu, 01 Jul 2021) | 12 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_main_reportfig.m
+M       cat_surf_createCS2.m
+M       cat_surf_fun.m
+M       html/cat.html
+
+(1) Fixed: Corrected bug in surface collission code in cat_surf_fun.m.
+(2) Fixed: Added try/end code to cat_main_reportfig.m because sometimes creation
+           of axes failed.
+
+------------------------------------------------------------------------
+r1855 | dahnke | 2021-07-01 15:56:52 +0200 (Thu, 01 Jul 2021) | 30 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_io_volctype.m
+M       cat_main.m
+M       cat_main1639.m
+M       cat_main_amap.m
+M       cat_main_reportstr.m
+M       cat_main_roi.m
+M       cat_main_updateWMHs.m
+M       cat_run.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_surf_resamp.m
+M       cat_vol_ctype.m
+M       cat_vol_resize.m
+
+(1) Changed: Improved error output in cat_run.
+(2) Fixed:   Corrected bugs in resize batch (cat_vol_resize).
+(3) Fixed:   Corrected bugs in CAT preprocessing with SPM input maps in 
+             in cat_run_job[1639], cat_main[1639], spm_main_reportstr, and
+             cat_main_updateWMHs.
+(4) Fixed:   Corrected problem in exporting own atlas ROIs in cat_main_roi.
+(5) Fixed:   Corrected resize batch menu in cat_conf_tools.
+(6) Fixed:   Corrected bugs in cat_vol_resize.       
+(7) Fixed:   Corrected bug in file handling in cat_surf_resamp.
+(8) Fixed:   Corrected problems in cat_io_volctype.        
+(9) Changed: Specified segmentation mixing alert message in cat_main_amap.            
+             
+
+------------------------------------------------------------------------
+r1854 | gaser | 2021-06-30 12:21:50 +0200 (Wed, 30 Jun 2021) | 12 lines
+
+Changed paths:
+M       CAT12-Manual.pdf
+M       CHANGES.txt
+M       Contents.m
+M       Makefile
+M       cat_spm_results_ui.m
+M       html/cat.html
+
+(1) Changed: Updated CAT12 manual.
+(2) Fixed:   Corrected path if results are called from another folder in 
+             cat_spm_results_ui.m.
+
+------------------------------------------------------------------------
+r1853 | gaser | 2021-06-29 14:24:57 +0200 (Tue, 29 Jun 2021) | 14 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_conf_ROI.m
+M       cat_conf_tools.m
+M       html/cat.html
+M       html/cat.txt
+M       html/cat_versions.html
+
+(1) Changed: Added interactive links to version information.
+(2) Fixed:   Corrected links to atlases in html-files.
+(3) Fixed:   Corrected braces for help text in cat_conf_tools.m.
+
+
+------------------------------------------------------------------------
+r1852 | gaser | 2021-06-28 23:47:22 +0200 (Mon, 28 Jun 2021) | 15 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_main1639.m
+M       cat_main_registration.m
+M       cat_main_reportfig.m
+M       cat_run_job1639.m
+M       cat_vol_slice_overlay.m
+ M      templates_animals/chimpanzee_atlas_davi.csv
+ M      templates_animals/chimpanzee_atlas_davi.txt
+
+(1) Fixed: Added try/catch to cat_vol_slice_overlay.m to handle subfolders.
+(2) Fixed: Added try/catch to ct_run_job1639.m to use older SPM12 versions.
+(3) Fixed: Tried to remove some sources of errors in cat_main_reportfig.m.
+(4) Fixed: Removed error in cat_main1639.m if SPM segmentation is used.
+
+------------------------------------------------------------------------
+r1851 | dahnke | 2021-06-28 14:44:14 +0200 (Mon, 28 Jun 2021) | 8 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_vol_resize.m
+
+(1) Changed:  Corrected parameter definions and updated help in resize batch 
+              with changes in cat_conf_tools and cat_vol_resize.
+
+------------------------------------------------------------------------
+r1850 | dahnke | 2021-06-28 11:59:10 +0200 (Mon, 28 Jun 2021) | 52 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_main.m
+M       cat_main1639.m
+M       cat_main_registration.m
+M       cat_main_roi.m
+M       cat_main_updateSPM.m
+M       cat_main_write.m
+M       cat_run.m
+M       cat_tst_calc_kappa.m
+M       cat_tst_qa_cleaner.m
+M       cat_vol_qa.m
+M       cat_vol_resize.m
+MM      cat_vol_sample.m
+ M      html/images/cat_SLC_msk_c0009s0010t01A.png
+M       internal/cat_tst_BWPres.m
+M       templates_animals/chimpanzee_T1.nii
+M       templates_animals/chimpanzee_TPM.nii
+M       templates_animals/chimpanzee_Template_0_GS.nii
+M       templates_animals/chimpanzee_Template_1_GS.nii
+M       templates_animals/chimpanzee_Template_2_GS.nii
+M       templates_animals/chimpanzee_Template_3_GS.nii
+M       templates_animals/chimpanzee_Template_4_GS.nii
+A       templates_animals/chimpanzee_atlas_davi.csv
+M       templates_animals/chimpanzee_atlas_davi.nii
+A       templates_animals/chimpanzee_atlas_davi.txt
+M       templates_animals/chimpanzee_brainmask.nii
+M       templates_animals/chimpanzee_cat.nii
+
+(1) Changed:  Updated 1 mm chimpanzee template.
+              See also http://junachimp.inm7.de/
+(2) Changed:  Added full data export in cat_main_registration and cat_main_write
+              in case of multiple ouput resolutions (extopts.vox) and experimental 
+              setting (extopts.experimental) in the developer mode to support
+              evaluation of enhanced Shooting templates (also include changes
+              in cat_main[1639].
+(3) Fixed:    Corrected tiny bug with extended vox value in cat_main_roi.
+(4) New:      Added new cases in the image resolution batch to reduce images  
+              with denoising by smoothing within the reduced neighborhood in   
+              cat_conf_tools and cat_vol_resize. 
+(5) Fixed:    Corrected problems in cat_vol_qa in case of other missig bias 
+              corrected map and added some missed variables.
+(6) Fixed!:   Added missed log scaling in noise estimation that compensates the 
+              variing amount of voxels that are averaged in the resolution 
+              reduction! This reduces the underestimation of noise in high-res 
+              images. It also reduces noise overestimations in low resolution
+              data but these are less obvious in IQR because of generally worse 
+              resolution rating in such images. 
+(7) Changed:  Tiny cosmetic changes in cat_tst_qa_cleaner and cat_tst_calc_kappa.              
+              
+
+------------------------------------------------------------------------
+r1849 | dahnke | 2021-06-25 11:05:24 +0200 (Fri, 25 Jun 2021) | 32 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_io_addwarning.m
+M       cat_main1639.m
+M       cat_main_registration.m
+M       cat_main_reportcmd.m
+M       cat_main_write.m
+M       cat_run.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_surf_fun.m
+MM      internal/cat_vol_gbdist.m
+ M      templates_animals_surfaces/bh.headbrain.ape_greater_TPM.gii
+ M      templates_animals_surfaces/bh.headbrain.chimpanzee_TPM.gii
+ M      templates_animals_surfaces/bh.headbrain.monkey_oldworld_TPM.gii
+ M      templates_surfaces/mesh.inflated.freesurfer.gii
+ M      templates_surfaces_32k/mesh.inflated.freesurfer.gii
+
+(1) Fixed:   Corrected typos in cat_run, cat_main_write, cat_main_reportcmd.
+(2) Fixed:   Corrected bugs in cat_main_registration in Dartel and backup 
+             pipeline.
+(3) Fixed:   Corrected imat-error in cat_surf_fun.             
+(4) Changed: Use warning/alert rather than error in case of (very) low  
+             resolutions in cat_run_job[1639]. 
+(5) Changed: Added real warning and error in cat_io_warning.             
+(6) New:     Added batch to call the image quality estimation for own 
+             input data with given segmentation in cat_conf_tools.
+             Called function cat_vol_qa is currently not ready and the 
+             batch is only visible for developer.
+                    
+
+------------------------------------------------------------------------
+r1848 | gaser | 2021-06-05 23:51:45 +0200 (Sat, 05 Jun 2021) | 6 lines
+
+Changed paths:
+M       CHANGES.txt
+R       cat_vol_sample.m
+
+Changed: Added cat_vol_sample.m again.
+
+------------------------------------------------------------------------
+r1847 | dahnke | 2021-06-05 12:59:59 +0200 (Sat, 05 Jun 2021) | 14 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_io_colormaps.m
+M       cat_main_reportcmd.m
+M       cat_run.m
+M       html/cat_methods_VBM.html
+A       html/images/cat_SLC_msk_c0009s0010t01A.png
+
+(1) Changed: Added Stroke Lesion Correction (SLC) HTML help page. 
+(2) Changed: Improved CAT preprocessing progress report in cat_main_reportcmd
+             and cat_run.  
+(3) Changed: Updated comments in cat_io_colormap. 
+
+
+------------------------------------------------------------------------
+r1846 | dahnke | 2021-06-03 16:41:00 +0200 (Thu, 03 Jun 2021) | 27 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_main_gintnorm.m
+M       cat_main_reportfig.m
+M       cat_surf_create_TPM_hull_surface.m
+A       internal/cat_vol_gbdist.m
+A  +    templates_animals_surfaces/bh.headbrain.ape_greater_TPM.gii
+        > moved from templates_surfaces/bh.headbrain.ape_greater_TPM.gii
+A  +    templates_animals_surfaces/bh.headbrain.chimpanzee_TPM.gii
+        > moved from templates_surfaces/bh.headbrain.chimpanzee_TPM.gii
+A  +    templates_animals_surfaces/bh.headbrain.monkey_oldworld_TPM.gii
+        > moved from templates_surfaces/bh.headbrain.monkey_oldworld_TPM.gii
+D       templates_surfaces/bh.headbrain.ape_greater_TPM.gii
+        > moved to templates_animals_surfaces/bh.headbrain.ape_greater_TPM.gii
+D       templates_surfaces/bh.headbrain.chimpanzee_TPM.gii
+        > moved to templates_animals_surfaces/bh.headbrain.chimpanzee_TPM.gii
+D       templates_surfaces/bh.headbrain.monkey_oldworld_TPM.gii
+        > moved to templates_animals_surfaces/bh.headbrain.monkey_oldworld_TPM.gii
+
+(1) Changed: Moved animal TPM template surface to animal directory and corrected
+             handling in cat_main_reportfig and cat_surf_create_TPM_hull_surface.
+(2) Changed: Corrected tiny bug in cat_main_gintnorm.             
+(3) New:     Added alternative voxel-based distance function cat_vol_gbdist that
+             estimated the distance to a isosurface of a volume by using a graph-
+             based nearest neighbor search, allow also to consider PVE values.                
+              
+
+------------------------------------------------------------------------
+r1845 | dahnke | 2021-06-03 14:29:43 +0200 (Thu, 03 Jun 2021) | 16 lines
+
+Changed paths:
+M       CHANGES.txt
+A       cat_vol_sample.m
+D       internal/cat_admin_create_estwrite_version.m
+D       internal/old
+A       templates_surfaces/bh.headbrain.ape_greater_TPM.gii
+A       templates_surfaces/bh.headbrain.chimpanzee_TPM.gii
+A       templates_surfaces/bh.headbrain.monkey_oldworld_TPM.gii
+A       templates_surfaces/mesh.inflated.freesurfer.gii
+A       templates_surfaces_32k/mesh.inflated.freesurfer.gii
+
+(1) Deleted:  Removed old unused internal functions. 
+(2) New:      Added some general surfaces. 
+(3) New:      Added missing? cat_vol_sample function. 
+
+
+------------------------------------------------------------------------
+r1844 | gaser | 2021-06-03 01:40:58 +0200 (Thu, 03 Jun 2021) | 18 lines
 
 Changed paths:
 M       CHANGES.txt
@@ -18,6 +3440,7 @@ M       html/cat.html
              cat_stat_check_cov.m.
 (4) Fixed:   Corrected estimation of mean values for dummy covariate in
              cat_conf_factorial.m.
+
 ------------------------------------------------------------------------
 r1843 | dahnke | 2021-06-02 18:24:44 +0200 (Wed, 02 Jun 2021) | 14 lines
 
@@ -6529,7 +9952,7 @@ A       templates_surfaces/cb.sphere.freesurfer.gii
                 and changes in tbx_cfg_cat, cat_conf_output, cat_simple, 
                 and cat12.
 (7)  New:       Added cb surfaces.
-{U+2248}
+â‰ˆ
 
 
 ------------------------------------------------------------------------
@@ -10813,7 +14236,7 @@ M       cat_run_job_APP_SPMinit.m
 M       cat_vol_imcalc.m
 
 (1) Fixed:  Corrected bugs in cat_conf_opts, cat_run1173 and cat_main1173.
-(2) Fixed:  Corrected interpolation bug "Cannot read header extension.{U+201C} in      
+(2) Fixed:  Corrected interpolation bug "Cannot read header extension.â€œ in      
             cat_run_job_APP_SPM* and cat_run_job.
 (3) Fixed:  Corrected type convertation in cat_vol_imcalc.
 (4) Fixed:  Added skull-stripped handling in cat_run_job_APP_SPMinit and
@@ -12128,10 +15551,10 @@ Changed:    Small modifications in cat_tst_calc_kappa.
 Changed:    Small modifications in cat_vol_morph.
 Changed*:   Large modifications of the WMH detection in cat_part_vol.
             Tested for MICCAI2017 WMH data with/without FLAIR input:
-                CAT     (T1)     DSC 0.5824±0.1705  gtt1 
-                CAT     (T1+FL)  DSC 0.5235±0.2013  gtt1 
-                LST-LGA (T1+FL)  DSC 0.6186±0.1539  gtt1
-                LST-LPA (FL)     DSC 0.6172±0.2003  gto
+                CAT     (T1)     DSC 0.5824Â±0.1705  gtt1 
+                CAT     (T1+FL)  DSC 0.5235Â±0.2013  gtt1 
+                LST-LGA (T1+FL)  DSC 0.6186Â±0.1539  gtt1
+                LST-LPA (FL)     DSC 0.6172Â±0.2003  gto
             with gtt1 as T1-optimized ground truth with intensity limit
             and gto as original FLAIR-based ground truth. 
             
@@ -16492,7 +19915,7 @@ M       html/cat_methods_validation.html
 
 (1) Changed: Added option for initial morphological closing in the parahippocampal 
     area to minimize large cuts after topology correction.
-(2) Changed: Updated CAT_FixToüology to better deal with large topology aretefacts
+(2) Changed: Updated CAT_FixToÃ¼ology to better deal with large topology aretefacts
 (2) Changed: Updated help text.
 
 ------------------------------------------------------------------------
@@ -16663,7 +20086,7 @@ M       internal/cat_vol_flipside.m
 (1) Fixed:     Corrected bugs in cat_run_APP_init.
 (2) Fixed:     Corrected Ym intensity scaling problem in cat_main_LAS.
 (3) Fixed:     Corrected index error in cat_surf_smooth.
-               Thanks to Björn Horing for pointing out this bug.
+               Thanks to BjÃ¶rn Horing for pointing out this bug.
 (4) Fixed:     Corrected WMH volume output in CAT report and XML file.
                Thanks to M.H.T. Zwartbol for pointing out this bug.
 (5) Fixed:     Corrected simultan output of modulated data in expert mode in 
@@ -16965,7 +20388,7 @@ M       cat_surf_surf2roi.m
  M      templates_1.50mm/Template_4_IXI555_MNI152_GS.nii
 
 Fixed: Surface ROI values for the right hemisphere in cat_surf_surf2ROIs.m
-were not correct. Thanks to René Seiger for pointing to that issue.
+were not correct. Thanks to RenÃ© Seiger for pointing to that issue.
 
 
 ------------------------------------------------------------------------
@@ -18472,7 +21895,7 @@ M       cat_vol_defs.m
 A  +    development/cat.nii
 A       development/cat_main_LAS.m
 
-{U+2248}(1) Changed*:   Update LAS cortex segmentation in "cat_main_LAS". 
+â‰ˆ(1) Changed*:   Update LAS cortex segmentation in "cat_main_LAS". 
                 Added further comments.
 (2) Changed:    Added comments and verbose output in CAT deformation tool 
                 "cat_vol_defs". Refined regular expression of deformation 
@@ -30361,7 +33784,7 @@ M       cg_vbm_write.m
 ------------------------------------------------------------------------
 r453 | dahnke | 2013-03-27 11:05:32 +0100 (Wed, 27 Mar 2013) | 1 line
 
-Little changes for Skull-Stripping and adding of export for the bias and noise corrected image (can find the original part... )
+Little changes for Skull-Stripping and adding of export for the bias and noise corrected image (can find the original partâ€¦ )
 ------------------------------------------------------------------------
 r452 | gaser | 2013-03-26 15:09:46 +0100 (Tue, 26 Mar 2013) | 13 lines
 

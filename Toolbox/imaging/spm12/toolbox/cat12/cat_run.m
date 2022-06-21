@@ -24,11 +24,11 @@ function varargout = cat_run(job)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_run.m 1841 2021-06-01 10:03:38Z gaser $
+% $Id: cat_run.m 1984 2022-04-19 07:59:02Z gaser $
 
 %#ok<*AGROW,*STRIFCND,*STRCL1,*ASGLU,*STREMP>
 
-%rev = '$Rev: 1841 $';
+%rev = '$Rev: 1984 $';
 
 %  -----------------------------------------------------------------
 %  Lazy processing (expert feature)
@@ -59,7 +59,15 @@ if isfield(job.output,'BIDS')
     name1 = spm_file(job.data{1},'fpath');
     ind = min(strfind(name1,'sub-'));
  
+    if ~isempty(strfind(job.data{1},BIDSfolder))
+      BIDSfolder = '';
+      ind = [];
+    end
+    
     if ~isempty(ind)
+      % remove leading ".." for real BIDS structure
+      BIDSfolder = strrep(BIDSfolder,['..' filesep],'');
+      
       length_name = length(name1);
       
       % Shorten path until "sub-" indicator is found and add additional
@@ -245,6 +253,19 @@ if isfield(job,'nproc') && job.nproc>0 && (~isfield(job,'process_index'))
   
   njobs = cellfun(@numel,{jobs.data});
   
+  % command window output
+  QMC       = cat_io_colormaps('marks+',17);
+  GMC       = cat_io_colormaps('turbo',45);
+  GMC       = GMC ./ repmat( max(1,sum(GMC,2)) , 1 , 3);  % make bright values darker 
+  color     = @(QMC,m) QMC(max(1,min(size(QMC,1),round(((m-1)*3)+1))),:);
+  colorgmt  = @(GMC,m) GMC(max(1,min(size(GMC,1),round(((m-0.5)*10)+1))),:);
+  mark2rps  = @(mark) min(100,max(0,105 - mark*10)) + isnan(mark).*mark;
+  rps2mark  = @(rps) min(10.5,max(0.5,10.5 - rps / 10)) + isnan(rps).*rps;
+  grades    = {'A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-','E+','E','E-','F'};
+  mark2grad = @(mark) grades{max(1,min(numel(grades),max(max(isnan(mark)*numel(grades),1),round((mark+2/3)*3-3))))};
+  
+  allcatalerts   = 0;
+  allcatwarnings = 0; 
   if job.getPID
     if any(PID==0) 
       cat_io_cprintf('warn',...
@@ -297,7 +318,7 @@ if isfield(job,'nproc') && job.nproc>0 && (~isfield(job,'process_index'))
             FID = fopen(log_name{i},'r'); 
             if FID < 0
               fprintf('File %s was probably deleted. Process monitoring inactive.',log_name{i});
-              continue
+              %continue
             end
             txt = textscan(FID,'%s','Delimiter','\n');
             txt = txt{1}; 
@@ -330,18 +351,48 @@ if isfield(job,'nproc') && job.nproc>0 && (~isfield(job,'process_index'))
             end
             
             % search for the end entry "Image Quality Rating (IQR): ... " to get IQR 
-            cati = find(cellfun('isempty',strfind(txt,'Image Quality Rating (IQR):'))==0,1,'last');
+            cati = find(cellfun('isempty',strfind(txt,'Image Quality Rating (IQR): '))==0,1,'last');
             if ~isempty(cati) 
               cathd   = textscan( txt{cati} ,'%s%s%s%s%s%s%s','Delimiter',' ');
               catiqr  = [cathd{6} cathd{7}]; 
             else 
               catiqr = {'unknown'};
             end
+          
+            %% search for GMV and GMT
+            cati = find(cellfun('isempty',strfind(txt,'GM volume (GMV): '))==0,1,'last');
+            if ~isempty(cati) 
+              cathd   = textscan( txt{cati} ,'%s','Delimiter',':'); 
+              cathd   = textscan( cathd{1}{2} ,'%s','Delimiter',' ');
+              try
+                catrgmv = [cathd{1}(1) cathd{1}{2}(2:end) cathd{1}(4)]; 
+              catch
+                catrgmv = [cathd{1}(1)]; 
+              end
+            else 
+              catrgmv = {'unknown'};
+            end
+            %%
+            cati = find(cellfun('isempty',strfind(txt,'GM thickness (GMT): '))==0,1,'last');
+            if ~isempty(cati) 
+              cathd   = textscan( txt{cati} ,'%s','Delimiter',':'); 
+              cathd   = textscan( cathd{1}{2} ,'%s','Delimiter',' ');
+              catgmt  = [cathd{1}(1) cathd{1}(3)]; 
+            else 
+              catgmt  = {'unknown'};
+            end
+          
+            %% search WARNINGs and ERRORs
+            cati = find(cellfun('isempty',strfind(txt,'ALERT '))==0);
+            catalerts   = numel(cati); 
+            cati = find(cellfun('isempty',strfind(txt,'WARNING '))==0);
+            catwarnings = numel(cati); 
+            
             
             %% search for preprocessing errors (and differentiate them)
             cati = find(cellfun('isempty',strfind(txt,'CAT Preprocessing error'))==0,1,'last');
             catl = find(cellfun('isempty',strfind(txt,'-----------------------'))==0);
-            if ~isempty(cati) && cati>catis(end) %&&  catie<catis(2)
+            if ~isempty(cati) && ~isempty(catis) && cati>catis(end)
               cathd = textscan( txt{catis(1)} ,'%s%s%s','Delimiter',':');
               cathd = textscan( char(cathd{2}) ,'%d','Delimiter','/');
               catSID(i) = cathd{1}(1);
@@ -349,15 +400,36 @@ if isfield(job,'nproc') && job.nproc>0 && (~isfield(job,'process_index'))
               caterr  = textscan( txt{cati+2} ,'%s','Delimiter','\n');
               caterr  = char(caterr{1});
               caterrcode = ''; 
-              for ei = 4:(catl(find(catl>cati,1,'first')+2) - cati)
-                catfct{ei-2}  = textscan( txt{cati+ei} ,'%d%s%s','Delimiter',' ');
-                if isempty(caterrcode)
-                  switch char(catfct{ei-2}{3})
-                    % most relevant functions to identify the error 
-                    case {'cat_surf_createCS','cat_surf_createCS2','cat_main','cat_run'}
-                      caterrcode = sprintf('%s:%d',char(catfct{ei-2}{3}),double(catfct{ei-2}{1}));
+              
+              if job.extopts.expertgui
+                % error message with nested functions 
+                try
+                  %%
+                  for ei = (catl(find(catl>cati,1,'first')+2) - cati - 1):-1:4
+                    try
+                      txt2 = txt{cati+ei};
+                    catch
+                      txt2 = ''; 
+                    end
+                    if ~isempty(txt2)
+                      catfct{ei-2} = textscan( txt2 ,'%d%s%s','Delimiter',' ');
+                      if ~isempty(catfct{ei-2}) && ~isempty(catfct{ei-2}{1})
+                        if isempty(caterrcode)
+                          caterrcode   = sprintf('%s:%d',char(catfct{ei-2}{3}),double(catfct{ei-2}{1}));
+                        else
+                          caterrcode   = [caterrcode '>' sprintf('%s:%d',char(catfct{ei-2}{3}),double(catfct{ei-2}{1}))];
+                        end
+                      end
+                    end
                   end
+                catch
+                  cat_io_cprintf('err','Unknown error in job supervision.\n')
                 end
+              else
+                % only last file and error message
+                ei         = (catl(find(catl>cati,1,'first')+2) - cati - 1);
+                catfct{1}  = textscan( txt{cati+ei} ,'%d%s%s','Delimiter',' ');
+                caterrcode = sprintf('%s:%d',char(catfct{1}{3}),double(catfct{1}{1}));
               end
             else
               caterr     = '';
@@ -409,13 +481,6 @@ if isfield(job,'nproc') && job.nproc>0 && (~isfield(job,'process_index'))
               [mrifolder, reportfolder] = cat_io_subfolders(jobs(i).data{max(1,catSID(i))},job);
               catlog = fullfile(pp,reportfolder,['catlog_' ff '.txt']); 
 
-              if exist(catlog,'file')
-                catlogt = ['<a href="matlab:edit(''' catlog ''');">' ...
-                  spm_str_manip( catlog , 'k60') ': </a>'];
-              else
-                catlogt = spm_str_manip( fullfile(pp,[ff ee]), 'k40'); 
-              end
-              
               
               switch caterr
                 case 'Bad SPM-Segmentation. Check image orientation!' % pink error that support user interaction  
@@ -424,21 +489,19 @@ if isfield(job,'nproc') && job.nproc>0 && (~isfield(job,'process_index'))
                   err.aff   = err.aff + 1;
                 case '' % successful processing    
                   % here it would be necessary to differentiate IQR and PQR
-                  %if 1 % no warning
+                  if catwarnings>0 % light yellow warning
+                    err.txt   = 'Possible error - Check results!'; 
+                    err.color = [0.7 0.4 0];
+                    err.warn1 = err.warn1 + 1; 
+                  elseif catalerts==2 % severe orange waring 
+                    err.txt   = 'Probable error - Check results!'; 
+                    err.color = [1 0.3 0];
+                    err.warn2 = err.warn2 + 1; 
+                  else % no warning
                     err.txt   = ''; 
                     err.color = [0 0 0];
                     err.warn0 = err.warn0 + 1; 
-                %{
-                elseif 0==1 % light yellow warning
-                  err.txt   = 'Possible error - Check results!'; 
-                  err.color = [0.8 0.6 0];
-                  err.warn1 = err.warn1 + 1; 
-                elseif 0==2 % severe orange waring 
-                  err.txt   = 'Probable error - Check results!'; 
-                  err.color = [1 0.3 0];
-                  err.warn2 = err.warn2 + 1; 
-                end
-                %}
+                  end
                 otherwise   
                   err.txt   = caterr;
                   err.color = [1 0 0];
@@ -446,39 +509,122 @@ if isfield(job,'nproc') && job.nproc>0 && (~isfield(job,'process_index'))
               end
               err.txt = sprintf('R%s:%s:%s',catr,caterrcode,err.txt); 
             
+              idx = sprintf('  %d/%d (job %d: %d/%d): ',...
+                cid,sum( numel(job_data) ), i,catSID(i), numel(jobs(i).data) );
               
-              % display
-              cat_io_cprintf(err.color,sprintf('  %d/%d (job %d: %d/%d): ',...
-                cid,sum( numel(job_data) ), i,catSID(i), numel(jobs(i).data) )); 
-              cat_io_cprintf([0 0.0 0],catlogt);
+              if exist(catlog,'file')
+                catlogt = ['<a href="matlab:edit(''' catlog ''');">' ...
+                  spm_str_manip( [catlog repmat(' ',1,100)] , sprintf('k%d',70 - numel(idx)) ) ': </a>'];
+              else
+                catlogt = spm_str_manip( fullfile(pp,[ff ee]), 'k60'); 
+              end
+              
+              %% display
+              cat_io_cprintf([0 0 0],idx); 
+              cat_io_cprintf([0 0 0],catlogt);
               if isempty(caterr)
-                cat_io_cprintf(err.color,sprintf(' % 3d.%02d minutes, ',cattime'));
-                cat_io_cprintf([0 0.0 0],sprintf('IQR=%s\n',strrep(catiqr{1},'%','%%')));  
+                cat_io_cprintf([0 0 0],sprintf(' % 3d.%02d minutes, ',cattime'));
+
+                % add IQR
+                col = color(QMC,rps2mark( str2double( catiqr{1}(1:end-1) )));
+                cat_io_cprintf(col,sprintf('IQR=%s',strrep(catiqr{1},'%','%%')));  
+              
+                % add GMV - colors only for developer
+                if job.extopts.expertgui > 1 && ~strcmp(catgmt{1},'unknown')
+                  col = colorgmt(GMC,str2double(catrgmv{3}) / 1200 * 2.5); 
+                else
+                  col = [0 0 0];
+                end
+                kcol = [0.5 0.5 0.5]; % color for comma
+                if job.extopts.expertgui > 0 
+                  try 
+                    cat_io_cprintf(kcol,', '); cat_io_cprintf(col,sprintf('TIV=%4.0fcm%s',...
+                      str2double(catrgmv{3}),'3'));  
+                  catch
+                    disp('E');
+                  end
+                end
+                
+                
+                % add GMV - colors only for developer
+                if job.extopts.expertgui > 1 && ~strcmp(catgmt{1},'unknown')
+                  col = colorgmt(GMC,str2double( catgmt{1} )); 
+                elseif job.extopts.expertgui > 1 
+                  col = colorgmt(GMC,str2double( catrgmv{1} ) * 5 ); % simple translation to thickness
+                else
+                  col = [0 0 0];
+                end
+                kcol = [0.5 0.5 0.5]; % color for comma
+                if job.extopts.expertgui > 0 && ~strcmp(catgmt{1},'unknown')
+                  cat_io_cprintf(kcol,', '); cat_io_cprintf(col,sprintf('rGMV=%s',strrep(catrgmv{1},'%','%%')));  
+                end
+                if job.extopts.expertgui > 0 && ~strcmp(catgmt{1},'unknown')
+                  cat_io_cprintf(kcol,', '); cat_io_cprintf(col,sprintf('GMT=%s',strrep(catgmt{1},'%','%%')));  
+                end
+                
+                % warnings
+                allcatwarnings = allcatwarnings + catwarnings; 
+                if job.extopts.expertgui > 1 && catwarnings
+                  if catwarnings
+                    col = 'warn'; 
+                  else 
+                    col = [0.6 0.6 0.6]; 
+                  end
+                  cat_io_cprintf(kcol,', '); cat_io_cprintf(col,sprintf('%d warnings',catwarnings));  
+                end
+                
+                % alerts
+                allcatalerts = allcatalerts + catwarnings; 
+                if job.extopts.expertgui > 1 && catalerts
+                  if catalerts
+                    col = [0.8 0 0 ]; 
+                  else
+                    col = [0.6 0.6 0.6]; 
+                  end
+                  cat_io_cprintf(kcol,', '); cat_io_cprintf(col,sprintf('%d alerts\n',catalerts));  
+                end
+                
+                fprintf('\n');
               else
                 cat_io_cprintf(err.color,sprintf('%s\n',err.txt));  
               end
             end
           end
           spm_progress_bar('Set', cid );
-                  
-          
         end
       end
     end
-    err.missed = sum( numel(job_data) ) - (err.warn0 + err.aff + err.vbm + err.sbm);
+    err.missed = max(0,sum( numel(job_data) ) - (err.warn0 + err.warn1 + err.warn2 + err.aff + err.vbm + err.sbm));
     
     %% final report
     fprintf('_______________________________________________________________\n');
-    fprintf('Conclusion: \n'); 
+    fprintf('Conclusion of %d cases: \n',numel(job_data)); 
     if sum( numel(job_data) ) == err.warn0, col = [0 0.5 0]; else, col = ''; end
     cat_io_cprintf(col, sprintf('  Processed successfully:% 8d volume(s)\n',err.warn0));
-     ... sprintf('  Processed with warning:% 8d volume(s)\n',1) ...
-     ... sprintf('  Processed with IQR warning:% 8d volume(s)\n',1) ...
-     ... sprintf('  Processed with PQR warning:% 8d volume(s)\n',1) ...
+    if err.warn1
+      cat_io_cprintf('warn', sprintf('  Processed with warning:% 8d volume(s)\n',err.warn1));
+    end
+    if err.warn2
+      cat_io_cprintf('alert', sprintf('  Processed with alert:  % 8d volume(s)\n',err.warn2));
+    end
     if (err.aff + err.vbm + err.sbm) > 0, col = 'error'; else, col = ''; end
-    cat_io_cprintf(col, sprintf('  Processed with error:  % 8d volume(s)\n',err.aff + err.vbm + err.sbm ));
-    if err.missed > 0, col = 'blue'; else, col = ''; end
-    cat_io_cprintf(col, sprintf('  Unknown/Unprocessed:   % 8d volume(s)\n\n',err.missed ));
+    if (err.aff + err.vbm + err.sbm )> 0
+      cat_io_cprintf(col, sprintf('  Processed with error:  % 8d volume(s)\n',err.aff + err.vbm + err.sbm ));
+ 
+      % create mail report
+      promptMessage = sprintf('Do you want to send error message?');
+      button = questdlg(promptMessage, 'Error message', 'Yes', 'No', 'Yes');
+      if strcmpi(button, 'Yes')
+        xmlfile = fullfile(pp,reportfolder,['cat_' ff '.xml']);
+        logfile = fullfile(pp,reportfolder,['catlog_' ff '.txt']);
+        err_txt = sprintf('Processed %d of %d with errors.',numel(job_data),err.aff + err.vbm + err.sbm);
+        cat_io_senderrormail(xmlfile,logfile,err_txt);
+      end
+    end
+    if err.missed > 0
+      col = 'blue'; %else, col = ''; end
+      cat_io_cprintf(col, sprintf('  Unknown/Unprocessed:   % 8d volume(s)\n\n',err.missed ));
+    end
     fprintf('_______________________________________________________________\n');
     
   else
@@ -681,6 +827,13 @@ function job = update_job(job)
       disp(alert_str);
       disp('--------------------------------------------')
     end
+    if ~isempty(strfind(ff,'suit')) && job.extopts.atlas{ai,4}
+      disp('--------------------------------------------')
+      disp('No commercial use of SUIT cerebellar atlas')
+      alert_str = ['Creative Commons Attribution-NonCommercial 3.0 Unported License does not allow commercial use.'];
+      disp(alert_str);
+      disp('--------------------------------------------')
+    end
   end
 
 
@@ -717,6 +870,7 @@ function job = update_job(job)
     job.opts.biasreg	= min(  10 , max(  0 , 10^-(job.opts.biasstr*2 + 2) ));
     job.opts.biasfwhm	= min( inf , max( 30 , 30 + 60*(1-job.opts.biasstr) ));  
   end
+  
   
   % SPM preprocessing accuracy
   if ~isfield(job.opts,'tol')
@@ -761,6 +915,41 @@ function job = update_job(job)
     job.opts = rmfield(job.opts,'acc'); 
   end
   clear sampval tolval;
+  
+  
+  % RD20211224:  Strong bias correction in case of long TPMs and long BC.
+  % In case of individual TPMs we should force strong correction. Although
+  % it further adapation of by another bias correction parameter would be
+  % possible, I think that simple fixed values are the better solution. 
+  % >> seems not be realy important and could be tested in the next release
+  if isfield(job,'useprior') && ~isempty(job.useprior) && job.extopts.new_release
+    cat_io_cprintf('blue','Addapt bias correction for longitudinal TPM!\n'); 
+    job.opts.biasacc  = 1;
+    job.opts.biasstr  = 1; 
+    job.opts.biasreg	= 1e-04;
+    job.opts.biasfwhm	= 30; 
+    %{
+      % RD20220103: Further optimisation? > Slow and no clear improvement 
+      % in single test cases (ADNI 0559 with 1.5 and 3.0T scans)
+      job.opts = rmfield(job.opts,'acc');
+      job.opts.accstr   = -1; 
+      job.opts.samp     = 1.5;  
+      job.opts.tol      = 1e-8; % 0.75
+    %}
+  end
+  
+  
+  if strcmpi(spm_check_version,'octave') && job.extopts.regstr > 0
+    warning('cat_run:noShooting','No Shooting registration possible under Octave yet. Switch to Dartel registration.')
+    job.extopts.regstr = 0; 
+    if isfield(job.extopts,'regmethod')
+      job.extopts.regmethod = rmfield(job.extopts.regmethod,'shooting');
+    else
+      job.extopts = rmfield(job.extopts,'shooting');
+    end
+    job.extopts.dartel.darteltpm = cat_get_defaults('extopts.darteltpm');
+  end
+
   
   %% set Dartel/Shooting templates
   if isfield(job.extopts,'regmethod') 
@@ -856,7 +1045,7 @@ function job = update_job(job)
        'output has been deselected.']);
     job.output.ROI = 0;
   end
-  
+
   
   % set boundary box by Template properties 
   if ~isfield(job.extopts,'bb'), job.extopts.bb = 12; end
@@ -938,7 +1127,7 @@ function vout = run_job(job)
 %           log files. 
 % ######################################################################
   surfcolors = 128;
-  cmap(1:60,:) = gray(60); cmap(61:120,:) = flipud(pink(60)); cmap(121:120+surfcolors,:) = jet(surfcolors);  
+  cmap(1:60,:) = gray(60); cmap(61:120,:) = flip(pink(60),1); cmap(121:120+surfcolors,:) = jet(surfcolors);  
   colormap(cmap)
   
   if isfield(job,'nproc') && job.nproc>0 
@@ -1353,7 +1542,11 @@ function [lazy,FNok] = checklazy(job,subj,verb) %#ok<INUSD>
             if strcmp(FNopts{fni},'ngaus') && numel(xml.parameter.opts.(FNopts{fni}))==4
               % nothing to do (skull-stripped case)
             else
-              if xml.parameter.opts.(FNopts{fni}) ~= job.opts.(FNopts{fni})
+              try
+                if xml.parameter.opts.(FNopts{fni}) ~= job.opts.(FNopts{fni})
+                  FNok = 5; break
+                end
+              catch
                 FNok = 5; break
               end
             end

@@ -10,7 +10,7 @@ function Ycls = cat_main_updateWMHs(Ym,Ycls,Yy,tpm,job,res,trans)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_main_updateWMHs.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_main_updateWMHs.m 1855 2021-07-01 13:56:52Z dahnke $
 
   % update WMHs?
   if numel(Ycls)>6
@@ -95,13 +95,13 @@ function Ycls = cat_main_updateWMHs(Ym,Ycls,Yy,tpm,job,res,trans)
 
   end
 
-  
-  if job.extopts.WMHC<2 && numel(Ycls)>6
-    Ycls{1} = Ycls{1} + Ycls{7}; % WMH as GM
-  elseif job.extopts.WMHC==2
-    Ycls{2} = Ycls{2} + Ycls{7}; % WMH as WM 
-  elseif job.extopts.WMHC>=3
-    Ycls{2} = Ycls{2} + Ycls{7}; % WMH as own class
+  if numel(Ycls)>6 && ~isempty(Ycls{7})
+    if job.extopts.WMHC<2 
+      Ycls{1} = Ycls{1} + Ycls{7}; % WMH as GM
+    elseif job.extopts.WMHC==2
+      Ycls{2} = Ycls{2} + Ycls{7}; % WMH as WM 
+    elseif job.extopts.WMHC>=3
+      Ycls{2} = Ycls{2} + Ycls{7}; % WMH as own class
+    end
   end
-
 end

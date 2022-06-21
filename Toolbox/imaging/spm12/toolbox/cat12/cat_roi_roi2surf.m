@@ -16,7 +16,7 @@ function varargout = cat_roi_roi2surf(job)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_roi_roi2surf.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_roi_roi2surf.m 1894 2021-10-14 23:45:55Z gaser $
   
   if nargin == 1
     def.verb = 1;
@@ -67,7 +67,7 @@ function varargout = cat_roi_roi2surf(job)
       fprintf('process "%s":\n',job.rdata{rfi});
     end
     
-    %% first we need to load the RIO tables in a similar style 
+    %% first we need to load the ROI tables in a similar style 
     clear xml;
     switch ee
       case '.csv'

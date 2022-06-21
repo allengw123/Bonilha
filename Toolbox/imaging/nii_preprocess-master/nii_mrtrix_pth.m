@@ -2,7 +2,7 @@ function pth = nii_mrtrix_pth
 %return path for MRtrix tools: Matlab does not source the bash PATH
 %returns empty if path not found
 
-pth = '/home/shared/miniconda/bin'; % <- customize: manually set
+pth = [char(java.lang.System.getProperty('user.home')),'/anaconda3/bin']; % <- customize: manually set
 if isTrix(pth), return; end
 pth = '/usr/local/bin';
 if isTrix(pth), return; end

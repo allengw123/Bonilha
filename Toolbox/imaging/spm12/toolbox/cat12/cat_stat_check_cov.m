@@ -9,11 +9,10 @@ function varargout = cat_stat_check_cov(job)
 % varargout = cat_stat_check_cov(job)
 %  
 % job                .. SPM job structure
-%  .data_vol         .. volume files
-%  .data_surf        .. surface files
-%  .gap              .. gap between slices (default=3)
+%  .data_vol         .. volume and surface files
+%  .gap              .. gap between slices for volumes (default=3, not used anymore in GUI)
 %  .c                .. confounds
-%  .data_xml         .. further xml QC data
+%  .data_xml         .. optional xml QC data
 %  .verb             .. print figures
 %
 % varargout          .. output structure 
@@ -34,7 +33,7 @@ function varargout = cat_stat_check_cov(job)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_stat_check_cov.m 1844 2021-06-02 23:40:58Z gaser $
+% $Id: cat_stat_check_cov.m 1978 2022-03-25 21:51:43Z gaser $
 
 if cat_get_defaults('extopts.expertgui')>2
   if nargout
@@ -86,7 +85,7 @@ else
 end
 
 % read filenames for each sample and indicate sample parameter
-if isfield(job,'data_vol')
+if ~spm_mesh_detect(char(job.data_vol{1}(1,:))) && isempty(strfind(char(job.data_vol{1}(1,:)),'thickness'))
   H.mesh_detected = 0;
   n_samples = numel(job.data_vol);
   for i=1:n_samples
@@ -97,31 +96,50 @@ if isfield(job,'data_vol')
       job.data_vol{i} = fullfile(pth,[nam ext]);
     end
     
-    V0 = spm_data_hdr_read(char(job.data_vol{i}));
+    V0 = nifti(char(job.data_vol{i}));
     n_subjects = n_subjects + length(V0);
       
     if i==1, H.V = V0;
-    else,    H.V = [H.V; V0]; end
+    else,    H.V = [H.V V0]; end
 
     H.sample = [H.sample, i*ones(1,length(V0))];
   end
-  sep = job.gap;
+  
+  % we need that field to be comparable to V of mesh-structure
+  H.fname = cellstr({H.V.dat.fname}'); 
+  if isfield(job,'gap')
+    sep = job.gap;
+  else
+    sep = 3;
+  end
 else
   H.mesh_detected = 1;
-  n_samples = numel(job.data_surf);
-  sinfo = cat_surf_info(char(job.data_surf{1}(1)));
+  n_samples = numel(job.data_vol);
+  sinfo = cat_surf_info(char(job.data_vol{1}(1,:)));
   H.Pmesh = gifti(sinfo.Pmesh);
   for i=1:n_samples
-    V0 = spm_data_hdr_read(char(job.data_surf{i}));
+    [pp,ff,ee] = spm_fileparts(job.data_vol{i}(1,:)); 
+    if any( ~isempty( strfind({'lh.thickness' },[ff ee]) ) ) && ~strcmp(ee,'.gii')
+      %% native longitudinal surface
+      sdata = gifti(fullfile(pp,[strrep(ff,'lh.thickness','lh.central') ee '.gii'])); 
+      cdata = single(cat_io_FreeSurfer('read_surf_data',job.data_vol{i})); 
+      gdata = gifti(struct('vertices',sdata.vertices,'faces',sdata.faces,'cdata',cdata)); 
+      V0 = struct('fname',job.data_vol{i},'dim',size(cdata),'dt',[16 0], ...
+             'pinfo',[1 0 0],'mat',eye(4),'n',[1 1],'descript','GMT'); 
+      V0.private = gdata; 
+    else
+      V0 = spm_data_hdr_read(char(job.data_vol{i}));
+    end
     n_subjects = n_subjects + length(V0);
       
     if i==1, H.V = V0;
     else,    H.V = [H.V; V0]; end
-    H.sample = [H.sample, i*ones(1,size(job.data_surf{i},1))];
+    H.sample = [H.sample, i*ones(1,size(job.data_vol{i},1))];
   end
+  H.fname = cellstr({H.V.fname}'); 
 end
     
-if ~isempty(job.c)
+if isfield(job,'c') && ~isempty(job.c)
   for i=1:numel(job.c)
     G = [G job.c{i}];
   end
@@ -129,25 +147,40 @@ end
 
 if isempty(char(job.data_xml))
   H.isxml = 0;
+  xml_defined = 0;
   QM_names = '';
   xml_files = [];
 else
   xml_files = char(job.data_xml);
-  H.isxml = 1;
+  if size(xml_files,1) ~= n_subjects
+    fprintf('Only %d of %d report files were defined. Try to find xml-files for quality measures.\n',size(xml_files,1),n_subjects);
+    H.isxml = 0;
+    xml_defined = 0;
+  else
+    H.isxml = 1;
+    xml_defined = 1;
+  end
 end
 
-pth = spm_fileparts(H.V(1).fname);
+if H.mesh_detected
+  QM = ones(n_subjects,5);
+  QM_names = char('Noise','Bias','Weighted overall image quality (IQR)','Euler number','Size of topology defects');
+else
+  QM = ones(n_subjects,3);
+  QM_names = char('Noise','Bias','Weighted overall image quality (IQR)');
+end
+
+pth = spm_fileparts(H.fname{1});
 report_folder = fullfile(spm_fileparts(pth),'report');
-subfolder = 1;
+
 % check whether report subfolder exists
 if ~exist(report_folder,'dir')
   report_folder = pth;
-  subfolder = 0;
 end
 
 % search xml report files if not defined
-H.found_xml = 0;
-if ~H.isxml
+prep_str = '';
+if ~xml_defined
   xml_files = spm_select('List',report_folder,'^cat_.*\.xml$');
   if ~isempty(xml_files)
 
@@ -161,12 +194,10 @@ if ~H.isxml
         fname = fname(5:end-4);
 
         % and find that string in data filename
-        ind = strfind(H.V(i).fname,fname);
+        Vfname = H.fname{i};
+        ind = strfind(Vfname,fname);
         if ~isempty(ind)
-          [pth, prep_str] = spm_fileparts(H.V(1).fname(1:ind-1));
-          H.isxml = 1;
-          H.found_xml = 1;
-          fprintf('Corresponding xml-files were found.\n')
+          [pth, prep_str] = spm_fileparts(Vfname(1:ind-1));
           i = n_subjects;
           j = size(xml_files,1);
           break
@@ -179,90 +210,102 @@ if ~H.isxml
   end  
 end
 
-if H.isxml & size(xml_files,1) ~= n_subjects
-    fprintf('WARNING: XML-files must have the same number as sample size. XML-files will be not used.\n');
-    H.isxml = 0;
-  end
-  
-if H.isxml
-  if H.mesh_detected
-    QM = ones(n_subjects,5);
-    QM_names = char('Noise','Bias','Weighted overall image quality (IQR)','Euler number','Size of topology defects');
-  else
-    QM = ones(n_subjects,3);
-    QM_names = char('Noise','Bias','Weighted overall image quality (IQR)');
-  end
-  
-  spm_progress_bar('Init',n_subjects,'Load xml-files','subjects completed')
-  for i=1:n_subjects
-    % get basename for data files
-    [pth, data_name] = fileparts(H.V(i).fname);
-    
-    % use xml-file if found by name
-    if H.found_xml
-      % get report folder
-      if subfolder
-        report_folder = fullfile(spm_fileparts(pth),'report');
-      else
-        report_folder = pth;
-      end
+n_xml_files = 0;
+spm_progress_bar('Init',n_subjects,'Load xml-files','subjects completed')
 
-      % remove prep_str from name and use report folder and xml extension
-      if H.mesh_detected
-        % for meshes we aso have to remove the additional "." from name
-        tmp_str = strrep(data_name,prep_str,'');
-        xml_file = fullfile(report_folder,['cat_' tmp_str(2:end) '.xml']);
-      else
-        xml_file = fullfile(report_folder,['cat_' strrep(data_name,prep_str,'') '.xml']);
-      end
+for i=1:n_subjects
+  % get basename for data files
+  [pth, data_name ee] = fileparts(H.fname{i});
+  if ~strcmp(ee,'.nii') && ~strcmp(ee,'.gii'), data_name = [data_name ee]; end
+  
+  % remove ending for rigid or affine transformed files
+  data_name = strrep(data_name,'_affine','');
+  data_name = strrep(data_name,'_rigid','');
+  
+  % use xml-file if found by name
+  if ~xml_defined
+    % get report folder
+    if exist(fullfile(spm_fileparts(pth),'report'),'dir')
+      report_folder = fullfile(spm_fileparts(pth),'report');
     else
-    
-      [pth, xml_name] = fileparts(deblank(xml_files(i,:)));
-      % remove leading 'cat_'
-      xml_name = xml_name(5:end);
+      report_folder = pth;
+    end
 
-      % check for filenames
-      if isempty(strfind(data_name,xml_name))
-        fprintf('Please check file names because of deviating subject names:\n%s vs. %s\n',H.V(i).fname,xml_files(i,:));
-      end
-      xml_file = deblank(xml_files(i,:));
-    end
-    
-    xml = cat_io_xml(xml_file);
-    if ~isfield(xml,'qualityratings') && ~isfield(xml,'QAM')
-      fprintf('Quality rating is not saved for %s. Report file %s is incomplete.\nPlease repeat preprocessing amd check for potential errors in the ''err'' folder.\n',H.V(i).fname,xml_files(i,:));    
-      return
-    end
+    % remove prep_str from name and use report folder and xml extension
     if H.mesh_detected
-      if isfield(xml.qualityratings,'NCR')
-      % check for newer available surface measures
-        if isfield(xml.subjectmeasures,'EC_abs')
-          QM(i,:) = [xml.qualityratings.NCR xml.qualityratings.ICR xml.qualityratings.IQR xml.subjectmeasures.EC_abs xml.subjectmeasures.defect_size];
-        else
-          QM(i,:) = [xml.qualityratings.NCR xml.qualityratings.ICR xml.qualityratings.IQR NaN NaN];
-        end
-      else % also try to use old version
-        QM(i,:) = [xml.QAM.QM.NCR xml.QAM.QM.ICR xml.QAM.QM.rms];
-      end
+      % for meshes we also have to remove the additional "." from name
+      tmp_str = strrep(data_name,prep_str,'');
+      xml_file = fullfile(report_folder,['cat_' tmp_str(2:end) '.xml']);
     else
-      if isfield(xml.qualityratings,'NCR')
-        QM(i,:) = [xml.qualityratings.NCR xml.qualityratings.ICR xml.qualityratings.IQR];
-      else % also try to use old version
-        QM(i,:) = [xml.QAM.QM.NCR xml.QAM.QM.ICR xml.QAM.QM.rms];
-      end
+      xml_file = fullfile(report_folder,['cat_' strrep(data_name,prep_str,'') '.xml']);
     end
-    spm_progress_bar('Set',i);  
+  else % use defined xml-files
+
+    [pth, xml_name] = fileparts(deblank(xml_files(i,:)));
+    % remove leading 'cat_'
+    xml_name = xml_name(5:end);
+
+    % check for filenames
+    if isempty(strfind(data_name,xml_name))
+      fprintf('Skip use of xml-files for quality measures because of deviating subject names:\n%s vs. %s\n',H.fname{i},xml_files(i,:));
+      H.isxml = 0;
+      break
+    end
+    xml_file = deblank(xml_files(i,:));
   end
-  spm_progress_bar('Clear');
-  
-  % remove last two columns if EC_abs and defect_size are not defined
-  if H.mesh_detected & all(isnan(QM(:,4))) & all(isnan(QM(:,5)))
-    QM = QM(:,1:3);
+
+  if exist(xml_file,'file')
+    xml = cat_io_xml(xml_file);
+    n_xml_files = n_xml_files + 1;
+    H.isxml = 1;
+  else
+    fprintf('File %s not found. Skip use of xml-files for quality measures.\n',xml_file);
+    H.isxml = 0;
+    break
   end
-  
+
+  if ~isfield(xml,'qualityratings') && ~isfield(xml,'QAM')
+    fprintf('Quality rating is not saved for %s. Report file %s is incomplete.\nPlease repeat preprocessing amd check for potential errors in the ''err'' folder.\n',H.fname{i},xml_files(i,:));  
+    H.isxml = 0;
+    break
+  end
+
+  if H.mesh_detected
+    if isfield(xml.qualityratings,'NCR')
+    % check for newer available surface measures
+      if isfield(xml.subjectmeasures,'EC_abs')
+        QM(i,:) = [xml.qualityratings.NCR xml.qualityratings.ICR xml.qualityratings.IQR xml.subjectmeasures.EC_abs xml.subjectmeasures.defect_size];
+      else
+        QM(i,:) = [xml.qualityratings.NCR xml.qualityratings.ICR xml.qualityratings.IQR NaN NaN];
+      end
+    else % also try to use old version
+      QM(i,:) = [xml.QAM.QM.NCR xml.QAM.QM.ICR xml.QAM.QM.rms];
+    end
+  else
+    if isfield(xml.qualityratings,'NCR')
+      QM(i,:) = [xml.qualityratings.NCR xml.qualityratings.ICR xml.qualityratings.IQR];
+    else % also try to use old version
+      QM(i,:) = [xml.QAM.QM.NCR xml.QAM.QM.ICR xml.QAM.QM.rms];
+    end
+  end
+  spm_progress_bar('Set',i);  
+end
+spm_progress_bar('Clear');
+
+if H.isxml
+  if n_xml_files ~= n_subjects
+    fprintf('Only %d of %d report files found. Skip use of xml-files for quality measures.\n',n_xml_files,n_subjects);
+    H.isxml = 0;
+  else
+    fprintf('%d report files with quality measures were found.\n',n_xml_files);
+  end
 end
 
-[pth,nam] = spm_fileparts(H.V(1).fname);
+% remove last two columns if EC_abs and defect_size are not defined
+if H.mesh_detected && all(isnan(QM(:,4))) && all(isnan(QM(:,5)))
+  QM = QM(:,1:3);
+  QM_names = QM_names(1:3,:);
+end
 
 if H.mesh_detected
   % load surface texture data
@@ -285,7 +328,7 @@ else
   vx =  sqrt(sum(H.V(1).mat(1:3,1:3).^2));
   Orig = H.V(1).mat\[0 0 0 1]';
 
-  if length(H.V)>1 && any(any(diff(cat(1,H.V.dim),1,1),1))
+  if length(H.V)>1 && any(any(diff(cat(1,H.V.dat.dim),1,1),1))
     error('images don''t all have same dimensions')
   end
   if max(max(max(abs(diff(cat(3,H.V.mat),1,3))))) > 1e-8
@@ -341,27 +384,26 @@ if H.mesh_detected
   clear Y
 else
   % consider image aspect ratio
-  H.pos.slice = [0.775 0.050 0.20 0.40*H.V(1).dim(2)/H.V(1).dim(1)];
+  H.pos.slice = [0.775 0.050 0.20 0.40*H.V(1).dat.dim(2)/H.V(1).dat.dim(1)];
 
-  slices = 1:sep:H.V(1).dim(3);
+  slices = 1:sep:H.V(1).dat.dim(3);
 
-  dimx = length(1:sep:H.V(1).dim(1));
-  dimy = length(1:sep:H.V(1).dim(2));
+  dimx = length(1:sep:H.V(1).dat.dim(1));
+  dimy = length(1:sep:H.V(1).dat.dim(2));
   Y = zeros(n_subjects, prod(dimx*dimy));
   H.YpY = zeros(n_subjects);
-%  MSE = zeros(n_subjects,1);
-  H.data = zeros([H.V(1).dim(1:2) n_subjects],'single');
+  H.data = zeros([H.V(1).dat.dim(1:2) n_subjects],'single');
 
   %-Start progress plot
   %-----------------------------------------------------------------------
-  spm_progress_bar('Init',H.V(1).dim(3),'Check correlation','planes completed')
+  spm_progress_bar('Init',H.V(1).dat.dim(3),'Check correlation','planes completed')
 
   for j=slices
 
     M  = spm_matrix([0 0 j 0 0 0 sep sep sep]);
 
     for i = 1:n_subjects
-      H.img = spm_slice_vol(H.V(i),M,[dimx dimy],[1 0]);
+      H.img(:,:) = H.V(i).dat(1:sep:H.V(1).dat.dim(1),1:sep:H.V(1).dat.dim(2),j);
       H.img(isnan(H.img)) = 0;
       Y(i,:) = H.img(:);
       if is_gSF
@@ -376,7 +418,7 @@ else
     if ~isempty(G) 
       [ind_inf,tmp] = find(isinf(G) | isnan(G));
       if ~isempty(ind_inf)
-        fprintf('Nuisance parameter for %s is Inf or NaN.\n',H.V(ind_inf).fname);
+        fprintf('Nuisance parameter for %s is Inf or NaN.\n',H.fname{ind_inf});
         return
       end
       Ymean = repmat(mean(Y), [n_subjects 1]);
@@ -387,19 +429,17 @@ else
     % calculate residual mean square of mean adjusted Y
     Y = Y - repmat(mean(Y,1), [n_subjects 1]);
     
-    %MSE = MSE + sum(Y.*Y,2);
-
     spm_progress_bar('Set',j);  
 
   end
 
   % correct filenames for 4D data
-  if strcmp(H.V(1).fname, H.V(2).fname)
+  if strcmp(H.fname{1}, H.fname{2})
     H.names_changed = 1;
     H.Vchanged = H.V;
     for i=1:n_subjects
-      [pth,nam,ext] = spm_fileparts(H.V(i).fname);
-      H.V(i).fname = fullfile(pth, [nam sprintf('%04d',i) ext]);
+      [pth,nam,ext] = spm_fileparts(H.fname{i});
+      H.fname{i} = fullfile(pth, [nam sprintf('%04d',i) ext]);
     end
   end
   
@@ -431,12 +471,16 @@ fname_m = [];
 fname_tmp = cell(n_samples,1);
 fname_s   = cell(n_samples,1);
 fname_e   = cell(n_samples,1);
-
 for i=1:n_samples
-  [tmp, fname_tmp{i}] = spm_str_manip(char(H.V(H.sample == i).fname),'C');
-  fname_m = [fname_m; fname_tmp{i}.m];
-  fname_s{i} = fname_tmp{i}.s;
-  fname_e{i} = fname_tmp{i}.e;
+  [tmp, fname_tmp{i}] = spm_str_manip(char(H.fname{H.sample == i}),'C');
+  if ~isempty(fname_tmp{i})
+    fname_m    = [fname_m; fname_tmp{i}.m]; 
+    fname_s{i} = fname_tmp{i}.s;
+    fname_e{i} = fname_tmp{i}.e;
+  else
+    fname_s{i} = '';
+    fname_e{i} = '';
+  end
   if job.verb
     fprintf('Compressed filenames sample %d: %s  \n',i,tmp);
   end
@@ -500,14 +544,14 @@ if ~isempty(n_thresholded) && job.verb
   fprintf('\nThese data have a mean correlation below 2 standard deviations.\n');
   fprintf('This does not necessarily mean that you have to exclude these data. However, these data have to be carefully checked:\n');
   for i=n_thresholded:n_subjects
-    fprintf('%s: %3.3f\n',H.V(H.ind_sorted(i)).fname,H.mean_cov_sorted(i));
+    fprintf('%s: %3.3f\n',H.fname{H.ind_sorted(i)},H.mean_cov_sorted(i));
   end
 end
 
 if nargout>0
-  varargout{1} = struct('table',{[cellstr([{H.V.fname}]'),num2cell(H.mean_cov)]},...
+  varargout{1} = struct('table',{[H.fname,num2cell(H.mean_cov)]},...
                         'covmat',H.YpY,...
-                        'sorttable',{[cellstr([{H.V(H.ind_sorted).fname}]'),num2cell(H.mean_cov_sorted)]},...
+                        'sorttable',{[H.fname(H.ind_sorted),num2cell(H.mean_cov_sorted)]},...
                         'sortcovmat',H.YpYsorted, ...
                         'cov',H.mean_cov,...
                         'threshold_cov',threshold_cov);
@@ -533,7 +577,9 @@ if job.verb
 
   cm = datacursormode(H.figure);
   set(cm,'UpdateFcn',@myupdatefcn,'SnapToDataVertex','on','Enable','on');
-  try set(cm,'NewDataCursorOnClick',false); end
+  try
+    set(cm,'Interpreter','none','NewDataCursorOnClick',false);
+  end
 
   % add colorbar
   H.cbar = axes('Position',H.pos.cbar,'Parent',H.figure);
@@ -554,19 +600,19 @@ if job.verb
 
   % add button for closing all windows
   H.close = uicontrol(H.figure,...
-          'string','Close','Units','normalized',...
-          'position',H.pos.close,...
+          'String','Close','Units','normalized',...
+          'Position',H.pos.close,...
           'Style','Pushbutton','HorizontalAlignment','center',...
-          'callback','for i=2:26, try close(i); end; end;',...
+          'Callback','for i=2:26, try close(i); end; end;',...
           'ToolTipString','Close windows',...
           'Interruptible','on','Enable','on');
 
   % check button
   H.show = uicontrol(H.figure,...
-          'string','Check most deviating data','Units','normalized',...
-          'position',H.pos.show,...
+          'String','Check most deviating data','Units','normalized',...
+          'Position',H.pos.show,...
           'Style','Pushbutton','HorizontalAlignment','center',...
-          'callback',@check_worst_data,...
+          'Callback',@check_worst_data,...
           'ToolTipString','Display most deviating files',...
           'Interruptible','on','Enable','on');
 
@@ -601,10 +647,10 @@ if job.verb
   end
 
   H.boxp = uicontrol(H.figure,...
-          'string',str,'Units','normalized',...
-          'position',H.pos.boxp,'UserData',tmp,...
+          'String',str,'Units','normalized',...
+          'Position',H.pos.boxp,'UserData',tmp,...
           'Style','PopUp','HorizontalAlignment','center',...
-          'callback','spm(''PopUpCB'',gcbo)',...
+          'Callback','spm(''PopUpCB'',gcbo)',...
           'ToolTipString','Display boxplot',...
           'Interruptible','on','Visible','on');
 
@@ -620,10 +666,10 @@ if job.verb
   end
 
   H.sort = uicontrol(H.figure,...
-          'string',str,'Units','normalized',...
-          'position',H.pos.sort,'UserData',tmp,...
+          'String',str,'Units','normalized',...
+          'Position',H.pos.sort,'UserData',tmp,...
           'Style','PopUp','HorizontalAlignment','center',...
-          'callback','spm(''PopUpCB'',gcbo)',...
+          'Callback','spm(''PopUpCB'',gcbo)',...
           'ToolTipString','Sort matrix',...
           'Interruptible','on','Visible','on');
 
@@ -653,7 +699,7 @@ if job.verb
 
     H.mm = uicontrol(H.figure,...
           'Units','normalized','position',H.pos.sslider,...
-          'Min',(1 - Orig(3))*vx(3),'Max',(H.V(1).dim(3) - Orig(3))*vx(3),...
+          'Min',(1 - Orig(3))*vx(3),'Max',(H.V(1).dat.dim(3) - Orig(3))*vx(3),...
           'Style','slider','HorizontalAlignment','center',...
           'callback',@update_slices_array,...
           'ToolTipString','Select slice for display',...
@@ -719,7 +765,8 @@ number = min([number 24]);
 number = min([number length(H.V)]);
   
 ind_sorted_decreased = H.ind_sorted_display(n:-1:1);
-list = char(H.V(ind_sorted_decreased).fname);
+
+list = char(H.fname{ind_sorted_decreased});
 sample = H.sample(ind_sorted_decreased);
 list2 = list(1:number,:);
 
@@ -906,8 +953,8 @@ for i=1:n_samples
 end
 
 H.fnambox = uicontrol(H.figure,...
-    'string','Show filenames','Units','normalized',...
-    'position',H.pos.fnambox,'callback',@checkbox_names,...
+    'String','Show filenames','Units','normalized',...
+    'Position',H.pos.fnambox,'callback',@checkbox_names,...
     'Style','CheckBox','HorizontalAlignment','center',...
     'ToolTipString','Show filenames in boxplot','value',H.show_name,...
     'BackgroundColor',[0.8 0.8 0.8],...
@@ -916,8 +963,8 @@ H.fnambox = uicontrol(H.figure,...
 % allow violin plot onl if samples are all large enough
 if allow_violin
   H.plotbox = uicontrol(H.figure,...
-    'string','Violinplot','Units','normalized',...
-    'position',H.pos.plotbox,'callback',@checkbox_plot,...
+    'String','Violinplot','Units','normalized',...
+    'Position',H.pos.plotbox,'callback',@checkbox_plot,...
     'Style','CheckBox','HorizontalAlignment','center',...
     'ToolTipString','Switch to Violinplot','value',H.show_violin,...
     'BackgroundColor',[0.8 0.8 0.8],...
@@ -936,12 +983,11 @@ ylim_add = 0.075;
 cat_plot_boxplot(data,opt);
 
 set(gca,'XTick',[],'XLim',[-.25 n_samples+1.25]);
-if max(data_boxp) > min(data_boxp)
-  yamp = max(data_boxp) - min(data_boxp);
-  ylim_min = min(data_boxp) - ylim_add*yamp;
-  ylim_max = max(data_boxp) + ylim_add*yamp;
-  set(gca,'YLim',[ylim_min ylim_max]);
-end
+
+yamp = max(data_boxp) - min(data_boxp) + 0.001;
+ylim_min = min(data_boxp) - ylim_add*yamp;
+ylim_max = max(data_boxp) + ylim_add*yamp;
+set(gca,'YLim',[ylim_min ylim_max]);
 
 % add colored labels and title
 if n_samples > 1
@@ -999,6 +1045,7 @@ else
 end
 
 % display image with 2nd colorbar (gray)
+axes('Position',H.pos.slice);
 image(65 + H.img);
 if ~H.mesh_detected, axis image; end
 set(gca,'XTickLabel','','YTickLabel','','TickLength',[0 0]);
@@ -1042,22 +1089,22 @@ Orig = P(1).mat\[0 0 0 1]';
 sl   = round(slice_mm/vx(3)+Orig(3));
 
 % if slice is outside of image use middle slice
-if (sl>P(1).dim(3)) || (sl<1)
-  sl = round(P(1).dim(3)/2);
+if (sl>P(1).dat.dim(3)) || (sl<1)
+  sl = round(P(1).dat.dim(3)/2);
 end
 
 M  = spm_matrix([0 0 sl]);
 H.data_diff = H.data;
 
 for i = 1:length(H.V)
-  H.img = single(spm_slice_vol(P(i),M,P(1).dim(1:2),[1 0]));
-  H.img(isnan(H.img)) = 0;
+  img(:,:) = single(P(i).dat(:,:,sl));
+  img(isnan(img)) = 0;
   
   % rescue unscaled data
-  H.data_diff(:,:,i) = H.img;
+  H.data_diff(:,:,i) = img;
 
   % scale image according to mean
-  H.data(:,:,i) = H.img/mean(H.img(H.img ~= 0));
+  H.data(:,:,i) = img/mean(img(img ~= 0));
 end
 
 % calculate individual difference to mean image
@@ -1127,6 +1174,7 @@ if isfield(H.pos,'x')
     txt = {sprintf('Correlation: %3.3f',H.YpY(x,y)),[],['Top: ',spm_file(H.filename.m{x},'short25')],...
       ['Bottom: ',spm_file(H.filename.m{y},'short25')],[],['Displayed slice: ',num2str(round(get(H.mm,'Value'))),' mm']};
   end
+
   set(H.text,'String',txt,'FontSize',H.FS-2);
   set(H.mm_txt,'String',[num2str(round(get(H.mm,'Value'))),' mm'],...
       'FontSize',H.FS-2);
@@ -1156,8 +1204,12 @@ if H.isscatter
   txt = {sprintf('%s',H.filename.m{H.pos.x})};
 
   % text info for textbox
-  txt2 = {[],sprintf('%s',spm_file(H.filename.m{H.pos.x},'short25')),[],'Difference to Sample Mean','(red: - green: +)'};
-
+  if H.mesh_detected
+    txt2 = {[],sprintf('%s',spm_file(H.filename.m{H.pos.x},'short25'))};
+  else
+    txt2 = {[],sprintf('%s',spm_file(H.filename.m{H.pos.x},'short25')),[],'Difference to Sample Mean','(red: - green: +)'};
+  end
+  
   set(H.text,'String',txt2,'FontSize',H.FS-2);
 
   if ~H.mesh_detected
@@ -1198,9 +1250,8 @@ else
 
   % text info for textbox
   if H.mesh_detected
-    txt2 = {[],sprintf('Correlation: %3.3f',H.YpY(x,y)),[],'right (1st row) and left (2nd row) hemisphere',['Left: ',...
-      spm_file(H.filename.m{x},'short25') '     Right: ',spm_file(H.filename.m{y},'short25')],...
-      [],'Difference to Sample Mean', '(red: - green: +)'};
+    txt2 = {[],sprintf('Correlation: %3.3f',H.YpY(x,y)),['Left: ',...
+      spm_file(H.filename.m{x},'short25') '     Right: ',spm_file(H.filename.m{y},'short25')]};
   else
     txt2 = {[],sprintf('Correlation: %3.3f',H.YpY(x,y)),['Top: ',...
       spm_file(H.filename.m{x},'short25')],['Bottom: ',spm_file(H.filename.m{y},'short25')],...

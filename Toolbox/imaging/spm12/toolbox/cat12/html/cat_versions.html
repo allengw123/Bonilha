@@ -28,8 +28,23 @@
 
     <div id="content">
       <p>
-        </br>Preprocessing should remain unaffected until the next minor version number. New processing of your data is not necessary if the minor version number of CAT12 remains unchanged.
+        </br>Preprocessing should remain unaffected until the next minor version number (12.x). New processing of your data is not necessary if the minor version number of CAT12 remains unchanged.
       </p>
+      <h2>Changes in version CAT12.8.1 (1975)</h2>      
+      <p>
+        <ul>
+          <li>Changes in preprocessing pipeline (which affects your results compared to CAT12.8)</li>
+          <ul>
+            <li>The longitudinal pipeline has been largely updated and is no longer compatible with preprocessing with version 12.8:/li>
+            <ul>
+              <li>The estimate of subject-specific TPM should now be more stable and less sensitive to changes between time points.</li>
+              <li>For data where the brain/head is still growing between time points and major changes are expected, a new longitudinal development model was added. For this type of data, an adapted pipeline was created that is very similar to the longitudinal aging model, but uses a time point-independent affine registration to adjust for brain/head growth. In addition, this model uses a subject-specific TPM based on the average image.</li>
+              <li>An additional <a href="cat_methods_catlongreport.html">longitudinal report</a> is now provided to better assess differences between time points.</li>
+            </ul>
+          </ul>
+        </ul>
+      </p>
+
       <h2>Changes in version CAT12.8 (1830)</h2>      
       <p>
         <ul>
@@ -60,12 +75,12 @@
         <ul>
           <li>Important new features</li>
           <ul>
-            <li>The Mahalanobis distance in the quality check is now replaced by the normalized ratio between overall weighted image quality (IQR) and mean correlation. A low ratio indicates good quality before and after preprocessing and means that IQR is highly rated (resulting in a low nominal number/grade) and/or mean correlation is high. This is hopefully a more intuitive measure to combine image quality measurement before and after preprocessing.</li>
+            <li>The Mahalanobis distance in the <a class="function" href="matlab:spm_jobman('interactive','','spm.tools.cat.tools.check_cov');">Quality Check</a> is now replaced by the normalized ratio between overall weighted image quality (IQR) and mean correlation. A low ratio indicates good quality before and after preprocessing and means that IQR is highly rated (resulting in a low nominal number/grade) and/or mean correlation is high. This is hopefully a more intuitive measure to combine image quality measurement before and after preprocessing.</li>
             <li>CAT12 now allows the use of the BIDS directory structure for storing data (not possible for the longitudinal pipeline). A BIDS path can be defined relative to the participant level directory. The segmentation module now supports the input of nii.gz files (not possible for the longitudinal pipeline).</li>
-            <li>The "Basic models" function has been completely restructured and simplified. There are now only two models available for: (1) cross-sectional data and (2) longitudinal data. Options that are not relevant for VBM or SBM have been removed. In addition, a new experimental option has been added that allows a voxel-wise covariate to be defined. This can be used (depending on the contrast defined) to (1) remove the confounding effect of structural data (e.g. GM) on functional data or (2) examine the relationship (regression) between functional and structural data. Additionally, an interaction can be modeled to investigate whether the regression between functional and structural data differs between two groups. Please note that the saved vSPM.mat file can only be evaluated with the TFCE toolbox.</li>
+            <li>The <a class="function" href="matlab:spm_jobman('interactive','cat_stat_factorial_design.m');">Basic Models</a> function has been completely restructured and simplified. There are now only two models available for: (1) cross-sectional data and (2) longitudinal data. Options that are not relevant for VBM or SBM have been removed. In addition, a new experimental option has been added that allows a voxel-wise covariate to be defined. This can be used (depending on the contrast defined) to (1) remove the confounding effect of structural data (e.g. GM) on functional data or (2) examine the relationship (regression) between functional and structural data. Additionally, an interaction can be modeled to investigate whether the regression between functional and structural data differs between two groups. Please note that the saved vSPM.mat file can only be evaluated with the TFCE toolbox.</li>
             <li>Added a new function cat_io_data2mat.m to save spatially registered volume or resampled surface data as Matlab data matrix for further use with machine learning tools. Volume data can be resampled to lower spatial resolutions and can optionally be masked to remove non-brain areas.</li>
-            <li>Added a new function cat_vol_ROI_summarize.m to summarise co-registered volume data within a region of interest (ROI). This tool can be used in order to estimate ROI information for other (co-registered) modalities (i.e. DTI, (rs)fMRI) which can be also defined as 4D data. Several predefined summary functions are available, as well as the possibility to define your own function.</li>
-            <li>Added a new function cat_stat_quality_measures.m to estimate and save quality measures for very large samples.</li>
+            <li>Added a new function <a class="function" href="matlab:spm_jobman('interactive','','spm.tools.cat.tools.ROIsum');">cat_vol_ROI_summarize.m</a> to summarise co-registered volume data within a region of interest (ROI). This tool can be used in order to estimate ROI information for other (co-registered) modalities (i.e. DTI, (rs)fMRI) which can be also defined as 4D data. Several predefined summary functions are available, as well as the possibility to define your own function.</li>
+            <li>Added a new function <a class="function" href="matlab:spm_jobman('interactive','','spm.tools.cat.tools.quality_measures');">cat_stat_quality_measures.m</a> to estimate and save quality measures for very large samples.</li>
             <li>Added standalone tools for de-facing, DICOM import, and estimating and saving quality measures for large samples.</li>
           </ul>
         </ul> 

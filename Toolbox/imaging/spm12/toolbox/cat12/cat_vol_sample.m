@@ -1,6 +1,7 @@
 function YA = cat_vol_sample(PT,PA,Yy,hold)
 % Return voxel values from an image volume by using a non-linear
 % deformation 
+%
 %  FORMAT YA = spm_sample_vol(VT,VA,Yy,hold)
 %
 % VT   ..  template space of the registration
@@ -11,7 +12,15 @@ function YA = cat_vol_sample(PT,PA,Yy,hold)
 %               2->127    : Higher order Lagrange (polynomial) interpolation
 %                           using different holds (second-order upwards)
 %               -127 - -1 : Different orders of sinc interpolation
-%  
+%
+% ______________________________________________________________________
+%
+% Christian Gaser, Robert Dahnke
+% Structural Brain Mapping Group (http://www.neuro.uni-jena.de)
+% Departments of Neurology and Psychiatry
+% Jena University Hospital
+% ______________________________________________________________________
+% $Id: cat_vol_sample.m 1850 2021-06-28 09:59:10Z dahnke $
 
   if ~exist('hold','var'), hold = 1; end
 

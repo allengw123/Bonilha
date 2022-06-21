@@ -20,9 +20,9 @@ function varargout = cat_update(update)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_update.m 1829 2021-05-27 09:40:22Z gaser $
+% $Id: cat_update.m 1890 2021-10-13 17:06:57Z gaser $
 
-rev = '$Rev: 1829 $';
+rev = '$Rev: 1890 $';
 
 if isdeployed
   sts= Inf;
@@ -157,7 +157,7 @@ if update
       addpath(d0);
       rehash
       rehash toolboxcache;
-      toolbox_path_cache
+      if exist('toolbox_path_cache','file'), toolbox_path_cache; end
       eval(['spm fmri;clear cat_version;spm_cat12']);
       warning on
     catch

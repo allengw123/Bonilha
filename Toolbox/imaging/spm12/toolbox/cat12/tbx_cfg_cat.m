@@ -3,7 +3,7 @@ function cat = tbx_cfg_cat
 %_______________________________________________________________________
 %
 % Christian Gaser
-% $Id: tbx_cfg_cat.m 1828 2021-05-20 20:53:18Z gaser $
+% $Id: tbx_cfg_cat.m 1889 2021-10-13 14:53:31Z gaser $
 %
 %#ok<*AGROW>
  
@@ -313,12 +313,9 @@ end
 
 % XML label
 if isfield(opts,'ROImenu') && isfield(opts.ROImenu,'atlases')
-  % sometimes this does not work...
-  try
-    is_ROI = any(cell2mat(struct2cell(opts.ROImenu.atlases(1:end-1))));
-  catch
-    is_ROI = ~isempty(struct2cell(opts.ROImenu.atlases));
-  end
+  if isfield(job.output.ROImenu.atlases,'ownatlas'), atlases = rmfield(job.output.ROImenu.atlases,'ownatlas'); end
+  is_ROI = any(cell2mat(struct2cell(atlases))) || ~isempty( job.output.ROImenu.atlases.ownatlas );
+
   if is_ROI
     cdep(end+1)          = cfg_dep;
     cdep(end).sname      = 'ROI XML File';
@@ -573,6 +570,3 @@ if isfield(job.output,'rmat') && job.output.rmat
 end
 
 dep = cdep;
-
-
-

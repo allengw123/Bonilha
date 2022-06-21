@@ -69,7 +69,7 @@ function varargout = cat_surf_fun(action,S,varargin)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_surf_fun.m 1842 2021-06-01 14:41:58Z gaser $ 
+% $Id: cat_surf_fun.m 1957 2022-02-28 20:10:19Z dahnke $ 
 
 % See also spm_mesh_area, spm_mesh_borders,
 %   spm_mesh_calc, spm_mesh_clusters, spm_mesh_contour, spm_mesh_curvature,
@@ -87,6 +87,9 @@ function varargout = cat_surf_fun(action,S,varargin)
     case 'normals'
       if nargin<2, help cat_surf_fun>cat_surf_normals; return; end
       varargout{1} = cat_surf_normals(S); 
+    
+    case 'localsurfsmooth'   
+      varargout{1} = cat_surf_localsurfsmooth(S,varargin{:});
     
     case 'angle'
       varargout{1} = cat_surf_edgeangle(S,varargin{1});
@@ -140,7 +143,7 @@ function varargout = cat_surf_fun(action,S,varargin)
       if nargout==2, [varargout{1},varargout{2}] = cat_surf_core(S,varargin{:}); end
     
     case {'tfs','tmin','tmax'}
-      % estimate the distance between two linked? surfaces
+      % estimate the distance between two (linked) surfaces
       if nargin<2, help cat_surf_fun>cat_surf_thickness; return; end
       if numel(varargin)==1
         if nargout==1
@@ -155,6 +158,13 @@ function varargout = cat_surf_fun(action,S,varargin)
           cat_surf_thickness(action,S);
         end
       end
+      
+    case {'tlink','surfdist'}
+      % tlink. Estimate the distance/thickness between two linked surfaces.
+      %  See also tfs, tmin, and tmax for unlinked/unrelated surfaced.
+      if nargin<2, help cat_surf_fun>cat_surf_tlink; return; end
+      varargout{1} = cat_surf_tlink(S,varargin{1});
+      
     case 'meshinterp'
       %S=cat_surf_meshinterp(S,interp,method,distth)  
       varargout{1} = cat_surf_meshinterp(S,varargin{:});  
@@ -207,23 +217,27 @@ function varargout = cat_surf_fun(action,S,varargin)
     case 'collisioncorrection'
     % Delaunay-based correction of surface self-intersections - not working  
       if nargin<2, help cat_surf_fun>show_orthview; return; end
-      [varargout{1},varargout{2},varargout{3}] = cat_surf_collision_correction(S,varargin{:});
+      [varargout{1},varargout{2}] = cat_surf_collision_correction(S,varargin{:});
 
     case 'collisioncorrectionry'
     % CAT_SelfIntersect-based correction of surface self-intersections   
       if nargin<2, help cat_surf_fun>show_orthview; return; end
-      [varargout{1},varargout{2}] = cat_surf_collision_correction_ry(S,varargin{:});
+      [varargout{1},varargout{2},varargout{3}] = cat_surf_collision_correction_ry(S,varargin{:});
     
     case 'collisioncorrectionpbt'
     % correction of self-intersections based on the PBT PP map
       if nargin<2, help cat_surf_fun>show_orthview; return; end
-      [varargout{1},varargout{2}] = cat_surf_collision_correction_pbt(S,varargin{:});
+      [varargout{1},varargout{2},varargout{3}] = cat_surf_collision_correction_pbt(S,varargin{:});
     
     case 'vdist'
     % ?
       if nargin<2, help cat_surf_fun>show_orthview; return; end
-      [varargout{1},varargout{2}] = cat_surf_vdist(S,varargin);
+      [varargout{1},varargout{2},varargout{3}] = cat_surf_vdist(S,varargin);
     
+    case 'vol2surf'  
+      [varargout{1}] = cat_surf_vol2surf(S,varargin{:});
+      
+      
     case 'surf2vol'
     % Render surface (data) into volume space. See also spm_mesh_to_grid. 
       if nargin<2, help cat_surf_fun>surf2vol; return; end
@@ -294,20 +308,92 @@ function varargout = cat_surf_fun(action,S,varargin)
       else
         varargout{1} = cat_surf_cdatamapping(S,varargin{:});
       end
+      
     case 'reduce'
       varargout{1} = cat_surf_reduce(S,varargin{:});
+    
     case 'isocolors'
     % Similar to MATLAB isocolor function but faster and support to use mat
     % files. See also spm_mesh_project. 
       if nargin<2, help cat_surf_fun>isocolors2; return; end
       varargout{1} = cat_surf_isocolors2(S,varargin{:});
     
+    case 'approxnans'
+      varargout{1} = cat_surf_approxnans(S);
+      
     otherwise
       error('Unknow action "%s"! Check "help cat_surf_fun".\n',action); 
   end
     
 end
+function S = cat_surf_tlink(S1,S2)
+% tlink. Estimate the distance/thickness between two linked surfaces.
+%  See also tfs, tmin, and tmax for unlinked/unrelated surfaced.
+  if numel( S1.vertices ) ~= numel( S2.vertices ) || ...
+     numel( S1.faces    ) ~= numel( S2.faces    ) 
+     error(['Surfaces has to have the same number of vertices and faces.' ...
+            'Use tfs, tmin, or tmax functions otherwise']);
+  end
+  S.facevertexcdata = sum((S1.vertices - S2.vertices).^2,2).^2;
+  S.vertices        = mean(cat(3,S1.vertices,S2.vertices),3);
+  S.faces           = S1.faces;
+end
+function S2 = cat_surf_approxnans(S,D,ds)
+  if ~exist('D','var')
+    if isfield(S,'facevertexcdata')
+      D = S.facevertexcdata; 
+    elseif isfield(S,'cdata')
+      D = S.cdata; 
+    end
+  end
+  if ~exist('ds','var')
+    ds = 10; 
+  end
+  
+  V  = double(S.vertices(~isnan(D),:)); 
+  T  = delaunayn(V);
 
+  [VI,VD] = dsearchn(V,T,double(S.vertices(isnan(D),:)));
+  Dv = D(~isnan(D)); 
+  Df = D; Df(isnan(D)) = Dv(VI);  
+
+  M  = spm_mesh_smooth(S);
+  Ds = single(spm_mesh_smooth(M,double(Df),ds * mean(VD)));
+  D(isnan(D)) = Ds(isnan(D)); 
+  
+  if isfield(S,'facevertexcdata')
+    S2=S; S2.facevertexcdata = D; 
+  elseif isfield(S,'cdata')
+    S2=S; S2.cdata = D;
+  else
+    S2 = D; 
+  end
+end
+
+function CS = cat_surf_localsurfsmooth(CS,C,s)
+% local surface filter for a surface CS that is filters vertices with the 
+% amount defined by C (0 no fitlering, 1 full filtering) and s as number
+% of iteration.
+
+  if ~exist('s','var'), s = 1; end
+
+  M = spm_mesh_smooth(CS);
+  if isempty(C) || all(size(C)==1)
+    if nargin<3 && all(size(C)==1)
+      CS.vertices = cat_surf_smooth(M,CS.vertices,C);
+    else
+      CS.vertices = cat_surf_smooth(M,CS.vertices,s);
+    end
+  else
+    Cst = sort(C); 
+
+    for i=1:s
+      Ci  = min(1,max(0,C - (s - i) * Cst(round(numel(C)*0.99)))); 
+      CSV = cat_surf_smooth(M,CS.vertices,1);
+      CS.vertices = CS.vertices .* repmat(1 - Ci,1,3) + CSV .* repmat(Ci,1,3);
+    end
+  end  
+end
 
 function S = cat_surf_reduce(S,red)
   Ptemp = tempname; 
@@ -593,7 +679,7 @@ function varargout = cat_surf_GMboundarySurface(type,varargin)
     Ptype  = cat_io_strrep(Praw,'central',type);
     
     cmd = sprintf('CAT_Central2Pial "%s" "%s" "%s" %0.2f',Praw,Pthick,Ptype,direction); 
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,1);
+    cat_system(cmd,1);
 
     if strcmp(ee,'')
       Ptype = cat_io_FreeSurfer('gii2fs',Ptype); 
@@ -616,7 +702,7 @@ function varargout = cat_surf_GMboundarySurface(type,varargin)
     Ptype  = strrep(Praw,'central',type);
    
     cmd = sprintf('CAT_Central2Pial "%s" "%s" %0.2f',Praw,Pthick,direction); 
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,1);
+    cat_system(cmd,1);
     
     % load surface 
     varargout{1} = gifti(Ptype); 
@@ -917,7 +1003,7 @@ function [AV,AF] = cat_surf_area(S)
      %   https://en.wikipedia.org/wiki/Circumscribed_circle
   end
    %%
-%   AV = cat_mesh_smooth(S,AV,5); 
+%   AV = spm_mesh_smooth(S,AV,5); 
 
 end
 
@@ -963,7 +1049,7 @@ function A = cat_surf_smoothtexture(S,A,smooth,Amax)
   
   % smooth textures
   cmd = sprintf('CAT_BlurSurfHK "%s" "%s" "%g" "%s"',Pmesh,Parea,smooth,Parea);
-  [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,debug);
+  cat_system(cmd,debug);
   
   % load smoothed textures
   A  = cat_io_FreeSurfer('read_surf_data',Parea);
@@ -1140,16 +1226,20 @@ function [SH,V] = cat_surf_core(S,opt)
   SH.vertices = SH.vertices + repmat(min(S.vertices),size(SH.vertices,1),1) - 5;
 end
 
-function res = cat_surf_evalCS(CS,T,Ym,Ypp,Pcentral,mat,verb,estSI)
+function res = cat_surf_evalCS(CS,Tpbt,Tfs,Ym,Ypp,Pcentral,mat,verb,estSI)
 % _________________________________________________________________________
 % cat_surf_evalCS in cat_surf_fun print out some values to characterize a
 % cortical surface.
 %
-%   res = cat_surf_fun('evalCS',CS[,T,Ym,Yppt])
-%   res = cat_surf_evalCS(CS[,T,Ym,Yppt])
+%   res = cat_surf_fun('evalCS',CS[,Tpbt,Tfs,Ym,Yppt])
+%   res = cat_surf_evalCS(CS[,Tpbt,Tfs,Ym,Yppt])
 %    
 %   CS        .. central surface in world space (mm)
-%   T         .. cortical thickness in world space (mm)
+%   Tpbt      .. cortical thickness (PBT) in world space (mm)
+%                can be empty (if so than Tfs will be used for generation 
+%                of the white/pial surface
+%   Tfs       .. cortical thickness (FreeSurfer) in world space (mm) 
+%                can be empty
 %   Ym        .. intensity normalized file with BG=0, CSF=1/3, GM=2/3, and WM=1
 %   Ypp       .. percent position map 
 %   Pcentral  .. number of classes for further thickness evaluation or a
@@ -1171,14 +1261,21 @@ function res = cat_surf_evalCS(CS,T,Ym,Ypp,Pcentral,mat,verb,estSI)
   
   if ~exist('verb','var'),  verb  = 1; end
   if ~exist('estSI','var'), estSI = 0; end
+
+  if isempty(Tpbt)
+    isemptyTpbt = 1;
+    Tpbt = Tfs; 
+  else
+    isemptyTpbt = 0; 
+  end
   
   M  = spm_mesh_smooth(CS);    % smoothing matrix
-  if exist('T','var') % thickness in voxel space 
+  if exist('Tpbt','var') % thickness in voxel space 
     try
       N  = spm_mesh_normals(CS);
     
-      VI = CS.vertices + N .* repmat(T / 2 ,1,3); % white surface
-      VO = CS.vertices - N .* repmat(T / 2 ,1,3); % pial surface
+      VI = CS.vertices + N .* repmat(Tpbt / 2 ,1,3); % white surface
+      VO = CS.vertices - N .* repmat(Tpbt / 2 ,1,3); % pial surface
     end
   end
   
@@ -1190,11 +1287,11 @@ function res = cat_surf_evalCS(CS,T,Ym,Ypp,Pcentral,mat,verb,estSI)
   
     if ~isempty(mat); 
       save(gifti(struct('faces',CS.faces,'vertices',CS.vertices)),Pcentralx,'Base64Binary');
-      cat_io_FreeSurfer('write_surf_data',Ppbtx,T);  
+      cat_io_FreeSurfer('write_surf_data',Ppbtx,Tpbt);  
       cmd = sprintf('CAT_Central2Pial -equivolume -weight 1 "%s" "%s" "%s" 0', ...
                      Pcentralx,Ppbtx,Player4x);
       try
-        [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+        cat_system(cmd,0);
         L4 = gifti(Player4x);
         uL4 = 1; 
         delete(Player4x);
@@ -1228,7 +1325,7 @@ function res = cat_surf_evalCS(CS,T,Ym,Ypp,Pcentral,mat,verb,estSI)
     IO  = IO./(IOs/mean(IOs)) - 1.5; clear IOs;
     % 
     
-    if uL4
+    if uL4 && exist('L4','var')
       ML  = spm_mesh_smooth(L4);    % smoothing matrix
       IC  = cat_surf_isocolors2(Ym,L4,mat);  
       ICs = single(spm_mesh_smooth(ML,double(IC),round(100 * sqrt(size(CS.faces,1)/180000)))); 
@@ -1237,7 +1334,7 @@ function res = cat_surf_evalCS(CS,T,Ym,Ypp,Pcentral,mat,verb,estSI)
     % divide by 2 because of the CSF-GM (1-2) and the GM-WM area (2-3) 
     % and to obtain a similar scaling as for the Ypp (also two segments and
     % we do not dived)
-    II = II / 2; IO = IO / 2; IC = IC / 2;
+    II = II / 2; IO = IO / 2; if uL4, IC = IC / 2; end
     % output
     if verb
       fprintf('    Local intensity RMSE (lower=better): ')
@@ -1304,13 +1401,13 @@ function res = cat_surf_evalCS(CS,T,Ym,Ypp,Pcentral,mat,verb,estSI)
     save(gifti(struct('faces',CS.faces,'vertices',VO)),Ppial,'Base64Binary');
 
     %cmd = sprintf('CAT_SurfDistance -mean "%s" "%s" "%s"',Pwhite,Ppial,Pthick);
-    %[ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS);
+    %cat_system(cmd);
     
     % write self intersection maps
     cmd = sprintf('CAT_SelfIntersect "%s" "%s"',Pwhite,Pselfw); 
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+    cat_system(cmd,0);
     cmd = sprintf('CAT_SelfIntersect "%s" "%s"',Ppial,Pselfp); 
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+    cat_system(cmd,0);
     
     selfw = cat_io_FreeSurfer('read_surf_data',Pselfw);
     selfp = cat_io_FreeSurfer('read_surf_data',Pselfp);
@@ -1341,11 +1438,11 @@ function res = cat_surf_evalCS(CS,T,Ym,Ypp,Pcentral,mat,verb,estSI)
   
   
   %% thickness analysis
-  if exist('T','var')
-    if exist('Tclasses','var') && ~isempty(Pcentral)
+  if exist('Tpbt','var') || exist('Tfs','var')
+    if 0 %exist('Tclasses','var') && ~isempty(Pcentral)
       if ischar(Pcentral)
         if strfind(Pcentral,'dilated1.5-2.5mm')
-          T = cat_stat_histth(T,0.95);
+          Tpbt = cat_stat_histth(Tpbt,0.95);
           Pcentral = 3;
         else
           Pcentral = 0;
@@ -1357,7 +1454,7 @@ function res = cat_surf_evalCS(CS,T,Ym,Ypp,Pcentral,mat,verb,estSI)
           warning('Tclasses has to be between 2 and 7.');
           Pcentral = min(7,max(3,Pcentral)); 
         end
-        [mn,sd] = cat_stat_kmeans(T,Pcentral);
+        [mn,sd] = cat_stat_kmeans(Tpbt,Pcentral);
         if verb
           fprintf('    Thickness mean (%d class(es)):       ',Pcentral)
           fprintf('%7.4f',mn); fprintf('\n'); 
@@ -1368,11 +1465,32 @@ function res = cat_surf_evalCS(CS,T,Ym,Ypp,Pcentral,mat,verb,estSI)
         res.thickness_std_nclasses  = sd;
       end
     end
-      
-    res.thickness_mn_sd_md_mx = [mean(T),std(T),median(T),max(T)];
+    
+    % fully named thickness variable
+    if ~isemptyTpbt
+      res.pbtthickness_mn_sd_md_mx = [mean(Tpbt),std(Tpbt),median(Tpbt),max(Tpbt)];
+    else
+      res.pbtthickness_mn_sd_md_mx = nan(1,4);
+    end
+    if ~isempty(Tfs)
+      res.fsthickness_mn_sd_md_mx = [mean(Tfs),std(Tfs),median(Tfs),max(Tfs)];
+    else
+      res.fsthickness_mn_sd_md_mx = nan(1,4); 
+    end
+    % general thickness value 
+    if isempty(Tfs) && ~isemptyTpbt
+      res.thickness_mn_sd_md_mx = res.pbtthickness_mn_sd_md_mx;
+    elseif ~isempty(Tfs) && isemptyTpbt
+      res.thickness_mn_sd_md_mx = res.fsthickness_mn_sd_md_mx;
+    else
+      res.thickness_mn_sd_md_mx = nan(1,4);
+    end
+    
     if verb
-      fprintf('    Surface thickness values:            %0.4f%s%0.4f (md=%0.4f,mx=%0.4f)\n',...
-        res.thickness_mn_sd_md_mx(1),native2unicode(177, 'latin1'),res.thickness_mn_sd_md_mx(2:end)); 
+      fprintf('    Surface PBT thickness values:        %0.4f%s%0.4f (md=%0.4f,mx=%0.4f)\n',...
+        res.pbtthickness_mn_sd_md_mx(1),native2unicode(177, 'latin1'),res.pbtthickness_mn_sd_md_mx(2:end)); 
+      fprintf('    Surface FS  thickness values:        %0.4f%s%0.4f (md=%0.4f,mx=%0.4f)\n',...
+        res.fsthickness_mn_sd_md_mx(1),native2unicode(177, 'latin1'),res.fsthickness_mn_sd_md_mx(2:end)); 
     end
   end
   
@@ -1486,16 +1604,16 @@ function cat_surf_saveICO(S,Tpbt,Pcs,subdir,Pm,mat,writeTfs,writeSI,writeL4,writ
   % write self intersection maps
   if writeSI
     cmd = sprintf('CAT_SelfIntersect "%s" "%s"',Pwhite,Pselfw); 
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+    cat_system(cmd,0);
     cmd = sprintf('CAT_SelfIntersect "%s" "%s"',Ppial,Pselfp); 
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+    cat_system(cmd,0);
   end
   
   % save thickness
   cat_io_FreeSurfer('write_surf_data',Ppbt,Tpbt);
   if exist('writeTfs','var') && ~isempty(writeTfs) && writeTfs
     cmd = sprintf('CAT_SurfDistance -mean "%s" "%s" "%s"',Pwhite,Ppial,Pthick);
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,opt.verb-2);
+    cat_system(cmd,opt.verb-2);
     fprintf('Display thickness: %s\n',spm_file(Pthick ,'link','cat_surf_display(''%s'')'));
   end
   
@@ -1503,7 +1621,7 @@ function cat_surf_saveICO(S,Tpbt,Pcs,subdir,Pm,mat,writeTfs,writeSI,writeL4,writ
   if writeL4
     cmd = sprintf('CAT_Central2Pial -equivolume -weight 1 "%s" "%s" "%s" 0', ...
                      Pcentral,Ppbt,Player4);
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+    cat_system(cmd,0);
   end
   
   % save intensities
@@ -1531,12 +1649,12 @@ function cat_surf_saveICO(S,Tpbt,Pcs,subdir,Pm,mat,writeTfs,writeSI,writeL4,writ
   if ~isnumeric( Pm ) && exist(Pm,'file')
     % use the file data ... slow????
     cmd = sprintf('CAT_3dVol2Surf -linear -steps 1 -start 0 -end 1 "%s" "%s" "%s"',Pwhite , Pm, PintIS);
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+    cat_system(cmd,0);
     cmd = sprintf('CAT_3dVol2Surf -linear -steps 1 -start 0 -end 0 "%s" "%s" "%s"',Ppial  , Pm, PintOS);
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+    cat_system(cmd,0);
     if writeL4
       cmd = sprintf('CAT_3dVol2Surf -linear -steps 1 -start 0 -end 0 "%s" "%s" "%s"',Player4, Pm, PintL4);
-      [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+      cat_system(cmd,0);
     end
   elseif ndims(Pm)==3
     int = cat_surf_isocolors2(Pm,VO,mat); cat_io_FreeSurfer('write_surf_data',PintOS,int);
@@ -1585,7 +1703,7 @@ function cat_surf_saveICO(S,Tpbt,Pcs,subdir,Pm,mat,writeTfs,writeSI,writeL4,writ
   
   if 0
     if ndims(Pm)==3, Ym=Pm; else, Ym=spm_read_vols(spm_vol(Pm)); end
-    res = cat_surf_evalCS(S,Tpbt,Ym,Ypp,Tclasses)
+    res = cat_surf_evalCS(S,Tpbt,[],Ym,Ypp,Tclasses)
   end
 end
 
@@ -1632,15 +1750,17 @@ function Sg = cat_surf_volgrad(varargin)
   if exist('mat','var')
     Si1 = cat_surf_isocolors2(Y,V1,mat);
     Si2 = cat_surf_isocolors2(Y,V2,mat);
+    vx_vol = sqrt(sum(mat(1:3,1:3).^2));
   else
     Si1 = cat_surf_isocolors2(Y,V1);
     Si2 = cat_surf_isocolors2(Y,V2);
+    vx_vol = [1 1 1];
   end
-  
-  Sg  = Si1 - Si2; 
+ 
+  Sg  = (Si1 - Si2) ./ repmat( mean(vx_vol), size(Si1,1), 1 ) * 2; 
 end
 
-function [S,Tn] = cat_surf_collision_correction_ry(S,T,Y,opt) 
+function [S,Tn,SI] = cat_surf_collision_correction_ry(S,T,Y,opt) 
 % _________________________________________________________________________
 % Correction of self-intersection (S) by iterative use of the 
 % CAT_selfintersect function of Rachel Yotter / Christian Gaser.
@@ -1696,7 +1816,7 @@ function [S,Tn] = cat_surf_collision_correction_ry(S,T,Y,opt)
   
   % detection and correction for flipped faces to have always the same normal direction
   flipped = cat_surf_checkNormalDir(S); %,T,Y,opt.interpBB);
-  if flipped, S.faces = [S.faces(:,1) S.faces(:,3) S.faces(:,2)]; S.mati(7) = - S.mati(7); end
+  if flipped && isfield(S,'mati'), S.faces = [S.faces(:,1) S.faces(:,3) S.faces(:,2)]; S.mati(7) = - S.mati(7); end
 
   % simple surface smoothing
   smoothsurf = @(V,s) [ ...        
@@ -1718,8 +1838,8 @@ function [S,Tn] = cat_surf_collision_correction_ry(S,T,Y,opt)
   N    = spm_mesh_normals(S); 
   i    = 0; final = 0; 
   
-  if opt.verb, fprintf('\n'); end
-  while i < opt.iterfull
+  if opt.verb, fprintf('\n'); end; SI = 90; SIO=100; 
+  while i < opt.iterfull || (SI>5 && SI<SIO*0.8)
     i = i + 1;
    
     % In theory the search/correction size would be half each time (0.5 0.25 0.125 ... 2^i)
@@ -1727,7 +1847,7 @@ function [S,Tn] = cat_surf_collision_correction_ry(S,T,Y,opt)
     % The changes are limited by opt.accuracy for anatomical (min sulcus-width) and runtime reasons.
     % If optimization is used than the test starts again but with higher accuracy ( 0.125 ). 
     if opt.mod
-      corrsize = max( opt.accuracy , 1 ./ opt.redterm.^(i+1) );
+      corrsize = max( opt.accuracy/2 , 1 ./ opt.redterm.^(i+1) );
     else
       corrsize = opt.accuracy;
     end
@@ -1741,9 +1861,9 @@ function [S,Tn] = cat_surf_collision_correction_ry(S,T,Y,opt)
 
     % call self-intersection function 
     cmd = sprintf('CAT_SelfIntersect "%s" "%s"',Pwhite,Pselfw); 
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+    cat_system(cmd,0);
     cmd = sprintf('CAT_SelfIntersect "%s" "%s"',Ppial,Pselfp); 
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,0);
+    cat_system(cmd,0);
 
     selfw = cat_io_FreeSurfer('read_surf_data',Pselfw)>0; 
     selfp = cat_io_FreeSurfer('read_surf_data',Pselfp)>0; 
@@ -1821,6 +1941,8 @@ function [S,Tn] = cat_surf_collision_correction_ry(S,T,Y,opt)
     
     % iteration
     if corrsize <= opt.accuracy, final = final + 1; end
+    SIO = SI; 
+    SI  = (sum(selfw>0)/2 + sum(selfp>0)/2) / numel(selfw) * 100; 
     if opt.verb
       cat_io_cprintf('g5',sprintf( ...
         '    Step %2d (SS=%02.0f%%%%, SI=%5.2f%%%%, T=%4.2f%s%4.2f)\n',...
@@ -1839,7 +1961,7 @@ function [S,Tn] = cat_surf_collision_correction_ry(S,T,Y,opt)
   
   if opt.verb, fprintf('\n'); end
   % final settings: back to world thickness in mm 
-  if flipped, S.faces = [S.faces(:,1) S.faces(:,3) S.faces(:,2)]; S.mati(7) = - S.mati(7); end
+  if flipped && isfield(S,'mati'), S.faces = [S.faces(:,1) S.faces(:,3) S.faces(:,2)]; S.mati(7) = - S.mati(7); end
 end
 
 function flipped = cat_surf_checkNormalDir(S)
@@ -1885,7 +2007,7 @@ function V = cat_surf_smooth(M,V,s,mode)
   end
 end
 
-function [S,Tn] = cat_surf_collision_correction_pbt(S,T,Y,Ypp,opt)
+function [S,Tn,SI] = cat_surf_collision_correction_pbt(S,T,Y,Ypp,opt)
 % _________________________________________________________________________
 % This function utilize the percentage position map Ypp map of the 
 % projection-based thickness to detect and correct self-intersections (SI)
@@ -1932,8 +2054,11 @@ function [S,Tn] = cat_surf_collision_correction_pbt(S,T,Y,Ypp,opt)
   M            = spm_mesh_smooth(S);                       % for spm_smoothing matrix
 
   % detection and correction for flipped faces to have always the same normal direction
-  flipped = cat_surf_checkNormalDir(S) && isfield(S,mati); 
-  if flipped, S.faces = [S.faces(:,1) S.faces(:,3) S.faces(:,2)]; S.mati(7) = - S.mati(7); end
+  flipped = cat_surf_checkNormalDir(S); 
+  if flipped
+    S.faces   = [S.faces(:,1) S.faces(:,3) S.faces(:,2)]; 
+    if isfield( S , 'mati' ), S.mati(7) = - S.mati(7); end
+  end
 
   % simple surface smoothing ... finaly not required anymore
   smoothsurf = @(V,s) [ ...         
@@ -1973,9 +2098,9 @@ function [S,Tn] = cat_surf_collision_correction_pbt(S,T,Y,Ypp,opt)
     TAs = ones(size(T),'single'); 
   end
   
-  i   = 0; final = 0; SIO = 1; 
+  i   = 0; final = 0; SIO = 1; SI = 90; SIO2 = 100; 
   if opt.verb, fprintf('\n'); end
-  while i < opt.iterfull / 4 % more iterations improve the int and especialy the pos and SI values but increase also the thdiff value  
+  while (i < opt.iterfull / 4) || (SI>1 && SI<SIO2*0.9) % more iterations improve the int and especialy the pos and SI values but increase also the thdiff value  
     i = i + 1;
    
     % In theory the search/correction size would be half each time (0.5 0.25 0.125 ... 2^i)
@@ -1983,7 +2108,7 @@ function [S,Tn] = cat_surf_collision_correction_pbt(S,T,Y,Ypp,opt)
     % The changes are limited by opt.accuracy for anatomical (min sulcus-width) and runtime reasons.
     % If optimization is used than the test starts again but with higher accuracy ( 0.125 ). 
     % Smaller values support better int/pos values but more intersections.
-    corrsize  = max( opt.accuracy , 1 ./ opt.redterm.^(i+2) );
+    corrsize  = max( opt.accuracy/2 , 1 ./ opt.redterm.^(i+2) );
    
     % outer and inner boundary
     VO = S.vertices - N .* repmat(Tp,1,3);
@@ -2228,12 +2353,15 @@ function [S,Tn] = cat_surf_collision_correction_pbt(S,T,Y,Ypp,opt)
         break
       end
     end
-    SIO = SI;
+    SIO2 = SIO; 
+    SIO  = SI;
   end
   
   if opt.verb, fprintf('\n'); end
-  if flipped, S.faces = [S.faces(:,1) S.faces(:,3) S.faces(:,2)]; S.mati(7) = - S.mati(7); end
-  
+  if flipped
+    S.faces = [S.faces(:,1) S.faces(:,3) S.faces(:,2)]; 
+    if isfield(S , 'mati' ), S.mati(7) = - S.mati(7); end
+  end
 end 
 function [Sve,Svde] = cat_surf_disterr(S,T,mat,Yp0,tol)
 
@@ -3262,7 +3390,7 @@ function [Yp,Yt,vmat1,vmat1i] = cat_surf_surf2vol(S,Y,T,type,opt)
     Praw = [tempname '.gii'];
     save(gifti(struct('vertices',S.vertices,'faces',S.faces)),Praw); 
     cmd = sprintf('CAT_RefineMesh "%s" "%s" %0.2f',Praw,Praw,opt.refine .* mean(vx_vol)); 
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,opt.debug);
+    cat_system(cmd,opt.debug);
     Sr = gifti(Praw);
     delete(Praw);
   end
@@ -3576,7 +3704,7 @@ function [V,vmat,vmati] = cat_surf_surf2vol_old(S,opt)
     save(gifti(struct('vertices',S.vertices,'faces',S.faces)),Praw); 
 
     cmd = sprintf('CAT_RefineMesh "%s" "%s" %0.2f',Praw,Praw,opt.refine .* opt.interpBB.interpV); 
-    [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS,opt.debug);
+    cat_system(cmd,opt.debug);
 
     So = S; S = gifti(Praw);
     delete(Praw);
@@ -3884,8 +4012,8 @@ function I = cat_surf_isocolors2(V,Y,mat,interp)
 %  Robert Dahnke, 2009-2019
   
   if isempty(Y), return; end
-  if ~isnumeric(V) && isfield(V,'vertices'), V = V.vertices; end 
-  if ~isnumeric(Y) && isfield(Y,'vertices'), Y = Y.vertices; end 
+  if ~isnumeric(V) && isfield(V,'vertices'), SV = V; V = V.vertices; end 
+  if ~isnumeric(Y) && isfield(Y,'vertices'), SY = Y; Y = Y.vertices; end 
   if ~ismatrix(V) && ndims(Y)~=3, VR = Y; Y = V; V = VR; end; clear VR % flip
   if ndims(Y)~=3,  error('MATLAB:isocolor2:dimsY','Only 2 or 3 dimensional input of Y.'); end
   if ~exist('interp','var'); interp = 'linear'; end 
@@ -3918,8 +4046,179 @@ function I = cat_surf_isocolors2(V,Y,mat,interp)
   % We have to process everything with double, thus larger images will cause memory issues.
   switch interp
     case 'nearest'
-      V = max(1,min(round(V),repmat(size(Y),nV,1))); 
-      I = Y( max(1,min(numel(Y), sub2ind(size(Y),V(:,2),V(:,1),V(:,3)))));
+      sY = [size(Y,2) size(Y,1) size(Y,3)]; % flipped limit
+      V = max(1,min(round(V),repmat(sY,nV,1))); 
+      I = Y( max(1,min(numel(Y), sub2ind(size(Y),V(:,2),V(:,1),V(:,3))))); % flipped vertices
+    case {'pushWSsum','pushWSmean','pushmax','pushsum','pushw','pushmean'}
+      %% map all non-NaN voxel to the surface
+      
+      % find voxels for mapping
+      switch interp
+        case 'pushWSsum'
+        otherwise
+          voxi = find(isnan(Y)==0);
+          [vox(:,2),vox(:,1),vox(:,3)] = ind2sub(size(Y),voxi); 
+      end
+      
+      % estimate nearest neighbor mapping (push of each voxel)
+      V = double(V); 
+      T = delaunayn(V);
+      %[VI,SD] = dsearchn(double(V),T,vox);
+%%
+      I   = nan(size(V,1),1);
+      switch interp
+        case {'pushWSsum','pushWSmean'}
+          % A) Cluster first and map the whole region to one voxel
+          %    (*) add local smoothing
+          %    (*) limit size of the cluster ?! But how?
+          %        >> structural separation by sulcal/gyral skeleton?
+          %    (*) extract local surface of the cluster and 
+          %        extract the largest component 
+          %        create new mapping of the whole cluster to this component 
+          %    (*) cluster mapping only for large structures?
+          % extract minima and maxima
+          %
+          %   Problems: 
+          %   - Mapping error of missing (broken) structures with huge miss-mapping
+          %   - "Overmapping" to peak structures (a skyscraber get all views)  
+          %     and that can change the whole picture (= instable)
+          %     >> futher differentitiation or cluster limitation is needed ! 
+          %
+          % (C) Mapping via simpler surfaces with later refinement or 
+          %     Mixed mapping ?
+          % 
+          % - use tissue segmentation to limit Y 
+          if 1
+            Yd  = -cat_vol_div(smooth3(Y),1,2);
+            Yd( cat_vol_morph( smooth3(abs(Yd))<0.01) ) = 0; 
+          else
+            Yd = Y; Yd(isnan(Yd)) = 0;
+          end
+          % watershed segmentation/partitioning
+          if exist('watershed','var')
+            Yw  = watershed(-Yd); %<-0.001);
+            % remove unwanted (superlarge) clusters
+            Yw(isnan(Y) | Yd==0) = 0;
+          else
+            %% normalize map to find local peaks 
+            Yw      = Y ./ max(0.1,cat_vol_smooth3X(log(abs(Y)+1),2)); 
+            [Yw,th] = cat_stat_histth(Yw,95); Yw = Yw ./ max(abs(th)); 
+            Yd      = -cat_vol_div(abs(Yw),1,1,1);
+            [Yd,th] = cat_stat_histth(Yd,99); Yd = Yd ./ max(abs(th)); 
+            Yw      = abs(Yd) .* abs(Yw); 
+            %
+            Yw(isnan(Y)) = nan; 
+            Yl  = spm_bwlabel(double(Yw>0.95)); 
+            Yw  = cat_vol_downcut(single(Yl),abs(single(Yw)),-0.4); Yw = cat_vol_median3c(Yw,~isnan(Y)); Yw(isnan(Y)) = nan; 
+            Yw  = cat_vol_downcut(single(Yw),abs(single(Yw)),-0.2); Yw = cat_vol_median3c(Yw,~isnan(Y)); Yw(isnan(Y)) = nan; 
+            Yw  = cat_vol_downcut(single(Yw),abs(single(Yw)),-0.1); Yw = cat_vol_median3c(Yw,~isnan(Y)); Yw(isnan(Y)) = nan; 
+          end
+          
+          
+          %% remove mini clusters (better to use the direct projection)
+          if 1
+            [whst,wind] = hist(single(Yw(Yw(:)>0)),1:single(max(Yw(:))));
+            wind(whst > 3^3) = []; 
+            for wi = 1:numel(wind)
+              Yw(Yw==wind(wi)) = 0; 
+            end
+          end
+          
+          %% map cluster to surface
+          Scluster = cat_surf_fun('isocolors',SV,Yw,[],'nearest');
+          Sdata    = cat_surf_fun('isocolors',SV,Y ,[],'nearest');
+          
+          % for cluster 
+          
+          SV.facevertexcdata = Scluster; 
+          
+          %% map 0-values (direct projection via push)
+          if 1
+            voxi = find(isnan(Y)==0 & Yw==0); clear vox; 
+            [vox(:,2),vox(:,1),vox(:,3)] = ind2sub(size(Y),voxi); 
+
+            I = nan(size(V,1),1);
+            [VI,SD] = dsearchn(V,T,vox);
+
+            for vi = 1:numel(VI)
+              if isnan(I(VI(vi)))
+                I(VI(vi)) = Y(voxi(vi)) .* 10./SD(vi);
+              else
+                I(VI(vi)) = I(VI(vi)) + Y(voxi(vi)) .* 10./SD(vi);
+              end
+            end
+          end
+          
+          
+          %% there should be some general limit vom a center point 
+          for wi = setxor( 1:max(single(Yw(:))) , single(wind) ) 
+            th = 0.1 * max(Y(Yw(:)==wi));
+            if ~isempty(th) && sum(Yw(:)==wi & Y(:)>=th)>0
+              %%
+              if 0
+                voxi = find(Yw==wi & Y>=th); clear vox;
+                [vox(:,2),vox(:,1),vox(:,3)] = ind2sub(size(Y),voxi); 
+                [VIwi,SD] = dsearchn(V,T,vox);
+
+                [VThst,VTind] = hist(VIwi,min(VIwi(:)):max(VIwi(:)));
+                [VThstmax,VThstind] = max(VThst); 
+                VIwimax = VTind(VThstind);
+
+                I(VIwimax) = sum( Y(Yw(:)==wi) ); 
+              else
+                voxi = find(Yw==wi & Y>=th); clear vox;
+                [vox(:,2),vox(:,1),vox(:,3)] = ind2sub(size(Y),voxi); 
+              
+                
+                
+                [VIwi,SD] = dsearchn(V,T,vox);
+                
+                
+              end
+            end
+          end
+          
+        case 'pushsum' % for fMRI
+          I = zeros(size(V,1),1,'single');
+          [VI,SD] = dsearchn(V,T,vox);
+            
+          for vi = 1:numel(VI)
+            if isnan(I(VI(vi)))
+              I(VI(vi)) = Y(voxi(vi)) .* min(1,1./SD(vi));
+            else
+              I(VI(vi)) = I(VI(vi)) + Y(voxi(vi)) .* min(1,1./SD(vi));
+            end
+          end
+        case 'pushmax'
+          for vi = 1:numel(vox)
+            if ~isnan(I(VI(vi))) 
+              I(VI(vi)) = max(I(VI(vi)),vox(vi)); 
+            else
+              I(VI(vi)) = vox(vi);
+            end
+          end
+        case 'pushmean'
+          I = nan(size(V,1),1,'single');
+          N = zeros(size(V,1),1,'single');
+          [VI,SD] = dsearchn(V,T,vox); SD=SD*6;
+            
+          for vi = 1:numel(VI)
+            if isnan(I(VI(vi)))
+              I(VI(vi)) = Y(voxi(vi)) .* min(1,1./SD(vi));
+              N(VI(vi)) =                min(1,1./SD(vi));
+            else
+              I(VI(vi)) = I(VI(vi)) + Y(voxi(vi)) .* min(1,1./SD(vi));
+              N(VI(vi)) = N(VI(vi)) +                min(1,1./SD(vi));
+            end
+          end
+          I = I ./ max(1,N); 
+      end 
+      
+      % question of smoothing & interpolation 
+     % I(isnan(I)) = 0; 
+      
+      
+          
     case 'linear'
       nb  = repmat(shiftdim(double([0 0 0;0 0 1;0 1 0;0 1 1;1 0 0;1 0 1;1 1 0;1 1 1]'),-1),nV,1);  
       enb = repmat(shiftdim((ones(8,1,'double')*[size(Y,2),size(Y,1),size(Y,3)])',-1),nV,1);  
@@ -3929,7 +4228,7 @@ function I = cat_surf_isocolors2(V,Y,mat,interp)
       % if the streamline is near the boundary of the image you could be out of range if you add 1 
       n8b = min(floor(w8b) + nb,enb); clear enb
       n8b = max(n8b,1);
-      w8b = flipdim(prod(abs(n8b - w8b),2),3);        
+      w8b = flip(prod(abs(n8b - w8b),2),3);        
 
       % multiply this with the intensity value of R
       I = sum( Y( max(1,min(numel(Y), sub2ind(size(Y),n8b(:,2,:),n8b(:,1,:),n8b(:,3,:))))) .* w8b,3);

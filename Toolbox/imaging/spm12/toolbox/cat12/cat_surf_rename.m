@@ -16,7 +16,7 @@ function [PO,sinfo] = cat_surf_rename(P,varargin)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_surf_rename.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_surf_rename.m 1956 2022-02-28 19:48:23Z dahnke $
 
 % Todo: update sinfo! also for other fields!
 
@@ -55,8 +55,14 @@ function [PO,sinfo] = cat_surf_rename(P,varargin)
         if sinfo(i).resampled==1
           if sinfo(i).template==1
             templateresampled=''; %.template';
-          else
-            templateresampled='.resampled';
+          elseif sinfo(i).resampled_32k==1
+            templateresampled='.resampled_32k';
+          elseif sinfo(i).resampled==1
+            if sinfo(i).resampled_32k
+              templateresampled='.resampled_32k';
+            else
+              templateresampled='.resampled';
+            end
           end
         else
           templateresampled='';

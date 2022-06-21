@@ -1,7 +1,7 @@
-% batch file of CAT12 Resample & Smooth for SPM12 standalone installation
+% Batch file for CAT12 Resample & Smooth for SPM12/CAT12 standalone installation
 %
 %_______________________________________________________________________
-% $Id: cat_standalone_resample.m 1837 2021-05-30 00:42:09Z gaser $
+% $Id: cat_standalone_resample.m 1981 2022-04-04 07:23:37Z gaser $
 
 % data field, that will be dynamically replaced by cat_standalone.sh
 matlabbatch{1}.spm.tools.cat.stools.surfresamp.sample{1}.data_surf = '<UNDEFINED>';

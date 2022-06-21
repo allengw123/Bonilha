@@ -20,10 +20,10 @@ function spm_cat12(varargin)
 %
 % ______________________________________________________________________
 % Christian Gaser, Robert Dahnke
-% $Id: spm_cat12.m 1798 2021-04-09 10:46:29Z gaser $
+% $Id: spm_cat12.m 1987 2022-04-25 12:28:37Z gaser $
 
 
-rev = '$Rev: 1798 $';
+rev = '$Rev: 1987 $';
 global deffile;
 global cprintferror;  % temporary, because of JAVA errors in cat_io_cprintf ... 20160307
 %try clearvars -global deffile;  end %#ok<TRYNC>
@@ -34,6 +34,26 @@ pth = fileparts(which(mfilename));
 if ~strcmp(nam,'cat12')
   spm('alert!',sprintf('Please check that you do not have multiple CAT12 installations in your path!\nYour current CAT12 version is installed in %s but should be installed in %s',pth,fullfile(spm('dir'),'toolbox','cat12')),'WARNING');
 end
+
+% check that mex-files on MAC are not blocked
+try
+  feval(@cat_sanlm,single(rand(6,6,6)),1,3);
+catch
+  if ismac 
+    CATDir = fullfile(spm('dir'),'toolbox','cat12','CAT');
+    web('https://en.wikibooks.org/wiki/SPM/Installation_on_64bit_Mac_OS_(Intel)#Troubleshooting');
+    cat_io_cmd(sprintf('\nThe following commands will be executed as administrator to allow execution of CAT12 binaries and mex-files.\n Please now type admin password to call sudo\n'),'warning');
+    cat_io_cmd(sprintf('You can also break that command here and run the commands that are listed on the open website under Troubleshooting manually.\n'),'warning');
+    cmd = ['sudo xattr -r -d com.apple.quarantine ' CATDir];
+    system(cmd); fprintf([cmd '\n']);
+    cmd = ['sudo find ' CATDir ' -name *.mexmac* -exec spctl --add {} \;'];
+    system(cmd); fprintf([cmd '\n']);
+    cmd = ['sudo chmod a+x ' CATDir '/CAT.mac*/CAT*'];
+    system(cmd); fprintf([cmd '\n']);
+    cmd = ['sudo find ' CATDir ' -name *.mexmac* -exec xattr -d com.apple.quarantine {} \;'];
+  end
+end
+
 
 % get expert level except for standalone installation
 expert   = cat_get_defaults('extopts.expertgui'); 
@@ -102,8 +122,8 @@ switch lower(deffile)
     deffile = catdef; 
   case {'greaterapes','lesserapes','oldworldmonkeys','newworldmonkeys','mammals','chimpanzees','dogs',...
         'greaterape' ,'lesserape' ,'oldworldmonkey' ,'newworldmonkey', 'mammal', 'chimpanzee' ,'dog', ...
-        'baboons', ...
-        'baboon' ,'macaca'}
+        'baboons', 'macaques', ...
+        'baboon' ,'macaca', 'macaque'}
     switch lower(deffile)
       case {'greaterapes','greaterape'},          species = 'ape_greater';     speciesdisp = ' (greater apes)';
       %case {'lesserapes','lesserape'},            species = 'ape_lesser';      speciesdisp = ' (lesser apes)';
@@ -111,7 +131,7 @@ switch lower(deffile)
       %case {'newworldmonkeys','newworldmonkey'},  species = 'monkey_newworld'; speciesdisp = ' (newworld monkeys)';
       %case {'mammals','mammal'},                  species = 'mammal';          speciesdisp = ' (mammal)';
       case {'chimpanzees','chimpanzee'},          species = 'chimpanzee';      speciesdisp = ' (chimpanzee)';
-      case {'macaque','macaques'},    					  species = 'macaque';         speciesdisp = ' (macaque)';
+      case {'macaque','macaques'},                species = 'macaque';         speciesdisp = ' (macaque)';
       case {'baboons','baboon'},                  species = 'baboon';          speciesdisp = ' (baboon)';
       case {'dogs','dog'},                        species = 'dog';             speciesdisp = ' (dogs)';
       otherwise
@@ -238,30 +258,12 @@ if expert<2
 end
 
 spm('FnBanner',mfilename,cat_version);
-[Finter,Fgraph] = spm('FnUIsetup','CAT12.8-Beta');
+[Finter,Fgraph] = spm('FnUIsetup','CAT12.8.1');
 url = fullfile(spm('Dir'),'toolbox','cat12','html','cat.html');
 spm_help('!Disp',url,'',Fgraph,'Computational Anatomy Toolbox for SPM12');
 
-[ST, RS] = cat_system('CAT_3dVol2Surf');
-% because status will not give 0 for help output we have to check whether we can find the
-% keyword "Usage" in output
-if isempty(strfind(RS,'Usage'));
-  if ispc
-    [ST, RS] = system('systeminfo.exe');
-  else
-    [ST, RS] = system('uname -a');
-  end
-  cat_io_cmd(sprintf('\nWARNING: Surface processing will not work because\n(1) CAT binaries are not compatible to your system or\n(2) Antivirus software in Windwos or Gatekeeper in MAC OS is blocking to execute binaries:\n%s\n',RS),'warning');
-  % check Gatekeeper on MAC OS
-  if ismac
-    [ST, RS] = system('spctl --status');
-    if ~isempty(strfind(RS,'enabled'))
-      fprintf('\n\nPlease disable Gatekeeper on MAC OS!\n');
-    end
-  end
-  fprintf('\n\nFor future support of your system please send this message to christian.gaser@uni-jena.de\n\n');
-end
-
+% check that binaries for surface tools are running 
+cat_system('CAT_3dVol2Surf');
 
 %% add some directories 
 spm_select('PrevDirs',{fullfile(spm('dir'),'toolbox','cat12')});
@@ -278,7 +280,7 @@ cat_io_cprintf([0.0 0.0 0.5],sprintf([ ...
     '   _______  ___  _______    \n' ...
     '  |  ____/ / _ \\\\ \\\\_   _/   ' expertguitext '\n' ...
     '  | |___  / /_\\\\ \\\\  | |     Computational Anatomy Toolbox\n' ...
-    '  |____/ /_/   \\\\_\\\\ |_|     CAT12.8-Beta - http://www.neuro.uni-jena.de\n\n']));
+    '  |____/ /_/   \\\\_\\\\ |_|     CAT12.8.1 - http://www.neuro.uni-jena.de\n\n']));
 cat_io_cprintf([0.0 0.0 0.5],' CAT default file:\n\t%s\n\n',deffile); 
 
 % call GUI

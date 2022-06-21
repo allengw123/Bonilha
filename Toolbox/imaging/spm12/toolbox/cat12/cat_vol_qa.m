@@ -69,7 +69,7 @@ function varargout = cat_vol_qa(action,varargin)
 % Jena University Hospital
 % ______________________________________________________________________
 %
-% $Id: cat_vol_qa.m 1834 2021-05-28 14:45:20Z dahnke $
+% $Id: cat_vol_qa.m 1982 2022-04-12 11:09:13Z dahnke $
 % ______________________________________________________________________
 
 %#ok<*ASGLU>
@@ -81,19 +81,40 @@ function varargout = cat_vol_qa(action,varargin)
   % init output
   QAS = struct(); 
   QAR = struct(); 
-  if nargout>0, varargout = cell(1,nargout); end
-
+  %if nargout>0, varargout = cell(1,nargout); end
+  
   try
-    [mrifolder, reportfolder] = cat_io_subfolders(varargin{4}.catlog,varargin{6}.job);
+    if strcmp(action,'cat12err')
+      [mrifolder, reportfolder] = cat_io_subfolders(varargin{1}.job.data,varargin{1}.job);
+    elseif strcmp(action,'cat12')
+      [mrifolder, reportfolder] = cat_io_subfolders(varargin{2},varargin{6}.job);
+    else
+      [mrifolder, reportfolder] = cat_io_subfolders(varargin{4}.catlog,varargin{6}.job);
+    end
   catch
     mrifolder    = 'mri'; 
     reportfolder = 'report'; 
   end
   
   % no input and setting of default options
+  action2 = action; 
   if nargin==0, action='p0'; end 
   if isstruct(action)
-    Pp0 = action.data;
+    if isfield(action,'model')
+      if isfield(action.model,'catp0')
+        Po  = action.images;
+        Pp0 = action.model.catp0; 
+        if numel(Po)~=numel(Pp0) && numel(Pp0)==1
+          Pp0 = repmat(Pp0,numel(Po),1);
+        end
+        Pm  = action.images;
+        action.data = Pp0;
+      end
+    end
+    if isfield(action,'data')
+      Pp0 = action.data;
+    end
+    
     action = 'p0';
   end
   if nargin>1 && isstruct(varargin{end}) && isstruct(varargin{end})
@@ -108,7 +129,7 @@ function varargout = cat_vol_qa(action,varargin)
   switch action
     case {'p0','p0+'}
     % segment image cases
-      if nargin<=3
+      if nargin<=3 && ( ~exist('Pp0','var') || isempty(Pp0) )
         if (nargin-nopt)<2  
           Pp0 = cellstr(spm_select(inf,'image',...
             'select p0-segment image',{},pwd,'^p0.*')); 
@@ -140,11 +161,11 @@ function varargout = cat_vol_qa(action,varargin)
           Pm = cellstr(spm_select(repmat(numel(Pp0),1,2),...
             'image','select modified image(s)',{},pwd,'.*')); 
         end
-      elseif nargin<=5
+      elseif nargin<=5 && ( ~exist('Pp0','var') || isempty(Pp0) )
         Pp0 = varargin{1};
         Po  = varargin{2};
         Pm  = varargin{3};
-      else
+      elseif ( ~exist('Pp0','var') || isempty(Pp0) )
         error('MATLAB:cat_vol_qa:inputerror',...
           'Wrong number/structure of input elements!'); 
       end
@@ -210,7 +231,10 @@ function varargout = cat_vol_qa(action,varargin)
       % CAT12 internal input
       if nargin>3 
         Yp0 = varargin{1};
+% Octave is starting with many warning messages here ...        
+%        if strcmpi(spm_check_version,'octave'), warning off; end
         Vo  = spm_vol(varargin{2});
+%        if strcmpi(spm_check_version,'octave'), warning on; end
         Yo  = single(spm_read_vols(Vo));    
         Ym  = varargin{3}; 
         res = varargin{4};
@@ -225,7 +249,8 @@ function varargout = cat_vol_qa(action,varargin)
         opt.verb = 0;
         
         % reduce to original native space if it was interpolated
-        if any(size(Yp0)~=Vo.dim)
+        sz = size(Yp0);
+        if any(sz(1:3)~=Vo.dim(1:3))
           if isfield(Vo,'private'), Vo = rmfield(Vo,'private'); end
           if isfield(Vo,'mat0'),    Vo = rmfield(Vo,'mat0');    end
           Vo.dat = zeros(Vo.dim,'single'); Vo.dt(1) = 16; Vo.pinfo = [1;0;0];
@@ -274,6 +299,7 @@ function varargout = cat_vol_qa(action,varargin)
   % Print options
   % --------------------------------------------------------------------
   opt.snspace = [70,7,3];
+  opt.snspace = [100,7,3];
   Cheader = {'scan'};
   Theader = sprintf(sprintf('%%%ds:',opt.snspace(1)-1),'scan');
   Tline   = sprintf('%%5d) %%%ds:',opt.snspace(1)-8);
@@ -325,22 +351,47 @@ function varargout = cat_vol_qa(action,varargin)
       
       for fi=1:numel(Pp0)
         try
-          if exist(Po{fi},'file')
+          [pp,ff,ee] = spm_fileparts(Po{fi});
+          if exist(fullfile(pp,[ff ee]),'file')
             Vo  = spm_vol(Po{fi});
           else
             error('cat_vol_qa:noYo','No original image.');
           end
   
-          Yp0 = single(spm_read_vols(spm_vol(Pp0{fi})));
+          Vm  = spm_vol(Pm{fi});
+          Vp0 = spm_vol(Pp0{fi});
+          if any(Vp0.dim ~= Vm.dim)
+            [Vx,Yp0] = cat_vol_imcalc(Vp0,Vm,'i1',struct('interp',2,'verb',0));
+          else
+            Yp0 = single(spm_read_vols(Vp0));
+          end
+          Yp0(isnan(Yp0) | isinf(Yp0)) = 0; 
           if ~isempty(Pm{fi}) && exist(Pm{fi},'file')
             Ym  = single(spm_read_vols(spm_vol(Pm{fi})));
+            Ym(isnan(Yp0) | isinf(Yp0)) = 0; 
+          elseif 1
+            Ym  = single(spm_read_vols(spm_vol(Po{fi})));
+            Ym(isnan(Yp0) | isinf(Yp0)) = 0; 
+            Yw  = Yp0>2.95 | cat_vol_morph( Yp0>2.25 , 'e'); 
+            Yb  = cat_vol_approx( Ym .* Yw + Yw .* min(Ym(:)) ) - min(Ym(:)); 
+            %Yb  = Yb / mean(Ym(Yw(:)));
+            Ym  = Ym ./ max(eps,Yb); 
+            
           else
             error('cat_vol_qa:noYm','No corrected image.');
           end
-  
+          rmse = (mean(Ym(Yp0(:)>0) - Yp0(Yp0(:)>0)/3).^2).^0.5; 
+          if rmse>0.1
+            warning('Segmentation is maybe not fitting to the image (RMSE(Ym,Yp0)=%0.2f)?:\n  %s\n  %s',rmse,Pm{fi},Pp0{fi}); 
+          end
+          
           res.image = spm_vol(Pp0{fi}); 
           [QASfi,QAMfi] = cat_vol_qa('cat12',Yp0,Vo,Ym,res,species,opt);
 
+          if isnan(QASfi.qualitymeasures.NCR)
+            fprintf('');
+          end
+          
      
           QAS = cat_io_updateStruct(QAS,QASfi,0,fi);
           QAR = cat_io_updateStruct(QAR,QAMfi,0,fi);
@@ -358,12 +409,12 @@ function varargout = cat_vol_qa(action,varargin)
           % print the results for each scan 
           if opt.verb>1 
             if opt.orgval 
-              cat_io_cprintf(opt.MarkColor(max(1,round( mqamatm(fi,:)/9.5 * ...
+              cat_io_cprintf(opt.MarkColor(max(1,floor( mqamatm(fi,:)/9.5 * ...
                 size(opt.MarkColor,1))),:),sprintf(Tline,fi,...
                 QAS(fi).filedata.fnames, ... spm_str_manip(QAS(fi).filedata.file,['f' num2str(opt.snspace(1) - 14)]),...
                 qamat(fi,:),max(1,min(6,mqamatm(fi)))));
             else
-              cat_io_cprintf(opt.MarkColor(max(1,round( mqamatm(fi,:)/9.5 * ...
+              cat_io_cprintf(opt.MarkColor(max(1,floor( mqamatm(fi,:)/9.5 * ...
                 size(opt.MarkColor,1))),:),sprintf(Tline,fi,...
                 QAS(fi).filedata.fnames, ... spm_str_manip(QAS(fi).filedata.file,['f' num2str(opt.snspace(1) - 14)]),...
                 qamatm(fi,:),max(1,min(6,mqamatm(fi)))));
@@ -502,13 +553,17 @@ function varargout = cat_vol_qa(action,varargin)
       % ----------------------------------------------------------------
       [nam,rev_spm] = spm('Ver');
       QAS.software.version_spm = rev_spm;
-      A = ver;
-      for i=1:length(A)
-        if strcmp(A(i).Name,'MATLAB')
-          QAS.software.version_matlab = A(i).Version; 
+      if strcmpi(spm_check_version,'octave')
+        QAS.software.version_octave = version;  
+      else
+        A = ver;
+        for i=1:length(A)
+          if strcmp(A(i).Name,'MATLAB')
+            QAS.software.version_matlab = A(i).Version; 
+          end
         end
+        clear A
       end
-      clear A
       % 1 line: Matlab, SPM12, CAT12 version number and GUI and experimental mode 
       if ispc,      OSname = 'WIN';
       elseif ismac, OSname = 'MAC';
@@ -549,11 +604,15 @@ function varargout = cat_vol_qa(action,varargin)
       % file information
       % ----------------------------------------------------------------
       [pp,ff,ee] = spm_fileparts(Vo.fname);
+%      if strcmpi(spm_check_version,'octave'), warning off; end
       [QAS.filedata.path,QAS.filedata.file] = spm_fileparts(Vo.fname);
-      QAS.filedata.fname  = Vo.fname;
-      QAS.filedata.F      = Vo.fname; 
+      QAS.filedata.fname  = char(Vo.fname);
+      QAS.filedata.F      = char(Vo.fname); 
+%      if strcmpi(spm_check_version,'octave'), warning on; end
+%      if strcmpi(spm_check_version,'octave'), warning off; end
       QAS.filedata.Fm     = fullfile(pp,mrifolder,['m'  ff ee]);
       QAS.filedata.Fp0    = fullfile(pp,mrifolder,['p0' ff ee]);
+%      if strcmpi(spm_check_version,'octave'), warning on; end
       QAS.filedata.fnames = [spm_str_manip(pp,sprintf('k%d',...
                          floor( max(opt.snspace(1)-19-ff,opt.snspace(1)-19)/3) - 1)),'/',...
                        spm_str_manip(ff,sprintf('k%d',...
@@ -568,15 +627,19 @@ function varargout = cat_vol_qa(action,varargin)
       else          OSname = 'LINUX';
       end
       
-      QAS.software.system       = OSname;
+      QAS.software.system       = char(OSname);
       QAS.software.version_spm  = rev_spm;
-      A = ver;
-      for i=1:length(A)
-        if strcmp(A(i).Name,'MATLAB')
-          QAS.software.version_matlab = A(i).Version; 
+      if strcmpi(spm_check_version,'octave')
+        QAS.software.version_matlab = ['Octave ' version];
+      else
+        A = ver;
+        for i=1:length(A)
+          if strcmp(A(i).Name,'MATLAB')
+            QAS.software.version_matlab = A(i).Version; 
+          end
         end
+        clear A
       end
-      clear A
       QAS.software.version_cat  = ver_cat;
       if ~isfield(QAS.software,'version_segment')
         QAS.software.version_segment = rev_cat;
@@ -588,10 +651,10 @@ function varargout = cat_vol_qa(action,varargin)
       QAS.software.date         = datestr(clock,'yyyymmdd-HHMMSS');
       % RD202007: not requried 
       %{
-      warning off
-      QAS.software.opengl       = opengl('INFO');
-      QAS.software.opengldata   = opengl('DATA');
-      warning on
+      %warning off
+      %QAS.software.opengl       = opengl('INFO');
+      %QAS.software.opengldata   = opengl('DATA');
+      %warning on
       %}
       QAS.software.cat_warnings = cat_io_addwarning;
       % replace matlab newlines by HTML code
@@ -674,7 +737,15 @@ function varargout = cat_vol_qa(action,varargin)
         warning('cat_vol_qa:badSegmentation',...
           sprintf('Bad %s segmentation (C=%0.0f,G=%0.0f,W=%0.0f).',species,subvol)) %#ok<SPWRN>
       end
-      
+      if ~isfield(QAS,'subjectmeasures')
+        %% in case of external/batch calls
+        QAS.subjectmeasures.vol_TIV = sum(Yp0(:)>0) ./ prod(vx_vol) / 1000;
+        for i = 1:3
+          QAS.subjectmeasures.vol_abs_CGW(i) = sum( Yp0toC(Yp0(:),i)) ./ prod(vx_vol) / 1000; 
+          QAS.subjectmeasures.vol_rel_CGW(i) = QAS.subjectmeasures.vol_abs_CGW(i) ./ ...
+                                               QAS.subjectmeasures.vol_TIV; 
+        end
+      end
 
       %%  estimate QA
       %  ---------------------------------------------------------------
@@ -698,6 +769,7 @@ function varargout = cat_vol_qa(action,varargin)
                 Ysc>0.75 & Yp0<1.25;% avoid PVE & ventricle focus
         if sum(Ycm(:)>0)<10; Ycm=cat_vol_morph(Yp0>0.5 & Yp0<1.5 & Yms<cat_stat_nanmean(T1th(1:2)),'e') & Yp0<1.25; end
         if sum(Ycm(:)>0)<10; Ycm=Yp0>0.5 & Yms<cat_stat_nanmean(T1th(1:2)) & Yp0<1.25; end
+        if sum(Ycm(:)>0)<10; Ycm=Yp0>0.5 & Yp0<1.5; end
         %Ycm  = Ycm | (Yp0==1 & Ysc>0.7 & Yms<cat_stat_nanmean(T1th(2:3))); % HEBEL      
         Ygm1 = round(Yp0*10)/10==2;                                       % avoid PVE 1
         Ygm2 = cat_vol_morph(Yp0>1.1,'e') & cat_vol_morph(Yp0<2.9,'e');   % avoid PVE 2
@@ -724,8 +796,99 @@ function varargout = cat_vol_qa(action,varargin)
       Ycm  = cat_vol_morph(Ycm,'lc'); % to avoid holes
       Ywm  = cat_vol_morph(Ywm,'lc'); % to avoid holes
       Ywe  = cat_vol_morph(Ywm,'e');  
+   
       
-      
+%% new resolution thing       
+% -------------------------------------------------------------------------
+% Although voxel resolution is a good measure in most raw data, interpolated
+% or resampled data, e.g. by interpolation/resampling/reslicing or directly 
+% within the protocol/reconstruction process.  
+% Although the BWP did not ofter a direct independent solution, we can use
+% any image and resample or smooth it. Real data test are highly important 
+% to avoid unforeseen side effects but finaly the evaluation has to take 
+% place also on the BWP, where the measure have to be tested for possible 
+% side effects of noise (could be a problem) and inhomogeneities (should  
+% be ok).  
+% - interpolate/reduce by a factor:     0.5x, 0.75x, 1.0x (low-res  >= 1.0 mm)
+%                                       1.0x, 1.50x, 2.0x (high-res <= 0.7 mm) 
+% - sampling to a specific resolution:  0.4, 0.6, 0.8, 1.0, 1.2 mm
+% - smoothing in mm:                    0.2, 0.4, 0.6, 0.8, 1.0 mm
+% -------------------------------------------------------------------------
+
+
+%% A) by gradient (RD20220324)
+% -------------------------------------------------------------------------
+%     The basic idea is that edges in smoothed and interpolated images are 
+%     softer/smoother and that the slope is simply smaller compared to
+%     sharp data. There are also the cases of to sharp images, e.g.
+%     binarized data like the SPM segmention with very hard partial volume
+%     effect. 
+%     Of course there are side effects from noise but as far as we have an
+%     independent noise estimation we can maybe include this. 
+%     In addition, edges beween WM and CSF are stronger and the CSF/GM  
+%     boundary is probably blurred. Hence, we quantify only voxels at the 
+%     WM/GM boudnary and limit also the normalized images with some GM-like
+%     value. 
+%     The first tests are promissing
+% -------------------------------------------------------------------------
+for sm = 0 %-1:0.5:1
+  %%
+  Yms = Ym + 0; %sm = -1;
+  if sm<0, Yms = round(Ym*3)/3*(0-sm) + Yms*(1+sm); end 
+  spm_smooth(Yms,Yms,repmat(max(0,sm),3,1));
+  Ygrad   = cat_vol_grad(max(2/3,Yms .* (Yp0>0)) , vx_vol); 
+  [a,b,c] = cat_stat_kmeans(Ygrad(Yp0(:)>2.05 & Yp0(:)<2.95),1);
+  QAS.qualitymeasures.res_grad = abs( a - 1/3 ); 
+  %QAS.qualitymeasures.res_grad = (abs(a-1/4) + abs(b - 0.025) ) / mean(vx_vol); 
+  %fprintf(' s=%+0.2f:  %0.4f + %0.4f ~ %0.4f , %0.4f \n', sm, a ,b , b-a, abs(a-1/4) + abs(b-0.02) );
+  %ds('d2sm','',1,Yms,Ygrad,100)
+end  
+
+
+  
+
+%%  B) by smoothing (RD20220324)
+% -------------------------------------------------------------------------
+%      The basic idea was that smoothing has low effects on smooth data and
+%      that the difference between original and smoothed image should be 
+%      neglidable. However, this is of course also effected by noise and
+%      anatomical features and seems to be not stable enough to been used.
+% -------------------------------------------------------------------------
+sm = 0.2:0.05:1; clear a b, dx = 1; 
+smx = 0; Ym2 = Ym + 0; if smx<0, Ym2 = round(Ym2*3)/3*(0-smx) + Ym2*(1+smx); end 
+spm_smooth(Ym2,Ym2,repmat(max(0,smx),3,1));
+for smi = 1:numel(sm)
+  Yms    = Ym2 + 0; spm_smooth(Yms,Yms,repmat(sm(smi),3,1));
+  Ygrad  = (Ym2 - Yms) .* (Yp0>0);
+  Ymsk   = Yp0(:)>2 & Yp0(:)<3; %smooth3( Yp0>2 & Yp0<3 )>0.5; 
+  a(smi) = cat_stat_nanmean(Ygrad(Ymsk(:))); %,1);
+end  
+cx = diff(a,dx); cx = (cx - min(cx)) ./ ( max(cx) - min(cx)); 
+%if cx(1)==1; cx=flip(cx); end
+switch dx
+  case 1
+    % 0.55 to 0.45 to 0.35 
+  %  fprintf(' s=%+0.2f:  %0.4f %0.4f \n', smx, cx(1) , sm( find(diff([cx,inf])>0,1,'first')) ); %ds('d2sm','',1,Yms,Ygrad,100)
+  case 2
+  %  fprintf(' s=%+0.2f:  %0.4f %0.4f \n', smx, mean( diff(a,dx) ) , sm( find(cx>0.9,1,'first')) ); %ds('d2sm','',1,Yms,Ygrad,100)
+end
+%QAS.qualitymeasures.RESsmooth = 
+%figure(1000 + round(smx*10)); plot(sm(1:end-dx),cx)
+% -------------------------------------------------------------------------
+
+
+% Image/processing quality: Euler Number of Surface
+% -------------------------------------------------------------------------
+% It is known (and was shown) that lower image quality correlates with the 
+% number of surface defects. However, "abnormal" anatomy can also cause 
+% problems because sulci are blurred in children or gyri are underdeveloped 
+% /unmyelinated in childen or atrophied in elderly. 
+% Moreover, we avoid surface-based measures to be open for fast VBM solutions.
+% However, it would be possible to create an intial surface based on the 
+% WM segment and estimate the number of surface defects. 
+% -------------------------------------------------------------------------
+
+
       %% low resolution tissue intensity maps (smoothing)
       % High frequency noise is mostly uncritical as far as simple smoothing can reduce it. 
       % Although the very low frequency interferences (inhomogeneity) is unproblematic in most cases,  
@@ -833,7 +996,7 @@ function varargout = cat_vol_qa(action,varargin)
       %   and take care of overoptimisation with values strongly >1/3
       %   of the relative contrast
       contrast = min(abs(diff(QAS.qualitymeasures.tissue_mn(3:4)))) ./ abs(diff([min([CSFth,BGth]),max([WMth,GMth])])); % default contrast
-      contrast = contrast + min(0,13/36 - contrast)*1.2;                      % avoid overoptimsization
+      contrast = contrast + min(0,13/36 - contrast) * 1.2;                    % avoid overoptimsization
       QAS.qualitymeasures.contrast  = contrast * (max([WMth,GMth])); 
       QAS.qualitymeasures.contrastr = contrast;
 
@@ -845,7 +1008,7 @@ function varargout = cat_vol_qa(action,varargin)
       if 1
         NCww = sum(Ywn(:)>0) * prod(vx_vol);
         NCwc = sum(Ycn(:)>0) * prod(vx_vol);
-        [Yos2,YM2] = cat_vol_resize({Ywn,Ywn>0},'reduceV',vx_vol,3,16,'meanm');
+        [Yos2,YM2,R] = cat_vol_resize({Ywn,Ywn>0},'reduceV',vx_vol,3,16,'meanm');
         signal_intensity = abs( diff( [min(BGth,CSFth) , max(GMth,WMth)] )); 
         NCRw = estimateNoiseLevel(Yos2,YM2>0.5,nb,rms) / signal_intensity / contrast  ; 
       else     
@@ -854,13 +1017,14 @@ function varargout = cat_vol_qa(action,varargin)
         NCww = sum(Ywmn(:)) * prod(vx_vol);
         NCwc = sum(Ycm(:)) * prod(vx_vol);
         signal_intensity = abs( diff( [min(BGth,CSFth) , max(GMth,WMth)] )); 
-        [Yos2,YM2] = cat_vol_resize({Ywn,Ywmn},'reduceV',vx_vol,max(3 * min(vx_vol) ,3),16,'meanm');
+        [Yos2,YM2,R] = cat_vol_resize({Ywn,Ywmn},'reduceV',vx_vol,max(3 * min(vx_vol) ,3),16,'meanm');
         YM2 = cat_vol_morph(YM2,'o'); % we have to be sure that there are neigbors otherwise the variance is underestimated 
         NCRw = estimateNoiseLevel(Yos2,YM2>0.5,nb,rms) / signal_intensity / contrast  ; 
         if isnan(NCRw)
           NCRw = estimateNoiseLevel(Ywn,Ywmn,nb,rms) / signal_intensity / contrast  ; 
         end
       end
+      NCRw = NCRw * (1 + log(28 - prod(R.vx_red)))/(1 + log(28 - 1)); % compensate voxel averageing 
       if BGth<-0.1 && WMth<3, NCRw=NCRw/3; end% MT weighting
       clear Yos0 Yos1 Yos2 YM0 YM1 YM2;
         
@@ -869,11 +1033,11 @@ function varargout = cat_vol_qa(action,varargin)
       wcth = 200; 
       if CSFth<GMth && NCwc>wcth
         if 1
-          [Yos2,YM2] = cat_vol_resize({Ycn,Ycn>0},'reduceV',vx_vol,3,16,'meanm');
+          [Yos2,YM2,red] = cat_vol_resize({Ycn,Ycn>0},'reduceV',vx_vol,3,16,'meanm');
           NCRc = estimateNoiseLevel(Yos2,YM2>0.5,nb,rms) / signal_intensity  / contrast ; 
         else
           % RD202005: not correct working?
-          [Yos2,YM2] = cat_vol_resize({Ycn,Ycm},'reduceV',vx_vol,max(3 * min(vx_vol) ,3),16,'meanm');
+          [Yos2,YM2,red] = cat_vol_resize({Ycn,Ycm},'reduceV',vx_vol,max(3 * min(vx_vol) ,3),16,'meanm');
           NCRc = estimateNoiseLevel(Yos2,YM2>0.5,nb,rms) / signal_intensity / contrast ; 
           if isnan(NCRc)
             NCRc = estimateNoiseLevel(Ycn,Ycm,nb,rms) / signal_intensity / contrast ; 
@@ -889,18 +1053,21 @@ function varargout = cat_vol_qa(action,varargin)
       % Nitz W R. Praxiskurs MRT. Page 28.
       NCwc = min(wcth,max(0,NCwc-wcth)); NCww = min(wcth,NCww) - NCwc; % use CSF if possible
       if NCwc<3*wcth && NCww<10*wcth, NCRc = min(NCRc,NCRw); end
-      QAS.qualitymeasures.NCR = (NCRw*NCww + NCRc*NCwc)/(NCww+NCwc);
-      QAS.qualitymeasures.NCR = QAS.qualitymeasures.NCR * (prod(resr.vx_volo*res))^0.4 * 5/4; %* 7.5; %15;
+      QAS.qualitymeasures.NCR = max(0,NCRw*NCww + NCRc*NCwc)/(NCww+NCwc);
+      QAS.qualitymeasures.NCR = real( QAS.qualitymeasures.NCR * 3 ); % abs(prod(resr.vx_volo*res))^0.4 * 5/4);        %* 7.5; %15;
       %QAS.qualitymeasures.CNR = 1 / QAS.qualitymeasures.NCR;  
 %fprintf('NCRw: %8.3f, NCRc: %8.3f, NCRf: %8.3f\n',NCRw,NCRc,(NCRw*NCww + NCRc*NCwc)/(NCww+NCwc));
 
       
       %% Bias/Inhomogeneity (original image with smoothed WM segment)
-      Yosm = cat_vol_resize(Ywb,'reduceV',vx_vol,3,32,'meanm');      % resolution and noise reduction
-      for si=1:max(1,min(3,round(QAS.qualitymeasures.NCR*4))), mth = min(Yosm(:)) + 1; Yosm = cat_vol_localstat(Yosm + mth,Yosm~=0,1,1) - mth; end 
-      QAS.qualitymeasures.ICR  = cat_stat_nanstd(Yosm(Yosm(:)>0)) / signal_intensity / contrast;
+      Yosm = cat_vol_resize(Ywb,'reduceV',vx_vol,3,32,'meanm'); Yosmm = Yosm~=0;      % resolution and noise reduction
+      for si=1:max(1,min(3,round(QAS.qualitymeasures.NCR*4))), mth = min(Yosm(:)) + 1; Yosm = cat_vol_localstat(Yosm + mth,Yosmm,1,1) - mth; end 
+      % BWP-like definition 
+      QAS.qualitymeasures.ICR  = cat_stat_nanstd(Yosm(Yosmm(:))) / signal_intensity / contrast;
       %QAS.qualitymeasures.CIR  = 1 / QAS.qualitymeasures.ICR;
-
+      % local concept that could work also on the BWP?
+      Yosm2 = cat_vol_localstat(Yosm,Yosmm,1,4) / mean(red.vx_volr)/3;
+      QAS.qualitymeasures.ICR1 = cat_stat_nanstd(Yosm2(Yosmm(:))) / signal_intensity / contrast * 20;
       
   
       %% marks
@@ -920,9 +1087,15 @@ function varargout = cat_vol_qa(action,varargin)
 
   end
 
-  if nargout>1, varargout{2} = QAR; end
-  if nargout>0, varargout{1} = QAS; end 
-
+  if isempty(varargin) || isstruct(varargin{1})
+    varargout{1}.data = Pp0;
+    action = action2; 
+  else
+    if nargout>1, varargout{2} = QAR; end
+    if nargout>0, varargout{1} = QAS; end 
+  end
+  
+  
 end
 %=======================================================================
 function def=defaults
@@ -961,7 +1134,10 @@ function noise = estimateNoiseLevel(Ym,YM,r,rms,vx_vol)
     rms = 1;
   end
   
-  Ysd   = cat_vol_localstat(single(Ym),YM,r,4);
-  noise = cat_stat_nanstat1d(Ysd(YM).^rms,'median').^(1/rms); 
+  Ysd   = cat_vol_localstat(single(Ym),YM,r  ,4);
+  Ysd2  = cat_vol_localstat(single(Ym),YM,r+1,4); % RD20210617: more stable for sub-voxel resolutions ?
+  Ysd   = Ysd * mod(r,1) + (1-mod(r,1)) * Ysd2;   % RD20210617: more stable for sub-voxel resolutions ?
+  %noise = cat_stat_nanstat1d(Ysd(YM).^rms,'median').^(1/rms); % RD20210617: 
+  noise = cat_stat_kmeans(Ysd(YM),1); % RD20210617: more robust ? 
 end
 %=======================================================================

@@ -38,9 +38,9 @@ function varargout = cat_surf_display(varargin)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_surf_display.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_surf_display.m 1975 2022-03-21 08:00:58Z dahnke $
 
-  SVNid = '$Rev: 1791 $';
+  SVNid = '$Rev: 1975 $';
   if nargout>0, varargout{1}{1} = []; end   
 
   if nargin>0
@@ -93,7 +93,7 @@ function varargout = cat_surf_display(varargin)
   job = cat_io_checkinopt(job,def);
   
   %% ... need further development 
-  sinfo = cat_surf_info(job.data,job.readsurf,job.usefsaverage);
+  sinfo = cat_surf_info(job.data,job.readsurf,0,0,job.usefsaverage);
 
   if job.verb
     spm('FnBanner',mfilename,SVNid); 
@@ -320,6 +320,14 @@ function varargout = cat_surf_display(varargin)
             end
         end    
       else
+        switch sinfo(i).texture
+          case {'longThicknessChanges'}
+            if expert<2
+              h = cat_surf_render('ColourMap',h.axis,flip(cat_io_colormaps('BWR',128),1)); 
+            else
+              h = cat_surf_render2('ColourMap',h.axis,flip(cat_io_colormaps('BWR',128),1)); 
+            end
+        end
         if expert<2
           cat_surf_render('clim',h.axis,job.caxis);
         else

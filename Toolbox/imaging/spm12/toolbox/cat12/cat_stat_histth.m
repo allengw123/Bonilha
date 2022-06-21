@@ -48,7 +48,7 @@ function varargout = cat_stat_histth(src,percent,opt)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_stat_histth.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_stat_histth.m 1968 2022-03-06 20:21:34Z dahnke $
 
 
   %% check input
@@ -74,6 +74,8 @@ function varargout = cat_stat_histth(src,percent,opt)
   if nargin==0, help cat_stat_histth; return; end
   if ~exist('percent','var') || isempty(percent)
     tol = [ 0.002 0.002 ]; 
+  elseif percent == 0
+    tol = [ 0 0 ];
   else
     if numel(percent)==1, percent(2) = percent(1); end
     for pi = 1:2
@@ -109,12 +111,21 @@ function varargout = cat_stat_histth(src,percent,opt)
   if opt.verb, srco=src; end
   % Use the last value below tol rather than the first value above tol to 
   % avoid problems 
-  ind    = max( [1,find(hp<tol(1),1,'last')]); 
-  ths(1) = mean( hval( ind:min(ind+1,numel(hval) ) ) ); 
-  src(src<ths(1)) = ths(1); 
+  if tol(1)
+    ind    = max( [1,find(hp<tol(1),1,'last')]); 
+    ths(1) = mean( hval( ind:min(ind+1,numel(hval) ) ) ); 
+  else
+    ths(1) = min(src(:)); 
+  end
   % upper limit
-  ind    = min( [numel(hval) , find(hp>(1-tol(2)),1,'first') ] ); 
-  ths(2) = mean( hval( max(1,ind-1):ind ) ); 
+  if tol(2)
+    ind    = min( [numel(hval) , find(hp>(1-tol(2)),1,'first') ] ); 
+    ths(2) = mean( hval( max(1,ind-1):ind ) ); 
+  else
+    ths(2) = max(src(:));
+  end
+  % apply limits
+  src(src<ths(1)) = ths(1); 
   src(src>ths(2)) = ths(2); 
   
   if ~isempty(opt.scale) && opt.scale(1)~=opt.scale(2) && diff(ths)~=0

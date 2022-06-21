@@ -11,7 +11,7 @@ function cat_run_newcatch(job,tpm,subj)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Revision: 1801 $  $Date: 2021-04-14 16:47:05 +0200 (Mi, 14 Apr 2021) $
+% $Revision: 1955 $  $Date: 2022-02-28 14:59:17 +0100 (Mon, 28 Feb 2022) $
 
   global cat_err_res;
 
@@ -52,7 +52,7 @@ function cat_run_newcatch(job,tpm,subj)
       caterr = addCause(caterr,adderr);
     end
     
-    mrifolder = cat_io_subfolders(job.channel(1).vols{subj},job);
+    [mrifolder, reportfolder, surffolder, labelfolder, errfolder] = cat_io_subfolders(job.channel(1).vols{subj},job);
 
     cat_io_cprintf('err',sprintf('\n%s\nCAT Preprocessing error for %s:\n%s\n%s\n%s\n', ...
       repmat('-',1,72),nam,repmat('-',1,72),caterr.message,repmat('-',1,72)));  
@@ -167,15 +167,12 @@ function cat_run_newcatch(job,tpm,subj)
 
     %% send error information, CAT12 version and computer system
     if cat_get_defaults('extopts.send_info') && ~ignore_message && job.extopts.expertgui<2 && job.extopts.ignoreErrors<2
-      [v,rev] = cat_version; expertguistr = ' ed';
-      str_err = sprintf('%s%s|',rev,deblank(expertguistr(job.extopts.expertgui + 1))); % revision and guilevel
+      [CATrel,CATver] = cat_version; expertguistr = ' ed';
+      str_err = sprintf('%s%s|',['r' CATver],deblank(expertguistr(job.extopts.expertgui + 1))); % revision and guilevel
       for si=1:numel(caterr.stack)
         str_err = [str_err '|' caterr.stack(si).name ':' num2str(caterr.stack(si).line)];
       end      
-      str_err = str_err(2:end); % remove first "|"
-      [CATrel, CATver] = cat_version;
       urlinfo = sprintf('%s/%s/%s/%s/%s/%s/%s',CATrel,computer,'errors',['r' CATver],caterr_id,caterr_message_str,str_err);
-%      urlinfo = sprintf('%s%s%s%s%s%s%s%s%s%s%s%s',CATrel,'%2F',computer,'%2F','errors','%2F',CATver,'%2F',caterr_id,'%2F',caterr_message_str,str_err);
       cat_io_send_to_server(urlinfo);
     end
 
@@ -213,36 +210,46 @@ function cat_run_newcatch(job,tpm,subj)
         delete(fullfile(pth,mrifolder,['n' nam ext]));
       end
     end
-    
-    if job.extopts.subfolders
-      reportfolder = 'report';
-    else
-      reportfolder = '';
+        
+    % create mail report for serial processing
+    if ~isfield(job,'process_index') && feature('ShowFigureWindows')
+      promptMessage = sprintf('Do you want to send error message?');
+      button = questdlg(promptMessage, 'Error message', 'Yes', 'No', 'Yes');
+      if strcmpi(button, 'Yes')
+        catfile = fullfile(pth,reportfolder,['cat_' nam '.xml']);
+        logfile = fullfile(pth,reportfolder,['catlog_' nam '.txt']);
+        cat_io_senderrormail(catfile,logfile);
+      end
     end
+    
     % create an error directory with errortype subdirectory for all failed datasets
     % copy the cat*.xml and catreport_*pdf 
     % create a symbolic link of the original file
+    
     if job.extopts.subfolders
-      %%
-      errfolder    = 'err';
-      [ppe,ffe]    = spm_fileparts(caterr.stack(1).file); 
-      suberrfolder = sprintf('%s.line%d.%s',ffe,caterr.stack(1).line,caterr.identifier); 
-      suberrfolder = char(regexp(strrep(suberrfolder,':','.'),'[A-Za-z0-9_.\- ]','match'))'; % remove bad chars
-      suberrfolder = strrep(suberrfolder,' ','_');
-      if ~exist(fullfile(pth,errfolder,suberrfolder),'dir'), mkdir(fullfile(pth,errfolder,suberrfolder)); end
-      catfile = fullfile(pth,reportfolder,['cat_' nam '.xml']);
-      logfile = fullfile(pth,reportfolder,['catlog_' nam '.txt']);
-      repfile = fullfile(pth,reportfolder,['catreport_' nam '.pdf']);
-      rejfile = fullfile(pth,reportfolder,['catreport_' nam '.jpg']);
-      if exist(catfile,'file'), copyfile(catfile,fullfile(pth,errfolder,suberrfolder),'f'); end
-      if exist(logfile,'file'), copyfile(logfile,fullfile(pth,errfolder,suberrfolder),'f'); end
-      if exist(repfile,'file'), copyfile(repfile,fullfile(pth,errfolder,suberrfolder),'f'); end
-      if exist(rejfile,'file'), copyfile(rejfile,fullfile(pth,errfolder,suberrfolder),'f'); end
-      if ismac || isunix
-        [ST, RS] = system(sprintf('ln -s -F "%s" "%s"',...
-          fullfile(pth,[nam ext]),fullfile(pth,errfolder,suberrfolder,[nam ext])));
-          cat_check_system_output(ST,RS,job.extopts.verb>2);
-      end  
+      try
+        %%
+        [ppe,ffe]    = spm_fileparts(caterr.stack(1).file); 
+        suberrfolder = sprintf('%s.line%d.%s',ffe,caterr.stack(1).line,caterr.identifier); 
+        suberrfolder = char(regexp(strrep(suberrfolder,':','.'),'[A-Za-z0-9_.\- ]','match'))'; % remove bad chars
+        suberrfolder = strrep(suberrfolder,' ','_');
+        if ~exist(fullfile(pth,errfolder,suberrfolder),'dir'), mkdir(fullfile(pth,errfolder,suberrfolder)); end
+        catfile = fullfile(pth,reportfolder,['cat_' nam '.xml']);
+        logfile = fullfile(pth,reportfolder,['catlog_' nam '.txt']);
+        repfile = fullfile(pth,reportfolder,['catreport_' nam '.pdf']);
+        rejfile = fullfile(pth,reportfolder,['catreport_' nam '.jpg']);
+        if exist(catfile,'file'), copyfile(catfile,fullfile(pth,errfolder,suberrfolder),'f'); end
+        if exist(logfile,'file'), copyfile(logfile,fullfile(pth,errfolder,suberrfolder),'f'); end
+        if exist(repfile,'file'), copyfile(repfile,fullfile(pth,errfolder,suberrfolder),'f'); end
+        if exist(rejfile,'file'), copyfile(rejfile,fullfile(pth,errfolder,suberrfolder),'f'); end
+        if ismac || isunix
+          [ST, RS] = system(sprintf('ln -s -F "%s" "%s"',...
+            fullfile(pth,[nam ext]),fullfile(pth,errfolder,suberrfolder,[nam ext])));
+            cat_check_system_output(ST,RS,job.extopts.verb>2);
+        end
+      catch 
+        cat_io_printf('warn','Warning: Cleanup error\.'); 
+      end
     end
     
     %% rethrow error 

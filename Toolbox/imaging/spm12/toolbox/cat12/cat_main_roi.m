@@ -46,7 +46,7 @@ function cat_main_roi(job,trans,Ycls,Yp0,opt)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_main_roi.m 1842 2021-06-01 14:41:58Z gaser $
+% $Id: cat_main_roi.m 1921 2021-12-13 13:31:32Z dahnke $
   
   if ~exist('opt','var'), opt = struct(); end
   def.type   = 1;     % 1 - native space, 2 - atlas space push, 3 - atlas space pull
@@ -85,7 +85,11 @@ function cat_main_roi(job,trans,Ycls,Yp0,opt)
     
     % add WMHC class if there is an extra class (WMHC==3)
     if job.extopts.WMHC == 3   
-      FA{fai-1,3} = unique( [FA{fai-1,3} {'wmh'}] ); %#ok<AGROW>
+      if fai-1 > 0
+        FA{fai-1,3} = unique( [FA{fai-1,3} {'wmh'}] ); %#ok<AGROW>
+      else
+        cat_io_cprintf('warn',sprintf('    Indexing faild. Could not consider WMHs! \n')); 
+      end
     end
   end
 
@@ -127,9 +131,10 @@ function cat_main_roi(job,trans,Ycls,Yp0,opt)
     mati        = trans.affine.mat(13:15) - VA(ai).mat(13:15); 
     vdim        = spm_imatrix( VA(ai).mat ); % trans.affine.mat ); 
     matit       = mati(1:3) ./ vdim(7:9); 
-    for i=1:3, transw.y(:,:,:,i) = transw.y(:,:,:,i) .* job.extopts.vox ./ VAvx_vol(ai,i);  end
+    % use vox(1) because vox can have multiple values in development mode
+    for i=1:3, transw.y(:,:,:,i) = transw.y(:,:,:,i) .* job.extopts.vox(1) ./ VAvx_vol(ai,i);  end 
     transw.y    = cat(4,transw.y(:,:,:,1) + matit(1), transw.y(:,:,:,2) + matit(2), transw.y(:,:,:,3) + matit(3) );
-    transw.ViVt = prod(vx_vol) ./ job.extopts.vox^3;
+    transw.ViVt = prod(vx_vol) ./ job.extopts.vox(1)^3;
     
     if opt.type == 3
       % Modulation using spm_diffeo and push introduces aliasing artefacts,
@@ -141,7 +146,7 @@ function cat_main_roi(job,trans,Ycls,Yp0,opt)
       % avoid boundary effects that are not good for the global measurements 
       transw.w(:,:,[1 end]) = NaN; transw.w(:,[1 end],:) = NaN; transw.w([1 end],:,:) = NaN;
       % filter the resampled data to reduce interpolation artefacts 
-      transw.fs = transw.fs .* job.extopts.vox ./ VAvx_vol(ai,i);
+      transw.fs = transw.fs .* job.extopts.vox(1) ./ VAvx_vol(ai,i);
       spm_smooth(transw.w,transw.w,transw.fs); % filter determinant to reduce interpolation artefacts 
       clear maxw;
     end
@@ -151,7 +156,7 @@ function cat_main_roi(job,trans,Ycls,Yp0,opt)
       wYp0    = cat_vol_roi_map2atlas(Yp0 ,transw,0,opt.type==3);
       wYcls   = cat_vol_roi_map2atlas(Ycls,transw,1,opt.type==3);
       wYa     = cat_vol_roi_load_atlas(FA{ai,1});
-      vx_volw = repmat(job.extopts.vox,1,3);
+      vx_volw = repmat(job.extopts.vox(1),1,3);
     else
       wYa = cat_vol_roi_load_atlas(FA{ai,1}, transw);
     end
@@ -344,6 +349,7 @@ function csv = cat_vol_ROIestimate(Yp0,Ya,Yv,ai,name,csv,tissue,FA,vx_vox)
 
   [pp,ff] = fileparts(FA{ai,1});
   csvf = fullfile(pp,[ff '.csv']);
+  csvf = char( min(255, max(0, double( csvf ))));
   
   if isempty(csv) 
     if exist(csvf,'file')
@@ -356,12 +362,11 @@ function csv = cat_vol_ROIestimate(Yp0,Ya,Yv,ai,name,csv,tissue,FA,vx_vox)
         cellstr([repmat('ROI',numel(IDs),1) num2str(IDs,'%03d')])];
     end
     
-    % remove empty rows and prepare structure names
+    % remove empty rows, text lines and prepare structure names 
     if size(csv,2)>2, csv(:,3:end)=[]; end
     for ri=size(csv,1):-1:1
-      if isempty(csv{ri,1}) || isempty(csv{ri,2}) 
-        csv(ri,:)=[];
-      elseif csv{ri,1}==0
+      if isempty(csv{ri,1}) || isempty(csv{ri,2}) ||  ...
+         any(csv{ri,1}==0) || (ri>2 && ~isnumeric(csv{ri,1}))
         csv(ri,:)=[];
       end       
     end
@@ -377,17 +382,19 @@ function csv = cat_vol_ROIestimate(Yp0,Ya,Yv,ai,name,csv,tissue,FA,vx_vox)
     switch name(1)
       case 'V' % volume
         csv{1,end+1} = [name tissue{ti}];  %#ok<AGROW>
-        for ri=2:size(csv,1)
-          switch lower(tissue{ti})
-            case 'csf',    Ymm = single(Yv{3}) .* single(Ya==csv{ri,1});
-            case 'gm',     Ymm = single(Yv{1}) .* single(Ya==csv{ri,1});
-            case 'wm',     Ymm = single(Yv{2}) .* single(Ya==csv{ri,1});
-            case 'wmh',    Ymm = single(Yv{7}) .* single(Ya==csv{ri,1}); 
-            case 'brain',  Ymm = single(Yv{1} + Yv{2} + Yv{3} + Yv{7}) .* single(Ya==csv{ri,1});
-            case 'tissue', Ymm = single(        Yv{2} + Yv{3} + Yv{7}) .* single(Ya==csv{ri,1});
-            case '',       Ymm = single(Ya==csv{ri,1});
+        for ri=1:size(csv,1)
+          if isnumeric(csv{ri,1})
+            switch lower(tissue{ti})
+              case 'csf',    Ymm = single(Yv{3}) .* single(Ya==csv{ri,1});
+              case 'gm',     Ymm = single(Yv{1}) .* single(Ya==csv{ri,1});
+              case 'wm',     Ymm = single(Yv{2}) .* single(Ya==csv{ri,1});
+              case 'wmh',    Ymm = single(Yv{7}) .* single(Ya==csv{ri,1}); 
+              case 'brain',  Ymm = single(Yv{1} + Yv{2} + Yv{3} + Yv{7}) .* single(Ya==csv{ri,1});
+              case 'tissue', Ymm = single(        Yv{2} + Yv{3} + Yv{7}) .* single(Ya==csv{ri,1});
+              case '',       Ymm = single(Ya==csv{ri,1});
+            end
+            csv{ri,end} = 1/1000 * cat_stat_nansum(Ymm(:)) .* prod(vx_vox);
           end
-          csv{ri,end} = 1/1000 * cat_stat_nansum(Ymm(:)) .* prod(vx_vox);
         end
       otherwise % 
         csv{1,end+1} = strrep([name tissue{ti}],'Tgm','ct');  %#ok<AGROW>
@@ -400,10 +407,11 @@ function csv = cat_vol_ROIestimate(Yp0,Ya,Yv,ai,name,csv,tissue,FA,vx_vox)
           case 'tissue', Ymm = Yp0>1.5;
           case '',       Ymm = true(size(Yp0));
         end
-        for ri=2:size(csv,1)
-          csv{ri,end} = cat_stat_nanmean(Yv(Ya(:)==csv{ri,1} & Ymm(:)));
+        for ri=1:size(csv,1)
+          if isnumeric(csv{ri,1})
+            csv{ri,end} = cat_stat_nanmean(Yv(Ya(:)==csv{ri,1} & Ymm(:)));
+          end
         end
     end
   end
-  
 return

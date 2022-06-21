@@ -23,7 +23,7 @@ function [prob,indx,indy,indz,th,Yrep] = cat_main_amap(Ymi,Yb,Yb0,Ycls,job,res)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_main_amap.m 1834 2021-05-28 14:45:20Z dahnke $ 
+% $Id: cat_main_amap.m 1946 2022-02-14 11:23:23Z dahnke $ 
 
   global cat_err_res
 
@@ -65,9 +65,10 @@ function [prob,indx,indy,indz,th,Yrep] = cat_main_amap(Ymi,Yb,Yb0,Ycls,job,res)
           % find maximum for reordered segmentations
           [maxi,maxind] = max(cls2(:,:,[3,1,2,4:Kb2]),[],3);
           for k1 = 1:Kb2
-            Yp0(:,:,i) = Yp0(:,:,i) + cat_vol_ctype((maxind == k1) .* (maxi~=0) * k1ind(k1) .* Yb(:,:,i)); 
+            Yp0(:,:,i) = Yp0(:,:,i) + cat_vol_ctype((maxind == k1) .* (maxi~=0) * k1ind(k1) .* min(1,Yb(:,:,i))); 
           end
       end
+      Yp0 = min(3,Yp0);
       if ~debug, clear maxi maxind Kb k1 cls2; end
   
       
@@ -221,9 +222,9 @@ end
     % RD202006 the bias_fwhm paraemter (and/or other) cause also MATLAB crashes in the ignoreError pipeline 
     % RD202104 sub has to be large because the AMAP bias corrections seams to be in-optimal and caused bad threshold 
     % RD202104 Ymib should only include positive values
-    n_iters = 10; sub = round(64/mean(vx_vol));   %#ok<NASGU>
-    n_classes = 3;  pve = 5; bias_fwhm = 0; init_kmeans = 0;           %#ok<NASGU>
-    if job.extopts.mrf~=0, iters_icm = 50; else iters_icm = 0; end    %#ok<NASGU>
+    n_iters = 10; sub = round(64/mean(vx_vol));   
+    n_classes = 3;  pve = 5; bias_fwhm = 0; init_kmeans = 0;          
+    if job.extopts.mrf~=0, iters_icm = 50; else, iters_icm = 0; end  
     if 0 %job.extopts.ignoreErrors > 2 || job.extopts.inv_weighting
       % init_kmeans = 0; % k-means was not stable working (e.g. HR075T2) 
       %                  % and it is better to use also here the previous intensity scaling  
@@ -233,38 +234,38 @@ end
       %                                  % but I will try the pve5 again after Christians comments  
       %
       % we need more iterations and also some bias correction here because LAS is missing
-      n_iters = 200; %#ok<NASGU>
+      n_iters = 200; 
       % bias_fwhm = 60; % using bias_fwhm=60 caused MATLAB errors so we only use more iterations 
     end
 
 
     % remove noisy background for kmeans
-    if init_kmeans && job.extopts.ignoreErrors < 3, Ymib(Ymib<0.1) = 0; end %#ok<NASGU>
+    if init_kmeans && job.extopts.ignoreErrors < 3, Ymib(Ymib<0.1) = 0; end 
 
-    %% do segmentation  
-    amapres = evalc(['prob = cat_amap(Ymib, Yp0b, n_classes, n_iters, sub, pve, init_kmeans, ' ...
-      'job.extopts.mrf, vx_vol, iters_icm, bias_fwhm);']);
+    % do segmentation  
+    [prob,amap_means,amap_stds] = cat_amap(Ymib, Yp0b, n_classes, n_iters, sub, pve, init_kmeans,  ...
+      job.extopts.mrf, vx_vol, iters_icm, bias_fwhm); 
     fprintf('%5.0fs\n',etime(clock,stime));
 
-    %% analyse segmentation ... the input Ym is normalized an the tissue peaks should be around [1/3 2/3 3/3]
-    amapres = textscan(amapres,'%s'); amapres = amapres{1}; 
-    th{1}   = cell2mat(textscan(amapres{11},'%f*%f')); 
-    th{2}   = cell2mat(textscan(amapres{12},'%f*%f')); 
-    th{3}   = cell2mat(textscan(amapres{13},'%f*%f')); 
-
+    % analyse segmentation ... the input Ym is normalized an the tissue peaks should be around [1/3 2/3 3/3]
+    th = {[amap_means(1) amap_stds(1)],[amap_means(2) amap_stds(2)],[amap_means(3) amap_stds(3)]}; 
+  
+    
     if job.extopts.AMAPframing
+      prob = zeros([size(Ybb),3],'uint8');
       for i=1:3, prob(:,:,:,i) = prob(:,:,:,i) .* uint8(Ybb); end
     end
     clear Ybb;
     
 
-    if job.extopts.verb>1 
+    if job.extopts.verb>1
+      if strcmpi(spm_check_version,'octave'), pm = '+/-'; else, pm = char(177); end
       if (th{1}(1) < th{2}(1)) && (th{2}(1) < th{3}(1)) % T1 
         fprintf('    AMAP peaks: [CSF,GM,WM] = [%0.2f%s%0.2f,%0.2f%s%0.2f,%0.2f%s%0.2f]\n',...
-          th{1}(1),char(177),th{1}(2),th{2}(1),char(177),th{2}(2),th{3}(1),char(177),th{3}(2));
+          th{1}(1),pm,th{1}(2),th{2}(1),pm,th{2}(2),th{3}(1),pm,th{3}(2));
       else
         fprintf('    AMAP peaks: [%0.2f%s%0.2f,%0.2f%s%0.2f,%0.2f%s%0.2f]\n',...
-          th{1}(1),char(177),th{1}(2),th{2}(1),char(177),th{2}(2),th{3}(1),char(177),th{3}(2));
+          th{1}(1),pm,th{1}(2),th{2}(1),pm,th{2}(2),th{3}(1),pm,th{3}(2));
       end
     end
     % if one of the peaks is NaN than create an error
@@ -293,8 +294,6 @@ end
     end
     
     if isfield(job.extopts,'inv_weighting') && job.extopts.inv_weighting % job.extopts.ignoreErrors > 1 &&
-      cat_io_addwarning('cat_main_amap:mixSPMAMAP','Mix SPM and AMAP segmentation. Use SPM in case of strong differences.',1,[0 1]) 
-      
       % RD202006: catching of problems in low quality data - in development 
       probs = prob; 
       ap = [3 1 2]; if numel(Ycls)==7, ap(4)=7; end
@@ -302,12 +301,16 @@ end
       % WMHC
       probs(:,:,:,2) = sum( probs(:,:,:,2:2:end) ,4); 
       
-      Yp0s = (single(probs(:,:,:,1)) + single(probs(:,:,:,2))*2 + single( probs(:,:,:,3))*3)/255/3;
-      Yp0  = (single(prob(:,:,:,1)) + single(prob(:,:,:,2))*2 + single(prob(:,:,:,3))*3)/255/3;
+      Yp0s = (single(probs(:,:,:,1)) + single(probs(:,:,:,2))*2 + single( probs(:,:,:,3))*3)/255/3; % SPM  segmentation 
+      Yp0  = (single(prob(:,:,:,1))  + single(prob(:,:,:,2))*2  + single(prob(:,:,:,3))*3)/255/3;     % AMAP segmentation
       if ( sum(abs(Yp0s(:) - Yp0(:))>0.4) / sum(Yp0(:)>0.5) ) > 0.02
         Yrep = min(1, abs(Yp0s - Yp0) * 3); % * 1 = low correction (less SPM) uint8( abs(Yp0s - Yp0) > 0.3  &  Yp0s>0.1); 
         prob2 = prob; 
         for i=1:3, prob2(:,:,:,i) = cat_vol_ctype( single(prob(:,:,:,i)) .* (1-Yrep) + Yrep .* single(probs(:,:,:,i)) ); end
+      
+        %rep = mean(Yrep(Yp0(:)))*100; 
+        %cat_io_addwarning('cat_main_amap:mixSPMAMAP',sprintf( 'Mix SPM and AMAP segmentation. Use SPM in case of strong differences (%0.2f%%).',rep),1,[0 1]) 
+      
         %Yp0c = (single(prob2(:,:,:,1)) + single(prob2(:,:,:,2))*2 + single(prob2(:,:,:,3))*3)/255/3;
       else
         Yrep = false(size(Ymib)); 

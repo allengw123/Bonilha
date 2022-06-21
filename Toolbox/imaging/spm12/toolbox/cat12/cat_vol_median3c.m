@@ -11,6 +11,13 @@
 %  Bi (logical) .. 3D matrix that mark voxel that should be filtered
 %  Bn (logical) .. 3D matrix that mark voxel that are used as neighbors 
 % 
+%  Examples: 
+%   1)
+%     A = round(smooth3(rand(50,50,3,'single')*3));
+%     B = false(size(A)); B(5:end-4,5:end-4,:)=true; 
+%     C = cat_vol_median3c(A,B); C = cat_vol_median3c(C,B); 
+%     ds('d2smns','',1,A+B,C,2);
+%
 %  See also cat_vol_median3, compile.
 % ______________________________________________________________________
 %
@@ -19,4 +26,4 @@
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-%  $Id: cat_vol_median3c.m 1791 2021-04-06 09:15:54Z gaser $
+%  $Id: cat_vol_median3c.m 1913 2021-11-28 20:44:47Z dahnke $

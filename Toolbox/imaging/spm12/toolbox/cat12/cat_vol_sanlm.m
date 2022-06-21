@@ -41,9 +41,9 @@ function out = cat_vol_sanlm(varargin)
 %     
 %      0                  .. no denoising 
 %      1                  .. full denoising (original sanlm)
-%      2                  .. "light":   NCstr=-0.5, red=0, fred=0; miter=0 
-%      3 | -inf           .. "medium":  NCstr=-1.0, red=1, fred=0; miter=0
-%      4                  .. "strong":  NCstr= 1.0, red=1, fred=1; miter=1
+%      2                  .. "light":   NCstr=-0.5, red=0, fred=0; iterm=0 
+%      3 | -inf           .. "medium":  NCstr=-1.0, red=1, fred=0; iterm=0
+%      4                  .. "strong":  NCstr= 1.0, red=1, fred=1; iterm=1
 %      0 < job.NCstr < 1  .. automatic global correction with user weighting
 %     -9 < job.NCstr < 0  .. automatic local correction with user weighting
 %      inf                .. global automatic correction
@@ -61,7 +61,7 @@ function out = cat_vol_sanlm(varargin)
 %   .fred                 .. force resolution reduction 
 %   .iter                 .. additional iterations on the reduced resolution
 %                            (default = 0)
-%   .miter                .. additional main iterations of the full filter
+%   .iterm                .. additional main iterations of the full filter
 %                            (default = 0)
 %
 % Some MR images were interpolated or use a limited frequency spectrum to 
@@ -86,7 +86,7 @@ function out = cat_vol_sanlm(varargin)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_vol_sanlm.m 1842 2021-06-01 14:41:58Z gaser $
+% $Id: cat_vol_sanlm.m 1982 2022-04-12 11:09:13Z dahnke $
 
     % this function adds noise to the data to stabilize processing and we
     % have to define a specific random pattern to get the same results each time
@@ -119,8 +119,17 @@ function out = cat_vol_sanlm(varargin)
     def.red                         = 1;         % number of reductions (be careful using values greater 1!)
     def.fred                        = 0;         % force reduce
     def.iter                        = 0;         % additional inner iterations on the reduced resolution
-    def.miter                       = 0;         % additional main iterations of the full filter
-    varargin{1} = cat_io_checkinopt(varargin{1},def);
+    def.iterm                       = 0;         % additional main iterations of the full filter
+    def.lazy                        = 1;         % avoid reprocessing if file exist 
+    job = varargin; 
+    if isfield(job{1},'nlmfilter')
+      subfield = fieldnames(job{1}.nlmfilter); 
+      FN = fieldnames(job{1}.nlmfilter.(subfield{1})); 
+      for fni = 1:numel(FN)
+        job{1}.(FN{fni}) = job{1}.nlmfilter.(subfield{1}).(FN{fni}); 
+      end
+    end
+    job{1} = cat_io_checkinopt(job{1},def);
     
     % special cases of the CAT GUI
     if isfield(varargin{1},'nlmfilter') 
@@ -130,23 +139,25 @@ function out = cat_vol_sanlm(varargin)
         varargin{1} = cat_io_checkinopt(varargin{1}.nlmfilter.expert,varargin{1});
       end
     end
-    switch varargin{1}.NCstr
-      case 2,        varargin{1}.NCstr =  -0.5; varargin{1}.red = 0; varargin{1}.fred = 0; varargin{1}.miter = 0; % light
-      case {3,-inf}, varargin{1}.NCstr =  -1.0; varargin{1}.red = 1; varargin{1}.fred = 0; varargin{1}.miter = 0; % medium
-      case 4,        varargin{1}.NCstr =   1.0; varargin{1}.red = 1; varargin{1}.fred = 1; varargin{1}.miter = 1; varargin{1}.iter = 1;% strong
-    end 
+    if nargin > 0 && isstruct(varargin{1}) && isfield(varargin{1},'NCstr')
+      switch varargin{1}.NCstr
+        case 2,        varargin{1}.NCstr =  -0.5; varargin{1}.red = 0; varargin{1}.fred = 0; varargin{1}.iterm = 0; % light
+        case {3,-inf}, varargin{1}.NCstr =  -1.0; varargin{1}.red = 1; varargin{1}.fred = 0; varargin{1}.iterm = 0; % medium
+        case 4,        varargin{1}.NCstr =   1.0; varargin{1}.red = 1; varargin{1}.fred = 1; varargin{1}.iterm = 1; varargin{1}.iter = 1;% strong
+      end 
+    end
     
     if nargin <= 1 && isstruct(varargin{1}) % job structure input
-        out.files = cat_vol_sanlm_file(varargin{1});
+        out.files = cat_vol_sanlm_file(job{1});
     else % image input
-        out = cat_vol_sanlm_filter(varargin{:});
+        out = cat_vol_sanlm_filter(job{:});
     end
 
 end
 
 %_______________________________________________________________________
 function varargout = cat_vol_sanlm_file(job)
-    SVNid = '$Rev: 1842 $';
+    SVNid = '$Rev: 1982 $';
     
     if ~isfield(job,'data') || isempty(job.data)
      job.data = cellstr(spm_select([1 Inf],'image','select images to filter'));
@@ -221,7 +232,9 @@ function varargout = cat_vol_sanlm_file(job)
     spm_progress_bar('Init',numel(job.data),'SANLM-Filtering','Volumes Complete');
 
     for i = 1:numel(job.data)
+      if ~job.lazy || cat_io_rerun( job.data{1} , varargout{1}{i} )
         cat_vol_sanlm_filter(job,V,i);
+      end
     end
 
     if isfield(job,'process_index') && job.verb, fprintf('Done\n'); end
@@ -250,7 +263,7 @@ function src2 = cat_vol_sanlm_filter(job,V,i,src)
       src = single(src);
     end
         
-    for im=1:1+job.miter;   
+    for im=1:1+job.iterm  
       % prevent NaN and INF
       if job.replaceNANandINF
         src(isnan(src)) = 0;
@@ -274,7 +287,7 @@ function src2 = cat_vol_sanlm_filter(job,V,i,src)
         
         jobr            = job;
         jobr.red        = job.red - 1;     
-        jobr.miter      = 0; 
+        jobr.iterm      = 0; 
         jobr.addnoise   = 0;                        % no additional noise on lower resolution 
         jobr.resolutionDependency      = 1;         % resolution depending filter strength
         jobr.resolutionDependencyRange = [1 1.6];   % [full-correction no-correction]
@@ -336,7 +349,7 @@ function src2 = cat_vol_sanlm_filter(job,V,i,src)
       cat_sanlm(src,3,1,job.rician);
       src = src + srcth(1);  % reset negative values 
       src = (src / 100) * th; 
-      if job.verb>1 && (nargin>3 || NCstrr>0) && im<1+job.miter
+      if job.verb>1 && (nargin>3 || NCstrr>0) && im<1+job.iterm
         if job.verb>1 && (nargin>3 || NCstrr>0), cat_io_cprintf('g5',sprintf('  %5.0fs\n',etime(clock,stime))); end
       end
     end
@@ -529,23 +542,38 @@ function src2 = cat_vol_sanlm_filter(job,V,i,src)
             % that red means failed filtering ...
             %   green > low filtering 
             %   red   > strong filtering
-            if NCstr(NCstri)>0 || isinf(NCstr(NCstri))
-                fprintf('NCstr = '); 
-                cat_io_cprintf( color( ( ( abs(NCstr(NCstri)) ) * 6 )) , ...
-                    sprintf('%- 5.2f > %4.2f', job.NCstr(NCstri) , abs(NCstr(NCstri)) ));
-                cat_io_cprintf( [0 0 0] , ', '); % restore default color!
+            % create some further parameter output for experts
+            FNs = {'filtername'};
+            FNf = {'NCstr'};
+            if cat_get_defaults('extopts.expertgui')
+              FNi = {'rician','intlim','outlier','addnoise','red','fred','iter','iterm'};
+            else
+              FNi = {};
+            end
+            parastr = ['''name = ' job.prefix '*' job.suffix ''';' ];
+            %for fni = 1:numel(FNs) 
+            %  parastr = [parastr sprintf('''%s = %s''; ', FNs{fni}, job.(FNs{fni}))];  %#ok<AGROW>
+            %end
+            for fni = 1:numel(FNf) 
+              parastr = [parastr sprintf('''%s = %0.2f''; ', FNf{fni}, job.(FNf{fni}))];  %#ok<AGROW>
+            end
+            for fni = 1:numel(FNi) 
+              parastr = [parastr sprintf('''%s = %d''; ', FNi{fni}, job.(FNi{fni}))];  %#ok<AGROW>
             end
             
-            % this is a long string but it loads the original and the filtered
-            % image for comparison
+            %% spm_orthview preview
+            %  This is a long string but it loads the original and the filtered
+            %  image for comparison (with  parameter settings)
             fprintf('%5.0fs, Output %s\n',etime(clock,stimef),...
               spm_file(Vo(i).fname,'link',sprintf(...
               ['spm_figure(''Clear'',spm_figure(''GetWin'',''Graphics'')); ' ...
                'spm_orthviews(''Reset''); ' ... remove old settings
+               'ax = axes; set(ax,''Position'',[0 0 1 1]); axis off; hd = text(ax,0.01,0.99,''File: ' job.data{i} '''); ' ...
                'ho = spm_orthviews(''Image'',''%s'' ,[0 0.51 1 0.49]); ',... top image
                'hf = spm_orthviews(''Image'',''%%s'',[0 0.01 1 0.49]);', ... bottom image
                'spm_orthviews(''Caption'', ho, ''original''); ', ... caption top image
-               'spm_orthviews(''Caption'', hf, ''filtered''); ', ... caption bottom image
+               'spm_orthviews(''Caption'', hf, {{''filtered'';'' '';' , ... caption bottom image
+               parastr '}}); ', ... % the parameters
                'spm_orthviews(''AddContext'',ho); spm_orthviews(''AddContext'',hf); ', ... % add menu
                'spm_orthviews(''Zoom'',40);', ... % zoom in
               ],V(i).fname)));

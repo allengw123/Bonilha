@@ -30,8 +30,8 @@ function [out,s] = cat_plot_boxplot(data,opt)
 %  opt.violin      = 0;             % violin-plot: 0 - box plot; 1 - violin plot; 2 - violin + thin box plot
 %  opt.boxwidth    = 0.8;           % width of box
 %  opt.groupcolor  = [R G B];       % matrix with (group)-bar-color(s) 
-%                                     use jet(numel(data)) 
-%                                     or other color functions
+%                                     default is nejm(numel(data)) 
+%                                     or other color functions (see also cat_io_colormaps for categorical colormaps)
 %  opt.symbolcolor = 'r';           % color of symbols
 %  opt.fontsize    = [];            % axis fontsize 
 %                                     important for ygrid size!
@@ -132,7 +132,7 @@ function [out,s] = cat_plot_boxplot(data,opt)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_plot_boxplot.m 1824 2021-05-12 15:47:31Z gaser $
+% $Id: cat_plot_boxplot.m 1920 2021-12-13 13:01:39Z gaser $
 
 if nargin==0, help cat_plot_boxplot; return; end
 
@@ -165,7 +165,7 @@ def.maxwhisker  = 1.5;
 def.sort        = 0; 
 def.names       = num2str( (1:numel(data))' );
 def.fill        = 1;
-def.groupcolor  = jet(numel(data));
+def.groupcolor  = cat_io_colormaps('nejm',numel(data));
 def.symbolcolor = 'r';
 def.groupnum    = 0;
 def.groupmin    = 5;
@@ -819,7 +819,7 @@ function y = prctile(x,p,dim)
 %   See also IQR, MEDIAN, NANMEDIAN, QUANTILE.
 
 %   Copyright 1993-2004 The MathWorks, Inc.
-%   $Revision: 1824 $  $Date: 2021-05-12 17:47:31 +0200 (Mi, 12 Mai 2021) $
+%   $Revision: 1920 $  $Date: 2021-12-13 14:01:39 +0100 (Mon, 13 Dec 2021) $
 
 
 if ~isvector(p) || numel(p) == 0
@@ -1002,6 +1002,7 @@ if nargout>3
 end
 
 end
+
 %---------------------------------------------
 function  out=fixed_point(t,N,I,a2)
 % this implements the function t-zeta*gamma^[l](t)
@@ -1014,8 +1015,6 @@ for s=l-1:-1:2
 end
 out=t-(2*N*sqrt(pi)*f)^(-2/5);
 end
-
-
 
 %---------------------------------------------
 function out = idct1d(data)
@@ -1204,7 +1203,7 @@ function fh = cat_stat_boxplot_batch(job)
       ax.YLabel.FontSize  = jobpara.FS*1.2;
       ax.XLabel.FontSize  = jobpara.FS*1.2;
     end
-    box on;
+    box('on')
     
     
     %% save images
@@ -1231,6 +1230,7 @@ function fh = cat_stat_boxplot_batch(job)
   end
 
 end
+
 function S = setval( S , i , fname , val )
   if isfield( S , fname ) 
     if iscell( S.(fname) ) && numel( S.(fname) )>=i 

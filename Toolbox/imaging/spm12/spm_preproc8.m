@@ -797,7 +797,7 @@ for iter=1:30
             scal   = 2^max(10-iter,0);
             prm    = param;
            %prm([5 7 8]) = param([5 7 8])*scal;
-            prm(6)       = param(6)*scal^2;
+            prm(6)       = param(6)*scal;
         else
             prm = [param(1:3)   param(4:8)];
         end

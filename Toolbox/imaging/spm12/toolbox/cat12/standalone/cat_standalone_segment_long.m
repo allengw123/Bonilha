@@ -1,12 +1,12 @@
-% Batch file of CAT12 longitudinal segmentation for SPM12 standalone installation
+% Batch file for CAT12 longitudinal segmentation for SPM12/CAT12 standalone installation
 %
 %_______________________________________________________________________
-% $Id: cat_standalone_segment_long.m 1842 2021-06-01 14:41:58Z gaser $
+% $Id: cat_standalone_segment_long.m 1981 2022-04-04 07:23:37Z gaser $
 
 % first undefined data field, that will be dynamically replaced by cat_standalone.sh
 % The different definitions of the subjects-field are necessary to be compatible 
-% with CAT12 longitudinal batch (using "{}") and cat_standalone where the field
-% '<UNDEFINED>' is necessary. The clear command prevents error due to different
+% with CAT12 longitudinal batch (using "{}") and cat_standalone where the
+% UNDEFINED field is necessary. The clear command prevents error due to different
 % datatypes and the comented out part for cat_standalone will be removed in the
 % shell script and the last definition of subjects is finally used. Looks weird,
 % but only works in that way.
@@ -18,8 +18,10 @@ clear matlabbatch
 % Remove comments and edit entry if you would like to change the parameter.
 % Otherwise the default value from cat_defaults.m is used.
 % Or use 1st parameter field, that will be dynamically replaced by cat_standalone.sh
+% (0) large changes with brain/head growth (i.e. developmental effects)
 % (1) small changes (i.e. plasticity/learning effects)
-% (2) large changes (i.e. aging/developmental effects)
+% (2) large changes (i.e. aging effects)
+% (3) save results for both models 1 and 2
 %matlabbatch{1}.spm.tools.cat.long.longmodel = '<UNDEFINED>';
 
 % Entry for choosing TPM

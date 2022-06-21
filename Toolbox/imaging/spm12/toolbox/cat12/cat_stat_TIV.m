@@ -8,7 +8,7 @@ function varargout = cat_stat_TIV(p)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_stat_TIV.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_stat_TIV.m 1984 2022-04-19 07:59:02Z gaser $
 
 if ~p.calcvol_TIV
   fprintf('%60s\t%7s\t%7s\t%7s\t%7s\t%7s\n','Name','Total','GM','WM','CSF','WMH');
@@ -38,7 +38,7 @@ for i=1:length(p.data_xml)
       end
     end
       
-    name = spm_str_manip(xml.filedata.fname,'a50');
+    name = spm_str_manip(deblank(p.data_xml{i}),'a50');
 
     % only save TIV
     if p.calcvol_TIV

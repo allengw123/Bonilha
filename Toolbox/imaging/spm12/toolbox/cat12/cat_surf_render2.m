@@ -73,7 +73,7 @@ function varargout = cat_surf_render2(action,varargin)
 % Jena University Hospital
 % ______________________________________________________________________
 % based on spm_mesh_render.m
-% $Id: cat_surf_render2.m 1834 2021-05-28 14:45:20Z dahnke $
+% $Id: cat_surf_render2.m 1963 2022-03-03 09:51:09Z dahnke $
 
 %#ok<*ASGLU>
 %#ok<*INUSL>
@@ -206,8 +206,11 @@ switch lower(action)
               [pp,ff,ee] = spm_fileparts(sinfo(pi).Pdata);
               switch sinfo(pi).ee
                   case '.gii'
-                      cdata = gifti(O.pcdata{pi}); 
-                      if isfield(cdata,'cdata')
+                      cdata  = gifti(O.pcdata{pi}); 
+                      cdatap = export(cdata,'patch');
+                      if isfield(cdatap,'facevertexcdata')
+                        cdata = cdatap.facevertexcdata; 
+                      elseif isfield(cdata,'cdata')
                         if isnumeric(cdata.cdata)
                           cdata = cdata.cdata; 
                         else
@@ -277,8 +280,10 @@ switch lower(action)
             %if strcmp(sinfo(1).texture,'defects'), 
               S.faces = S.faces(:,[2,1,3]); 
             end
-            labelmap = jet; 
-            
+            % use original colormap from annot file otherwise use jet
+            if ~strcmp(sinfo(pi).ee,'.annot')
+              labelmap = jet; 
+            end
             
             
             % Patch
@@ -446,11 +451,11 @@ switch lower(action)
         if numel(labelnam)>0
           %%
           H = cat_surf_render2('ColorBar',H.axis,'on'); 
-          labelnam2 = labelnam; for lni=1:numel(labelnam2),labelnam2{lni} = [' ' labelnam2{lni} ' ']; end
+          labelnam2 = [{''} labelnam]; for lni=1:numel(labelnam2),labelnam2{lni} = [' ' labelnam2{lni} ' ']; end
 
           labellength = min(100,max(cellfun('length',labelnam2))); 
           ss = max(1,round(diff(labelmapclim+1)/60)); 
-          ytick = labelmapclim(1)-0.5:ss:labelmapclim(2)+0.5;
+          ytick = labelmapclim(1):ss:labelmapclim(2);
           
           set(H.colourbar,'ytick',ytick,'yticklabel',labelnam2(1:ss:end),...
             'Position',[max(0.75,0.98-0.008*labellength) 0.05 0.02 0.9]);
@@ -3114,7 +3119,7 @@ for pi=pis
     error('cat_surf_render:add_wrong_mesh',[...
       'Colordata does not fit to underlying mesh.\n' ...
       '  Colordata:   %d values\n' ...
-      '  Surface:     %d vertices'],size(C,1),size(curv,1) );
+      '  Surface:     %d vertices'],size(curv,1),size(C,1) );
   end
 
  %C = repmat(~any(v,1),3,1)' .* curv + repmat(any(v,1),3,1)' .* C;

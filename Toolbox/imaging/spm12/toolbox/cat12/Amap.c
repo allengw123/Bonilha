@@ -5,7 +5,7 @@
  * Departments of Neurology and Psychiatry
  * Jena University Hospital
  * ______________________________________________________________________
- * $Id: Amap.c 1791 2021-04-06 09:15:54Z gaser $ 
+ * $Id: Amap.c 1921 2021-12-13 13:31:32Z dahnke $ 
  *
  *
  * This code is a substantially modified version of Amap.C 
@@ -51,23 +51,23 @@ static void GetMeansVariances(double *src, unsigned char *label, int n_classes, 
   area = dims[0]*dims[1];
 
   /* define grid dimensions */
-  nix = (int) ceil((dims[0]-1)/((double) sub))+1;
-  niy = (int) ceil((dims[1]-1)/((double) sub))+1;
-  niz = (int) ceil((dims[2]-1)/((double) sub))+1; 
+  nix = (int) ceil( (double) (dims[0]-1) / ((double) sub) ) + 1;
+  niy = (int) ceil( (double) (dims[1]-1) / ((double) sub) ) + 1;
+  niz = (int) ceil( (double) (dims[2]-1) / ((double) sub) ) + 1; 
   narea = nix*niy;
   nvol  = nix*niy*niz;
-  
+ 
   ir = (struct ipoint*)malloc(sizeof(struct ipoint)*n_classes*nvol);
   if(ir == NULL) {
     printf("Memory allocation error\n");
     exit(EXIT_FAILURE);
   }
-
+ 
   for(i = 0; i < n_classes; i++) {
     for(j = 0; j < nvol; j++) {
       ind = (i*nvol)+j; 
-      ir[ind].n = 0;
-      ir[ind].s = 0.0;
+      ir[ind].n  = 0;
+      ir[ind].s  = 0.0;
       ir[ind].ss = 0.0;
     }
   }
@@ -88,16 +88,18 @@ static void GetMeansVariances(double *src, unsigned char *label, int n_classes, 
             for(x = 0; x < nix; x++) {
               xsub = x*sub + m;
               if ((xsub >= 0) && (xsub < dims[0])) {
-                label_value = (int)label[zsub2 + ysub2 + xsub];
+                label_value    = (int)label[zsub2 + ysub2 + xsub];
                 label_value_BG = label_value - 1;
                 if (label_value_BG < 0) continue;
                 val = src[zsub2 + ysub2 + xsub];
-                    
+                   
                 /* exclude values out of quartile 1-99% */
-                if ((val < thresh[0]) || (val > thresh[1])) continue;
-                ind = ((label_value_BG)*nvol)+yoffset+x;
+                if ( (val < thresh[0]) || (val > thresh[1]) ) continue;  
+
+                ind = (label_value_BG * nvol) + yoffset + x;
                 ir[ind].n++;
-                ir[ind].s += val; ir[ind].ss += val*val;
+                ir[ind].s  += val; 
+                ir[ind].ss += val*val;
               }
             }
           }
@@ -114,8 +116,11 @@ static void GetMeansVariances(double *src, unsigned char *label, int n_classes, 
         r[ind].mean = ir[ind].s/ir[ind].n;
         if (ir[ind].n == 1)
           r[ind].var = 0.0;
-        else    r[ind].var = (ir[ind].ss -ir[ind].n*SQR(r[ind].mean))/(ir[ind].n-1);
-      } else r[ind].mean = 0.0;
+        else    
+          r[ind].var = (ir[ind].ss -ir[ind].n*SQR(r[ind].mean))/(ir[ind].n-1);
+      } 
+      else 
+        r[ind].mean = 0.0;
     }
   }
 
@@ -125,10 +130,8 @@ static void GetMeansVariances(double *src, unsigned char *label, int n_classes, 
 }
 
 /* Computes likelihood of value given parameters mean and variance */ 
-double ComputeGaussianLikelihood(double value, double mean , double var)
-
-{ 
-  return(exp(-(SQR(value - mean))/(2 * var))/SQRT2PI/sqrt(var));
+double ComputeGaussianLikelihood(double value, double mean , double var) { 
+  return(exp(-(SQR(value - mean))/(2.0 * var))/SQRT2PI/sqrt(var));
 }
 
 /* -------------------------------------------------------------------
@@ -147,13 +150,11 @@ Jussi Tohka
 
 double ComputeMarginalizedLikelihood(double value, double mean1 , double mean2, 
                                        double var1, double var2, 
-                                       unsigned int nof_intervals)
-
-{ 
+                                       unsigned int nof_intervals) { 
   double lh, tmean, tvar, delta, step;
   
   step = 1.0 / (double) nof_intervals;
-  lh = 0;
+  lh = 0.0;
   
   for(delta = 0.0; delta <= 1.0; delta += step) {
     tmean = delta * mean1 + ( 1 - delta ) * mean2;
@@ -282,7 +283,7 @@ void ComputeInitialPveLabel(double *src, unsigned char *label, unsigned char *pr
         Normalize(d_pve, n_pure_classes+2+off);
         
         for(i = 0; i < n_pure_classes+2+off; i++) 
-          prob[(vol*i) + index] = (unsigned char)ROUND(255*d_pve[i]);
+          prob[(vol*i) + index] = (unsigned char)ROUND(255.0*d_pve[i]);
 
         label[index] = (unsigned char) MaxArg(d_pve, n_pure_classes+2+off);
       }
@@ -331,7 +332,7 @@ void ComputeMrfProbability(double *mrf_probability, double *exponent, unsigned c
 } 
 
 /* Iterative conditional mode */
-void ICM(unsigned char *prob, unsigned char *label, int n_classes, int *dims, double beta, int iterations, double *voxelsize)
+void ICM(unsigned char *prob, unsigned char *label, int n_classes, int *dims, double beta, int iterations, double *voxelsize, int verb)
 {
   
   int i, iter, x, y, z, z_area, y_dims, index, sum_voxel;
@@ -385,11 +386,14 @@ void ICM(unsigned char *prob, unsigned char *label, int n_classes, int *dims, do
 #endif
     if(rel_changed < TH_CHANGE) break;
   }   
-  printf("\n");
+  if ( verb == 1) printf("\n");
 } 
 
-void EstimateSegmentation(double *src, unsigned char *label, unsigned char *prob, struct point *r, double *mean, double *var, int n_classes, int niters, int sub, int *dims, double *thresh, double *beta, double offset, double *voxelsize, double bias_fwhm)
-{
+void EstimateSegmentation(double *src, unsigned char *label, unsigned char *prob, 
+    struct point *r, double *mean, double *var, int n_classes, int niters, int sub, 
+    int *dims, double *thresh, double *beta, double offset, double *voxelsize, 
+    double bias_fwhm, int verb, double *fmeans, double *fstds) {
+  
   int i,j;
   int area, narea, nvol, vol, z_area, y_dims, index, ind;
   double *bias, sub_1, dmin, val, fwhm[3];
@@ -400,7 +404,7 @@ void EstimateSegmentation(double *src, unsigned char *label, unsigned char *prob
   int ix, iy, iz, ind2, masked_smoothing, subsample;
   double ll, ll_old, change_ll;
 
-  MrfPrior(label, n_classes, alpha, beta, 0, dims);    
+  MrfPrior(label, n_classes, alpha, beta, 0, dims, verb);    
 
   area = dims[0]*dims[1];
   vol = area*dims[2];
@@ -436,12 +440,13 @@ void EstimateSegmentation(double *src, unsigned char *label, unsigned char *prob
     ll = 0.0;
     
     /* get means for grid points */
+    
     GetMeansVariances(src, label, n_classes, r, sub, dims, thresh);    
 
     for(i = 0; i < n_classes; i++) {
-      sum[i] = 0.0;
+      sum[i]        = 0.0;
       var_global[i] = 0.0;
-      n_all[i] = 0;
+      n_all[i]      = 0;
     }
   
     /* use slightly larger values than 0 for initialization outside of mask to
@@ -553,28 +558,40 @@ void EstimateSegmentation(double *src, unsigned char *label, unsigned char *prob
 
   if(bias_fwhm > 0.0) free(bias);
 
-  printf("\nFinal Mean*Std: "); 
-  for(i = 0; i < n_classes; i++) printf("%.3f*%.3f  ",mean_global[i]-offset,sqrt(var_global[i])); 
-  printf("\n"); 
+  /* be verbose */
+  if ( verb == 1 ) printf("\nFinal Mean*Std: "); 
+  for(i = 0; i < n_classes; i++) {
+    fmeans[i] = (double) mean_global[i] - offset; 
+    fstds[i]  = (double) sqrt(var_global[i]); 
+    if ( verb == 1 ) {
+      printf("(%d) %.3f*%.3f  ",i,fmeans[i],fstds[i]); 
+    }
+  } 
+  if ( verb== 1 ) printf("\n"); 
+}  
 
-}
+double max2(double a, double b) { if (a>b) return a; else return b; }
+double min2(double a, double b) { if (a<b) return a; else return b; }
 
 
 /* perform adaptive MAP on given src and initial segmentation label */
-void Amap(double *src, unsigned char *label, unsigned char *prob, double *mean, int n_classes, int niters, int sub, int *dims, int pve, double weight_MRF, double *voxelsize, int niters_ICM, double offset, double bias_fwhm)
-{
+void Amap(double *src, unsigned char *label, unsigned char *prob, double *mean, 
+          int n_classes, int niters, int sub, int *dims, int pve, double weight_MRF, 
+          double *voxelsize, int niters_ICM, double offset, double bias_fwhm, 
+          int verb, double *fmeans, double *fstds) { 
   int i, nix, niy, niz;
   int area, nvol, vol;
   int histo[65536];
+  int cumsum[65536], cumsumr[65536];
   int n[MAX_NC], j;
   double var[MAX_NC];
   double thresh[2], beta[1];
   double min_src = HUGE, max_src = -HUGE;
-  int cumsum[65536];
   struct point *r;
-      
+  int tmp; 
+
   area = dims[0]*dims[1];
-  vol = area*dims[2];
+  vol  = area*dims[2];
  
   for(i = 0; i < vol; i++) {
     min_src = MIN(src[i], min_src);
@@ -582,21 +599,71 @@ void Amap(double *src, unsigned char *label, unsigned char *prob, double *mean, 
   }
   
   /* build histogram */
-  for(i = 0; i < 65536; i++) histo[i] = 0;
+  for(i = 0; i < 65536; i++) {histo[i] = 0; cumsum[i] = 0;}
   for(i = 0; i < vol; i++) {
     if (label[i] == 0) continue;
-    histo[(int)ROUND(65535.0*(src[i]-min_src)/(max_src-min_src))]++;
+    histo[(int) max2(0.0,min2(65535.0,ROUND(65535.0 * (src[i] - min_src) / max2(0.001,max_src - min_src) )))]++;
   }
 
   /* find values between 1% and 99% quartile */
-  cumsum[0] = histo[0];
-  for(i = 1; i < 65536; i++) cumsum[i] = cumsum[i-1] + histo[i];
-  for(i = 0; i < 65536; i++) cumsum[i] = (int) ROUND(1000.0*(double)cumsum[i]/(double)cumsum[65535]);
-  for(i = 0; i < 65536; i++) if (cumsum[i] >= 10) break;
-  thresh[0] = (double)i/65535.0*(max_src-min_src);
-  for(i = 65535; i > 0; i--) if (cumsum[i] <= 990) break;
-  thresh[1] = (double)i/65535.0*(max_src-min_src);
- 
+  cumsum[0] = 0;  
+  
+#ifdef OCTAVE
+  int use_fixed_code = 2; /* 0 - no, original code; 1 - fixed; 2 - "improved" without outlier removal */
+#else
+  int use_fixed_code = 0; /* 0 - no, original code; 1 - fixed; 2 - "improved" without outlier removal */
+#endif
+/* use_fixed_code = 2; */
+  for(i = 1; i < 65536; i++) cumsum[i] = cumsum[i-1] + histo[i]; 
+  /* ########################### CORRUPT LINES ############################
+   * RD202112: 
+   *   Test in Octave cause fatal errors: 
+   *     fatal: caught signal Segmentation fault: 11 -- stopping myself...
+   *   That are still unclear to me because the code seams to be correct 
+   *   but finally it was possible to aling cumsum so I created cumsumr.
+   */   
+  if ( use_fixed_code==0 ) {
+    /* original code - not working in Octave */
+    for(i = 0; i < 65536; i++) cumsum[i] = (int) ROUND( 1000.0 * ((double)cumsum[i] / (double)cumsum[65535])); 
+  }
+  else {
+    /* new code - working in Octave */
+    for(i = 0; i < 65536; i++) cumsumr[i] = (int) round( 1000.0 * ((double) cumsum[i]) / max2(TINY,(double)cumsum[65535]) ); 
+  }
+  
+  /* ########################### CORRUPT LINES ############################
+   * RD202112: 
+   *   Although the prevous step was now running  
+   *   Anyhow, removing outlier is dangerous in particular in high quality 
+   *   or denoised data.  
+   */
+  if ( use_fixed_code==0 ) {
+    /* find values between 1% and 99% quartile with cumsum */
+    for(i = 0; i < 65536; i++) if (cumsum[i] <= 10) break;
+    thresh[0] = ( ((double) i ) / 65535.0) * (max_src - min_src); 
+    for(i = 65535; i > 0; i--) if (cumsum[i] <= 990) break;
+    thresh[1] = ( ((double) i ) / 65535.0) * (max_src - min_src); 
+  }
+  else {
+    /* find values between 1% and 99% quartile with cumsumr - not working in Octave */
+    if ( use_fixed_code==1 ) {
+      double ii = 0.0;
+      for(i = 0; i < 65536; i++) if (cumsumr[i] <= 10) ii=(double)i;
+      thresh[0] = ( ii / 65535.0 ) * (max_src - min_src); 
+      ii = 65535.0; 
+      for(i = 65535; i > 0; i--) if (cumsumr[i] <= 990) ii=(double)i;
+      thresh[1] = ( ii / 65535.0 ) * (max_src - min_src); 
+      
+      thresh[0] = min2( (max_src - min_src) , max2( 0.0 , thresh[0] )); 
+      thresh[1] = min2( (max_src - min_src) , max2( 0.0 , thresh[1] )); 
+    }
+    else {
+      /* no outlier removal - working in Octave */
+      thresh[0] = 0.0;
+      thresh[1] = (max_src - min_src); 
+    }
+  }
+  
   /* define grid dimensions */
   nix = (int) ceil((dims[0]-1)/((double) sub))+1;
   niy = (int) ceil((dims[1]-1)/((double) sub))+1;
@@ -609,8 +676,10 @@ void Amap(double *src, unsigned char *label, unsigned char *prob, double *mean, 
     exit(EXIT_FAILURE);
   }
     
+   
   /* estimate 3 classes before PVE */
-  EstimateSegmentation(src, label, prob, r, mean, var, n_classes, niters, sub, dims, thresh, beta, offset, voxelsize, bias_fwhm);
+  EstimateSegmentation(src, label, prob, r, mean, var, n_classes, niters, 
+          sub, dims, thresh, beta, offset, voxelsize, bias_fwhm, verb, fmeans, fstds);
   
   /* Use marginalized likelihood to estimate initial 5 or 6 classes */
   if (pve) {
@@ -620,15 +689,30 @@ void Amap(double *src, unsigned char *label, unsigned char *prob, double *mean, 
     
     /* recalculate means for pure and mixed classes */
     for(j = 0; j < n_classes; j++) {
-      n[j] = 0;
-      mean[j] = 0.0;
+      n[j]      = 0;
+      mean[j]   = 0.0;
+      /*
+      fmeans[j] = 0.0; 
+      fstds[j]  = 0.0;
+       */
     }
     for(i = 0; i < vol; i++) {
       if(label[i] == 0) continue;
       n[label[i]-1]++;
-      mean[label[i]-1] += src[i];
+      mean[label[i]-1]   += src[i];
+      /*
+      fmeans[label[i]-1] += src[i] - offset;
+       */
     }
-    for(j = 0; j < n_classes; j++) mean[j] /= n[j];
+    for(j = 0; j < n_classes; j++) mean[j]   /= n[j];
+    /*
+    for(j = 0; j < n_classes; j++) fmeans[j] /= n[j];
+    for(i = 0; i < vol; i++) {
+      if(label[i] == 0) continue;
+      fstds[label[i]-1]  += (src[i] - fmeans[label[i]-1]); 
+    }
+    for(j = 0; j < n_classes; j++) fstds[j] /= n[j];
+     */
   }
   
   /* use much smaller beta for if no pve is selected */
@@ -638,10 +722,10 @@ void Amap(double *src, unsigned char *label, unsigned char *prob, double *mean, 
   if((niters_ICM > 0) && (weight_MRF > 0)) {
     if(weight_MRF != 1.0) {
       beta[0] *= weight_MRF;
-      printf("Weighted MRF beta %3.3f\n",beta[0]);
+      if ( verb == 1 ) printf("Weighted MRF beta %3.3f\n",beta[0]);
     }
   
-    ICM(prob, label, n_classes, dims, beta[0], niters_ICM, voxelsize);
+    ICM(prob, label, n_classes, dims, beta[0], niters_ICM, voxelsize, verb);
   }
   
   free(r);

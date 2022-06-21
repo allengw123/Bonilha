@@ -9,7 +9,7 @@ function [Ysrc,Ycls,Yb,Yb0,job,res,T3th,stime2] = cat_main_updateSPM1639(Ysrc,P,
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_main_updateSPM1639.m 1834 2021-05-28 14:45:20Z dahnke $
+% $Id: cat_main_updateSPM1639.m 1977 2022-03-22 13:24:14Z dahnke $
 
 
   %dbs = dbstatus; debug = 0; for dbsi=1:numel(dbs), if strcmp(dbs(dbsi).name,mfilename); debug = 1; break; end; end
@@ -22,6 +22,7 @@ function [Ysrc,Ycls,Yb,Yb0,job,res,T3th,stime2] = cat_main_updateSPM1639(Ysrc,P,
   
   % voxel size parameter
   vx_vol  = sqrt(sum(res.image(1).mat(1:3,1:3).^2));    % voxel size of the processed image
+  vx_vol0 = sqrt(sum(res.image0(1).mat(1:3,1:3).^2));
   vx_volp = prod(vx_vol)/1000;
   
   d = res.image(1).dim(1:3);
@@ -39,13 +40,17 @@ function [Ysrc,Ycls,Yb,Yb0,job,res,T3th,stime2] = cat_main_updateSPM1639(Ysrc,P,
   %for z=1:d(3)
    % YbA(:,:,z) = spm_sample_vol(Vb,double(Yy(:,:,z,1)),double(Yy(:,:,z,2)),double(Yy(:,:,z,3)),1); 
   %end
-  if round(max(YbA(:))/Vb.pinfo(1)), YbA=YbA>0.1*Vb.pinfo(1); else, YbA=YbA>0.1; end
+  if (isfield(job,'useprior') && ~isempty(job.useprior) ), bth = 0.5; else, bth = 0.1; end
+  if round(max(YbA(:))/Vb.pinfo(1)), YbA=YbA>bth*Vb.pinfo(1); else, YbA=YbA>bth; end
   % add some distance around brainmask (important for bias!)
   YbA = YbA | cat_vol_morph(YbA & sum(P(:,:,:,1:2),4)>4 ,'dd',2.4,vx_vol);
   
-  
-  if size(P,4)<4
-    P(:,:,:,4) = 1 - sum(P,4); 
+  if size(P,4)==3
+    % create background class that is required later
+    Yb = cat_vol_morph( smooth3( sum(P(:,:,:,1:2),4) ) > 192 , 'ldc' , 5 , vx_vol ); 
+    Yb = cat_vol_morph( Yb , 'ldo' ); 
+    for i=1:3, P(:,:,:,i) = P(:,:,:,i) .* cat_vol_ctype(Yb); end 
+    P(:,:,:,4) = cat_vol_ctype((1 - Yb) * 255); 
   end
   
   % transfer tissue outside the brain mask to head  ... 
@@ -71,8 +76,10 @@ function [Ysrc,Ycls,Yb,Yb0,job,res,T3th,stime2] = cat_main_updateSPM1639(Ysrc,P,
       clear Pc1 Pc2 Ybb;
     end
   end
-  clear YbA;
-  
+  if ~( (isfield(job,'useprior') && ~isempty(job.useprior) ) && ... 
+        (isfield(res,'ppe') && ~res.ppe.affreg.highBG) )
+    clear YbA;
+  end
   
   % some reports
   for i=1:size(P,4), Pt = P(:,:,:,i); res.ppe.SPMvols0(i) = cat_stat_nansum(single(Pt(:)))/255 .* prod(vx_vol) / 1000; end; clear Pt; 
@@ -177,7 +184,77 @@ function [Ysrc,Ycls,Yb,Yb0,job,res,T3th,stime2] = cat_main_updateSPM1639(Ysrc,P,
   %  Update Skull-Stripping 1
   %  ----------------------------------------------------------------------
   stime2 = cat_io_cmd('  Update Skull-Stripping','g5','',job.extopts.verb-1,stime2); 
-  if size(P,4)==4 % skull-stripped
+  if (isfield(job,'useprior') && ~isempty(job.useprior) && strcmp(job.opts.affreg,'prior') ) && ... 
+     (isfield(res,'ppe') && ~res.ppe.affreg.highBG) 
+    % RD202010: use longitudinal skull-stripping 
+    [pp,ff,ee] = spm_fileparts(char(job.useprior));
+    if isfield(job.output.BIDS,'BIDSyes') % I am not sure if separation is needed or if we simply try with/without mri-dir
+      Pavgp0 = fullfile(pp,[strrep(ff,'avg_','p0avg_'),ee]);
+      if ~exist(Pavgp0,'file')
+        Pavgp0 = fullfile(pp,'mri',[strrep(ff,'avg_','p0avg_'),ee]);
+      end      
+    else
+      Pavgp0 = fullfile(pp,'mri',[strrep(ff,'avg_','p0avg_'),ee]);
+      if ~exist(Pavgp0,'file')
+        Pavgp0 = fullfile(pp,[strrep(ff,'avg_','p0avg_'),ee]);
+      end
+    end
+
+% RD20220213: 
+%  For the development model with longitudinal TPM you may have to add the affine registration. 
+%  However it seems that the adaption of the brainmask works quite well ... 
+%  but maybe it is better to full deactive the skull-stripping in the 
+%  plasticity/aging case
+
+    % get gradient and divergence map (Yg and Ydiv)
+    [Ytmp,Ytmp,Yg,Ydiv] = cat_main_updateSPM_gcut0(Ysrc,P,vx_vol,T3th); clear Ytmp;  %#ok<ASGLU>
+    if exist(Pavgp0,'file')
+      % the p0avg should fit optimal  
+      if any(vx_vol0 ~= vx_vol) % if the data was internaly resampled we have to load it via imcalc
+        [Vb,Yb] = cat_vol_imcalc(spm_vol(Pavgp0),spm_vol(res.image.fname),'i1',struct('interp',3,'verb',0,'mask',-1)); clear Vb;  %#ok<ASGLU>
+      else
+        Yb = spm_read_vols(spm_vol(Pavgp0));
+      end
+      Yb = Yb > 0.5; 
+    else
+      % otherwise it would be possible to use the individual TPM 
+      % however, the TPM is more smoothed and is therefore only second choice  
+      cat_io_addwarning('cat_main_updateSPM:miss_p0avg',sprintf('Cannot find p0avg use TPM for brainmask: \n  %s\n',Pavgp0),2,[1 2]);
+      Yb = YbA > 0.5;
+      clear YbA
+    end
+    Ybb = cat_vol_ctype(cat_vol_smooth3X(Yb,0.5)*256); 
+    
+    %% correct tissues
+    %  RD20221224: Only the brainmask wasn't enough and we need to cleanup 
+    %              the segmentation also here (only for long pipeline)
+    % move brain tissue to head tissues or vice versa
+    for ti = 1:3
+      if ti == 1 % GM with soft boundary to reduce meninges
+        Ynbm = cat_vol_ctype( single(P(:,:,:,ti)) .* (1 - max(0,2 * smooth3(Yb) - 1) ) ); 
+        Ybm  = cat_vol_ctype( single(P(:,:,:,5))  .* (    max(0,2 * smooth3(Yb) - 1) ) ); 
+      elseif ti == 2 % WM with very soft boundary because we exptect no WM close to the skull
+        Ynbm = cat_vol_ctype( single(P(:,:,:,ti)) .* (1 - max(0,2 * single(Ybb)/255 - 1) ) ); 
+        Ybm  = cat_vol_ctype( single(P(:,:,:,5))  .* (    max(0,2 * single(Ybb)/255 - 1) ) ); 
+      else % CSF with hard boundary
+        Ynbm = cat_vol_ctype( single(P(:,:,:,ti)) .* (1 - Yb) ); 
+        Ybm  = cat_vol_ctype( single(P(:,:,:,5))  .* (    Yb) ); 
+      end
+      P(:,:,:,ti) = P(:,:,:,ti) - Ynbm + Ybm; 
+      P(:,:,:,5)  = P(:,:,:,5)  + Ynbm - Ybm; 
+      clear Ynbm Ybm;
+    end
+    % some extra GM cleanup for meninges
+    Yngm = P(:,:,:,1) .* uint8( Ybb<255 & (P(:,:,:,1)>64) & (smooth3( single(P(:,:,:,1)>64) )<0.5) );
+    P(:,:,:,1) = P(:,:,:,1) - Yngm; P(:,:,:,5) = P(:,:,:,5) + Yngm; %if ~debug, clear Yngm; end
+    % some further hard GM cleanup ? 
+    %{
+    Yp0avg = spm_read_vols(spm_vol(Pavgp0));
+    Yngm = P(:,:,:,1) .* uint8( cat_vol_morph( Yp0avg < 1.75 , 'de' , 3, vx_vol) & Yp0yvg>0 );
+    P(:,:,:,1) = P(:,:,:,1) - Yngm; P(:,:,:,5) = P(:,:,:,5) + Yngm; %if ~debug, clear Yngm; end
+    %}
+    
+  elseif size(P,4)==4 || size(P,4)==3 % skull-stripped
     [Yb,Ybb,Yg,Ydiv,P] = cat_main_updateSPM_skullstriped(Ysrc,P,res,vx_vol,T3th);
   elseif job.extopts.gcutstr==0 
     [Yb,Ybb,Yg,Ydiv] = cat_main_updateSPM_gcut0(Ysrc,P,vx_vol,T3th);
@@ -237,11 +314,62 @@ function [Ysrc,Ycls,Yb,Yb0,job,res,T3th,stime2] = cat_main_updateSPM1639(Ysrc,P,
 
 
 
+
+  %% RD202110: Background correction in longitidunal mode
+  %  We observed some problems in the SPM background segmentation for
+  %  longidutidnal processing that detected the volume of the boundary box 
+  %  whereas the real background was miss-aligned to class 5 that caused 
+  %  further problems in the LAS function that were solved too. Although 
+  %  it would be possible to adapt the SPM segmentation, eg. by adapting 
+  %  the number of gaussians per class, we decided that it is simpler and 
+  %  maybe saver to add further test in the longitudinal case, where the 
+  %  TPM should be close to the segmentation outcome.  
+  if (isfield(job,'useprior') && ~isempty(job.useprior) && strcmp(job.opts.affreg,'prior') ) && ... 
+     (isfield(res,'ppe') && ~res.ppe.affreg.highBG)
+    %% sum of all TPM classes without background
+    Vall = tpm.V(end); Vall.pinfo(3) = 0; Vall.dt=16; 
+    Vall.dat = zeros(size(tpm.dat{1})); for k1 = 1:numel(tpm.dat)-1, Vall.dat = Vall.dat + single(exp(tpm.dat{k1})); end 
+    Yall = cat_vol_sample(res.tpm(1),Vall,Yy,1);
+
+    % backgound class
+    Ybg = 1 - Yall; clear Yall Vall; 
+
+    %% estimate error and do correction 
+    rmse = @(x,y) mean( (x(:) - y(:)).^2 ).^0.5; 
+    % the TPM BG may be smaller due to the limited overlap and we need a
+    % higher threshold to avoid unnecessary background corrections
+    TPisSmaller = ( sum(sum(sum(single(P(:,:,:,end))/255))) - sum(Ybg(:))) < 0;  
+    if rmse(Ybg,single(P(:,:,:,end))/255) > 0.3 + 0.2*TPisSmaller % just some threshold (RD20220103: adjusted by TPisSmaller)
+      % setup new background
+      Ynbg = Ybg>0.5 | ( P(:,:,:,end)>128 & Ysrc < mean( T3th(1:2) ) );
+      Ynbg = cat_vol_morph(Ynbg,'dc',5,vx_vol); 
+      Ynbg = uint8( 255 .* smooth3(Ynbg) ); 
+      
+      % correct classes
+      for k1 = 1:size(P,4)-1, P(:,:,:,k1) = P(:,:,:,k1) - min(P(:,:,:,k1),Ynbg); end
+      P(:,:,:,end) = max( Ynbg , P(:,:,:,end) ); 
+      clear Ynbg; 
+      
+      % normalize all classes
+      sP = (sum(single(P),4)+eps)/255;
+      for k1=1:size(P,4), P(:,:,:,k1) = cat_vol_ctype(single(P(:,:,:,k1))./sP); end
+      clear sP; 
+    
+      cat_io_addwarning('cat_main_updateSPM:ReplacedLongBackground','Detected and corrected inadequate background \\nsegmentation in longitudinal mode.',0,[1 2]);
+    end
+    clear Ybg; 
+  end
+
+  
+  
+  
   stime2 = cat_io_cmd('  Update probability maps','g5','',job.extopts.verb-1,stime2);
-  if ~(any(sign(diff(T3th))==-1))
+  if ~(any(sign(diff(T3th))==-1)) && ...
+     ~( (isfield(job,'useprior') && ~isempty(job.useprior) && strcmp(job.opts.affreg,'prior') ) && ... % no single longitudinal timepoint
+        (isfield(res,'ppe') && ~res.ppe.affreg.highBG) )
     %% Update probability maps
     % background vs. head - important for noisy backgrounds such as in MT weighting
-    if size(P,4)==4 % skull-stripped
+    if size(P,4)==4 || size(P,4)==3 % skull-stripped
       Ybg = ~Yb;
     else
       if sum(sum(sum(P(:,:,:,6)>240 & Ysrc<cat_stat_nanmean(T3th(1:2)))))>10000
@@ -251,16 +379,6 @@ function [Ysrc,Ycls,Yb,Yb0,job,res,T3th,stime2] = cat_main_updateSPM1639(Ysrc,P,
         Ybgr = cat_vol_morph(cat_vol_morph(cat_vol_morph(Ybgr>128,'d') & Ysrcr<Ybgrth,'lo',1),'lc',1);
         Ybg  = cat_vol_resize(cat_vol_smooth3X(Ybgr,1),'dereduceV',resT2); 
         clear Ysrcr Ybgr; 
-% RD202010 bad SPM background
-%{
-      elseif sum(sum(sum(P(:,:,:,6)>8 & Ysrc<cat_stat_nanmean(T3th(1:2)))))>10000
-        Ybg = cat_vol_smooth3X( single(P(:,:,:,6)) * 240 ,2); 
-        [Ybgr,Ysrcr,resT2] = cat_vol_resize({Ybg,Ysrc},'reduceV',vx_vol,2,32); 
-        Ybgrth = max(cat_stat_nanmean(Ysrcr(Ybgr(:)>128)) + 2*std(Ysrcr(Ybgr(:)>128)),T3th(1));
-        Ybgr = cat_vol_morph(cat_vol_morph(cat_vol_morph(Ybgr>128,'d') & Ysrcr<Ybgrth,'lo',1),'lc',1);
-        Ybg  = cat_vol_resize(cat_vol_smooth3X(Ybgr,1),'dereduceV',resT2); 
-        clear Ysrcr Ybgr;
-%}
       else
         Ybg = ~Yb;
       end

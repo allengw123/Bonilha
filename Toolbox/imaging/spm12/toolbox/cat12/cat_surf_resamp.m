@@ -14,7 +14,7 @@ function vout = cat_surf_resamp(varargin)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_surf_resamp.m 1808 2021-04-17 21:03:00Z dahnke $
+% $Id: cat_surf_resamp.m 1901 2021-10-26 10:25:52Z gaser $
 
 %#ok<*AGROW,*STREMP>
 
@@ -23,7 +23,7 @@ function vout = cat_surf_resamp(varargin)
 %   supported that are only available in the developer mode (RD20180408)
 %    > catched by error message
 
-  SVNid = '$Rev: 1808 $';
+  SVNid = '$Rev: 1901 $';
 
   
   % Transform input 
@@ -32,8 +32,8 @@ function vout = cat_surf_resamp(varargin)
   % This results in a more complex input with another cell level, internal 
   % representation and final output as cell of cellstr.
   if nargin == 1
-  	% complex developer input of different structures to handle dependencies differently
-  	% here we have to build the classical input structure
+    % complex developer input of different structures to handle dependencies differently
+    % here we have to build the classical input structure
     if isfield(varargin{1},'sample')
       if ~isfield(varargin{1},'data_surf')
         varargin{1}.data_surf = {};
@@ -53,6 +53,7 @@ function vout = cat_surf_resamp(varargin)
     
     % classical simple input structure
     if iscell(varargin{1}.data_surf)
+      %%
       P = ''; 
       for i = 1:numel(varargin{1}.data_surf)
         if iscell(varargin{1}.data_surf)
@@ -144,7 +145,8 @@ function vout = cat_surf_resamp(varargin)
     stime = clock; 
     [pp,ff,ex]   = spm_fileparts(deblank(P(i,:))); ffex = [ff ex]; 
     if any([strfind(ffex,'.sphere.'),strfind(ffex,'.central.'),strfind(ffex,'.resampled_tmp'),...
-        strfind(ffex,'.resampled'),strfind(ffex(end-3:end),'.mat'),strfind(ff,'.area.tmp.'),strfind(ex,'.mat'),strfind(ex,'.m')])
+        strfind(ffex,'.resampled'),strfind(ff,'.area.tmp.'),strfind(ffex(end-3:end),'.mat'),...
+        strfind(ffex(end-3:end),'.mat'),strfind(ffex(end-1:end),'.m')])
       if job.verb
         cat_io_cprintf('note',sprintf('%s NOTE - Cannot process "%s"!\n',pstr,deblank(P(i,:))));
         listpp.note = listpp.note + 1; 
@@ -167,6 +169,7 @@ function vout = cat_surf_resamp(varargin)
    
     % define output name for lazy option
     surfacefield = 'central'; 
+    %%
     if job.lazy
       for j=1:length(hemistr)
         hemi = hemistr{j};
@@ -179,11 +182,13 @@ function vout = cat_surf_resamp(varargin)
         else
           Pfwhm = [strrep(Pcentral(1:k(2)-1),surfacefield,[pname str_resamp]) Pcentral(k(2):end)];
         end
+
         if job.merge_hemi
-          Pfwhm    = [strrep(Pfwhm(1:3)   ,'lh.','mesh.') Pcentral(4:end)]; 
+          k = strfind(Pfwhm,'.');
+          Pfwhm    = [strrep(Pfwhm(1:k(2)),'.lh.','.mesh.') Pfwhm(k(2)+1:end)]; 
           %Pcentral = [strrep(Pcentral(1:3),'lh.','mesh.') Pcentral(4:end)]; 
         end
-        
+        Pfwhm = strrep(Pfwhm,surfacefield,[pname str_resamp]);
         
         if j==1
           Psdata{i} = fullfile(pp,Pfwhm);
@@ -195,7 +200,7 @@ function vout = cat_surf_resamp(varargin)
         end
       end
     end
-    
+    %%
     if ~job.lazy || (job.merge_hemi && cat_io_rerun(Psdata{i},P(i,:)) ) || ...
         (~job.merge_hemi && cat_io_rerun(lPsdata{i},P(i,:)) && cat_io_rerun(rPsdata{i},P(i,:)) ) 
 
@@ -283,29 +288,28 @@ function vout = cat_surf_resamp(varargin)
           ncdata = cat_surf_fun('useEdgemap',cdata,edgemap); 
           cat_io_FreeSurfer('write_surf_data',Pvalue,ncdata); 
           cmd = sprintf('CAT_ResampleSurf "%s" "%s" "%s" "%s" "%s" "%s"',Pcentral,Pspherereg,Pfsavg,Presamp,Pvalue0,Pvalue);
-          [ST, RS] = cat_system(cmd); err = cat_check_system_output(ST,RS,job.debug,def.trerr); if err, continue; end
+          err = cat_system(cmd,job.debug,def.trerr); if err, continue; end
           cat_io_FreeSurfer('write_surf_data',Pvalue,ncdata); 
           clear Si clear Si edgemap; 
 
         else
           %% resample values using warped sphere 
           cmd = sprintf('CAT_ResampleSurf "%s" "%s" "%s" "%s" "%s" "%s"',Pcentral,Pspherereg,Pfsavg,Presamp,Pvalue0,Pvalue);
-          [ST, RS] = cat_system(cmd); 
-          evalc('err = cat_check_system_output(ST,RS,job.debug,def.trerr);');
+          evalc('err = cat_system(cmd,job.debug,def.trerr);');
           %%
           if err, continue; end
         end
 
         if job.fwhm_surf > 0
 
-					%% smooth resampled values
-					% don't use mask for cerebellum
-					if strcmp(hemi,'lc') || strcmp(hemi,'rc')
-						cmd = sprintf('CAT_BlurSurfHK "%s" "%s" "%g" "%s"',Presamp,Pfwhm,job.fwhm_surf,Pvalue);
-					else
-						cmd = sprintf('CAT_BlurSurfHK "%s" "%s" "%g" "%s" "%s"',Presamp,Pfwhm,job.fwhm_surf,Pvalue,Pmask);
-					end
-					[ST, RS] = cat_system(cmd); err = cat_check_system_output(ST,RS,job.debug,def.trerr);
+          %% smooth resampled values
+          % don't use mask for cerebellum
+          if strcmp(hemi,'lc') || strcmp(hemi,'rc')
+            cmd = sprintf('CAT_BlurSurfHK "%s" "%s" "%g" "%s"',Presamp,Pfwhm,job.fwhm_surf,Pvalue);
+          else
+            cmd = sprintf('CAT_BlurSurfHK "%s" "%s" "%g" "%s" "%s"',Presamp,Pfwhm,job.fwhm_surf,Pvalue,Pmask);
+          end
+          err = cat_system(cmd,job.debug,def.trerr);
           %%
           if err
             cat_io_cprintf('err',sprintf('%sERROR - Smoothing & resampling of "%s" failed!\n',Presamp)); 
@@ -316,7 +320,7 @@ function vout = cat_surf_resamp(varargin)
 
         %% add values to resampled surf and save as gifti
         cmd = sprintf('CAT_AddValuesToSurf "%s" "%s" "%s"',Presamp,Pfwhm,Pfwhm_gii);
-        [ST, RS] = cat_system(cmd); err = cat_check_system_output(ST,RS,job.debug,def.trerr);% if err, continue; end
+        err = cat_system(cmd,job.debug,def.trerr);% if err, continue; end
 
         if exist(Pfwhm_gii,'file'), Psname = Pfwhm_gii; end
 

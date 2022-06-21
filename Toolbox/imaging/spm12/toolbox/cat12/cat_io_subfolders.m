@@ -1,8 +1,8 @@
-function [mrifolder, reportfolder, surffolder, labelfolder] = cat_io_subfolders(fname,job)
+function [mrifolder, reportfolder, surffolder, labelfolder, errfolder] = cat_io_subfolders(fname,job)
 % ______________________________________________________________________
 % Prepare subfolder names, optionally with BIDS structure
 %
-% FORMAT [mrifolder, reportfolder, surffolder, labelfolder] = cat_io_subfolders(fname,job)
+% FORMAT [mrifolder, reportfolder, surffolder, labelfolder, errfolder] = cat_io_subfolders(fname,job)
 % fname - filename (can be also empty)
 % job   - optional job structure from cat_run.m
 %
@@ -15,9 +15,12 @@ function [mrifolder, reportfolder, surffolder, labelfolder] = cat_io_subfolders(
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_io_subfolders.m 1797 2021-04-09 09:33:35Z gaser $
-  
-  if nargin > 1 && isfield(job,'extopts') && isfield(job.extopts,'subfolders')
+% $Id: cat_io_subfolders.m 1876 2021-09-01 14:08:49Z gaser $
+    
+  if nargin > 1 && isfield(job,'extopts')
+    if ~isfield(job.extopts,'subfolders')
+      job.extopts.subfolders = cat_get_defaults('extopts.subfolders');
+    end
     subfolders = job.extopts.subfolders;
     if isfield(job.extopts,'BIDSfolder')
       BIDSfolder = job.extopts.BIDSfolder;
@@ -40,11 +43,13 @@ function [mrifolder, reportfolder, surffolder, labelfolder] = cat_io_subfolders(
     mrifolder    = 'mri';
     surffolder   = 'surf';
     reportfolder = 'report';
+    errfolder    = 'err';
   else
     labelfolder  = '';
     mrifolder    = '';
     surffolder   = '';
     reportfolder = '';
+    errfolder    = '';
   end
 
   % check whether sub-name is found and "anat" and "ses-" subfolder
@@ -69,20 +74,32 @@ function [mrifolder, reportfolder, surffolder, labelfolder] = cat_io_subfolders(
       mrifolder    = sub_ses_anat;
       surffolder   = sub_ses_anat;
       reportfolder = sub_ses_anat;
+      errfolder    = sub_ses_anat;
     end
     
-    % combine with BIDS folder structure 
-    labelfolder  = fullfile(BIDSfolder,labelfolder);
-    mrifolder    = fullfile(BIDSfolder,mrifolder);
-    surffolder   = fullfile(BIDSfolder,surffolder);
-    reportfolder = fullfile(BIDSfolder,reportfolder);
-
+    % check whether fname already contains BIDSfolder filename and don't
+    % use any subfolders again
+    if ~isempty(strfind(fname,spm_file(BIDSfolder,'filename'))) && ~isempty(sub_ses_anat)
+      labelfolder  = '';
+      mrifolder    = '';
+      surffolder   = '';
+      reportfolder = '';
+      errfolder    = '';
+    elseif isempty(strfind(fname,spm_file(BIDSfolder,'filename')))
+      % combine with BIDS folder structure 
+      labelfolder  = fullfile(BIDSfolder,labelfolder);
+      mrifolder    = fullfile(BIDSfolder,mrifolder);
+      surffolder   = fullfile(BIDSfolder,surffolder);
+      reportfolder = fullfile(BIDSfolder,reportfolder);
+      errfolder    = fullfile(BIDSfolder,errfolder);
+    end
+    
   % if BIDS structure was found but not defined leave subfolder names empty
   elseif ~isempty(sub_ses_anat)
     labelfolder  = '';
     mrifolder    = '';
     surffolder   = '';
     reportfolder = '';
+    errfolder    = '';
   end
-  
 end

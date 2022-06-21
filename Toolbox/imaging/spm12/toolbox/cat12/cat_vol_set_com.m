@@ -7,8 +7,9 @@ function Affine = cat_vol_set_com(V)
 % V      - mapped images or filenames 
 % Affine - affine transformation to roughly correct origin 
 % 
-% If no output filed is defined the estimated transformation is applied 
-% to the images
+% Only if no input is defined the function is called interactively and the
+% estimated transformation is applied to the images. Otherwise, only the 
+% Affine paramter is returned.
 % ______________________________________________________________________
 %
 % Christian Gaser, Robert Dahnke
@@ -16,7 +17,7 @@ function Affine = cat_vol_set_com(V)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_vol_set_com.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_vol_set_com.m 1943 2022-02-04 16:53:42Z dahnke $
 
 
 if nargin == 1
@@ -35,8 +36,8 @@ n = numel(V);
 % pre-estimated COM of MNI template
 com_reference = [0 -20 -15];
 
+fprintf('Correct center-of-mass                                            ');
 for i=1:n
-  fprintf('Correct center-of-mass                                            ');
   Affine = eye(4);
   if isfield(V(i),'dat')
     vol(:,:,:) = V(i).dat(:,:,:);
@@ -53,8 +54,13 @@ for i=1:n
 
   M = spm_get_space(V(i).fname);
   Affine(1:3,4) = (com - com_reference)';
+  
   if nargin < 1
     spm_get_space(V(i).fname,Affine\M);
     fprintf('\n');
+  end
+  
+  if ~nargout
+    clear Affine
   end
 end

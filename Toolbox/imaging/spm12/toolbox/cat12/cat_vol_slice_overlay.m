@@ -3,19 +3,27 @@ function cat_vol_slice_overlay(OV)
 % Call help for slice_overlay for any additional help
 % 
 % Additional fields to slice_overlay:
-% OV.xy    - define number of columns and rows
-%            comment this out for interactive selection
-% OV.atlas - define atlas for labeling
-%            comment this out for interactive selection
-%            or use 'none' for no atlas information
-% OV.save  - save result as png/jpg/pdf/tif
-%            comment this out for interactive selection or use '' for not 
-%            saving any file or use just file extension (png/jpg/pdf/tif) to 
-%            automatically estimate filename to save
-% OV.FS    - normalized font size
+% OV.name       - char array of filenames for overlay that can be interactively
+%                 selected
+% OV.slices_str - char array of slice values (e.g. '-32:2:20')
+%                 use empty string for automatically estimating slices with
+%                 local maxima
+% OV.xy         - define number of columns and rows
+%                 comment this out for interactive selection or set the values
+%                 to [Inf 1] for using one row and automatically estimate number
+%                 of columns or use [1 Inf] for using one column
+% OV.atlas      - define atlas for labeling (e.g. 'cat12_cobra')
+%                 comment this out for interactive selection
+%                 or use 'none' for no atlas information
+% OV.save       - save result as png/jpg/pdf/tif
+%                 comment this out for interactive selection or use '' for not 
+%                 saving any file or use just file extension (png/jpg/pdf/tif) to 
+%                 automatically estimate filename to save
+% OV.FS         - normalized font size (default 0.08)
 % OV.name_subfolder
-%          - if result is saved as image use up to 2 subfolders to add their 
-%            names to the filename (default 1)
+%               - if result is saved as image use up to 2 subfolders to add their 
+%                 names to the filename (default 1)
+% OV.overview   - use empty brackets to not suppress slice overview (.e.g []);
 %
 % see cat_vol_slice_overlay_ui.m for an example
 % ______________________________________________________________________
@@ -25,7 +33,7 @@ function cat_vol_slice_overlay(OV)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_vol_slice_overlay.m 1829 2021-05-27 09:40:22Z gaser $
+% $Id: cat_vol_slice_overlay.m 1970 2022-03-08 10:01:28Z gaser $
 
 clear global SO
 global SO
@@ -106,7 +114,7 @@ else
   sel = 1;
 end
 
-nm = deblank(OV.name(sel, :));
+OV.name = deblank(OV.name(sel, :));
 
 % if only one argument is given assume that parameters are the same for all files
 if size(OV.range, 1) > 1
@@ -128,8 +136,8 @@ else
   compare_to_threshold = @(a,b) ge(a,b);
 end
 
-[path, tmp] = spm_fileparts(nm);
-img = nm;
+[path, tmp] = spm_fileparts(OV.name);
+img = OV.name;
 
 n_slice = size(OV.slices_str, 1);
 if n_slice > 0
@@ -233,11 +241,18 @@ xy_name = num2str(xy);
 str = deblank(xy_name(1, :));
 for i = 2:n, str = [str '|' deblank(xy_name(i, :))]; end
 
+% either interactively select columns/rows or use the defined values
 if ~isfield(OV, 'xy')
   indxy = spm_input('Select number of columns/rows', '+1', 'm', str);
   xy = xy(indxy, :);
 else
-  xy = OV.xy;
+  if ~isfinite(OV.xy(1))
+    xy = xy(n,:);
+  elseif ~isfinite(OV.xy(2))
+    xy = xy(1,:);
+  else
+    xy = OV.xy;
+  end
 end
 
 
@@ -512,20 +527,20 @@ if ~isempty(xA)
           fprintf('\n______________________________________________________');
           fprintf('\n%s: Positive effects\n%s',SO.img(2).vol.fname,atlas_name);
           fprintf('\n______________________________________________________\n\n');
-          fprintf('%7s\t%7s\t%15s\t%s\n\n','Value','   Size','    xyz [mm]   ','Overlap of atlas region');
+          fprintf('%7s\t%12s\t%15s\t%s\n\n','Value','Cluster-Size','    xyz [mm]   ','Overlap of atlas region');
         end
         if found_neg == 1
           fprintf('\n______________________________________________________');
           fprintf('\n%s: Negative effects\n%s',SO.img(2).vol.fname,atlas_name);
           fprintf('\n______________________________________________________\n\n');
-          fprintf('%7s\t%7s\t%15s\t%s\n\n','Value','   Size','    xyz [mm]   ','Overlap of atlas region');
+          fprintf('%7s\t%12s\t%15s\t%s\n\n','Value','Cluster-Size','    xyz [mm]   ','Overlap of atlas region');
         end
         
-        fprintf('%7.2f\t%7d\t%4.0f %4.0f %4.0f',maxZ(j),length(Zj{j}),XYZmmj{j}(:,indZ));
+        fprintf('%7.2f\t%12d\t%4.0f %4.0f %4.0f',maxZ(j),length(Zj{j}),XYZmmj{j}(:,indZ));
         for m=1:numel(labk{j})
           if Pl{j}(m) >= 1,
             if m==1, fprintf('\t%3.0f%%\t%s\n',Pl{j}(m),labk{j}{m});
-            else     fprintf('%7s\t%7s\t%15s\t%3.0f%%\t%s\n','       ','       ','               ',...
+            else     fprintf('%7s\t%12s\t%15s\t%3.0f%%\t%s\n','       ','       ','               ',...
               Pl{j}(m),labk{j}{m});
             end
           end
@@ -592,7 +607,7 @@ if ~strcmp(image_ext, 'none')
       % use up to 2 subfolders for getting filename
       switch subfolder
         case 0, pt1 = '';
-        case 2, pt1 = [pt2 pt1]; 
+        case 2, try, pt1 = [pt2 pt1]; end 
       end
       if numel(slices) == 1
         imaname = [pt1 nm '_' lower(OV.transform) num2str(slices) '.' image_ext];
@@ -737,7 +752,7 @@ function SO = pr_basic_ui(imgs, dispf)
 %         (defaults to GUI select if no arguments passed)
 % dispf - optional flag: if set, displays overlay (default = 1)
 %
-% $Id: cat_vol_slice_overlay.m 1829 2021-05-27 09:40:22Z gaser $
+% $Id: cat_vol_slice_overlay.m 1970 2022-03-08 10:01:28Z gaser $
 
 if nargin < 1
   imgs = '';
@@ -802,12 +817,21 @@ for i = 1:nimgs
         end
       end
     end
+        
     SO.img(i).range = spm_input('Image range for colormap', '+1', 'e', [mn mx], 2)';
     define_slices = spm_input('Slices', '+1', 'm', 'Estimate slices with local maxima|Define slices', [0 1], 1);
     
     if ~define_slices
+
+      % for log-scaled p-values we should rather use gt than ge for comparison with threshold
+      if logP
+        compare_to_threshold = @(a,b) gt(a,b);
+      else
+        compare_to_threshold = @(a,b) ge(a,b);
+      end
+    
       % threshold map and restrict coordinates
-      Q = find(compare_to_threshold(img,range(1)) & le(img,range(2)));
+      Q = find(compare_to_threshold(img,SO.img(i).range(1)) & le(img,SO.img(i).range(2)));
       XYZ = XYZ(:, Q);
       img = img(Q);
       

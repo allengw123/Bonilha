@@ -9,20 +9,25 @@ function tools = cat_conf_tools(expert)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_conf_tools.m 1844 2021-06-02 23:40:58Z gaser $
+% $Id: cat_conf_tools.m 1982 2022-04-12 11:09:13Z dahnke $
 
+  if ~exist('expert','var'), expert = 1; end
+  
 % multi use fields
 % -----------------------------------------------------------------------
 
   % just used once 
   data_xml          = cfg_files;
-  data_xml.name     = '';
+  data_xml.name     = 'Quality measures';
   data_xml.tag      = 'data_xml';
   data_xml.filter   = 'xml';
   data_xml.ufilter  = '^cat_.*\.xml$';
   data_xml.val      = {{''}};
   data_xml.num      = [0 Inf];
-  data_xml.help     = {''};
+  data_xml.help     = {
+    'Select the quality measures that are saved during segmentation as xml-files in the report folder.'
+    'Please note, that the order of the xml-files should be the same as the other data files.'
+    };
 
   outdir            = cfg_files;
   outdir.tag        = 'outdir';
@@ -51,7 +56,10 @@ function tools = cat_conf_tools(expert)
   data.help         = {''};
 
   
-  % do not process, if result already exists
+  % Do not process, if result already exists and is younger than the
+  % original image, i.e., if the original was changed then it will be 
+  % processed again. The function is quite helpful to develop and test
+  % SPM batches and avoid reprocessing of slow steps.
   lazy         = cfg_menu;
   lazy.tag     = 'lazy';
   lazy.name    = 'Lazy processing';
@@ -75,14 +83,8 @@ function tools = cat_conf_tools(expert)
   spm_type          = cfg_menu; %
   spm_type.tag      = 'spm_type';
   spm_type.name     = 'Data type of the output images';
-  if expert>1 
-    % developer! there should be no great difference between uint# and int# due to rescaling 
-    spm_type.labels = {'same','uint8','int8','uint16','int16','single'};
-    spm_type.values = {0 2 256 512 4 16};
-  else
-    spm_type.labels = {'same','uint8','uint16','single (32 bit)'};
-    spm_type.values = {0 2 512 16};
-  end
+  spm_type.labels   = {'same','uint8','int8','uint16','int16','single'};
+  spm_type.values   = {0 2 256 512 4 16};
   spm_type.val      = {16};
   spm_type.help     = {
     'SPM data type of the output image. Single precision is recommended, but  uint16 also provides good results. Internal scaling supports a relative high accuracy for the limited number of bits, special values such as NAN and INF (e.g. in the background) will be lost and NAN is converted to 0, -INF to the minimum, and INF to the maximum value. '
@@ -95,10 +97,11 @@ function tools = cat_conf_tools(expert)
   intlim.tag        = 'intlim';
   intlim.name       = 'Global intensity limitation';
   intlim.strtype    = 'r';
-  intlim.num        = [1 1];
+  intlim.num        = [1 inf];
   intlim.val        = {100};
   intlim.help       = {
-    'General intensity limitation to remove strong outliers by using 99.99%% of the original histogram values  before noise correction. '
+    'General intensity limitation to remove strong outliers by using 100%% of the original histogram values. '
+    'You can also specify the lower and upper boundary seperatlym, e.g. [80 99], what will keep only 80%% of the (many) low (background values) but 99%% of the (rew) high intensity (skull) values. ' 
     ''
   };
 
@@ -132,7 +135,17 @@ function tools = cat_conf_tools(expert)
   save.val          = {0};
   save.help         = {'Save and close figures for batch processing.'};
   
-
+  verb                                = cfg_menu;
+  verb.tag                            = 'verb';
+  verb.name                           = 'Verbose output';
+  verb.labels                         = {'No' 'Yes' 'Yes (Details)'};
+  verb.values                         = {0 1 2};
+  verb.val                            = {1};
+  verb.hidden                         = expert<1;
+  verb.help                           = {
+    'Be more or less verbose. '
+    ''
+    };
 % get subbatches
 % -------------------------------------------------------------------------
   [T2x,T2x_surf,F2x,F2x_surf] = conf_T2x;
@@ -141,27 +154,29 @@ function tools = cat_conf_tools(expert)
   [defs,defs2]                = conf_vol_defs;
   nonlin_coreg                = cat_conf_nonlin_coreg;
   createTPM                   = conf_createTPM(data_vol,expert,suffix,outdir); 
-  createTPMlong               = conf_createTPMlong(data_vol);
-  headtrimming                = conf_vol_headtrimming(intlim,spm_type,prefix,suffix,expert);
+  createTPMlong               = conf_createTPMlong(data_vol,expert);
+  long_report                 = conf_long_report(data_vol,data_xml,expert);
+  headtrimming                = conf_vol_headtrimming(intlim,spm_type,prefix,suffix,verb,lazy,expert);
   check_SPM                   = conf_stat_check_SPM(outdir,fname,save,expert); 
   showslice                   = conf_stat_showslice_all(data_vol);
   maskimg                     = conf_vol_maskimage(data,prefix);
   calcvol                     = conf_stat_TIV;
-  spmtype                     = conf_io_volctype(data,intlim,spm_type,prefix,suffix,expert,lazy);
+  spmtype                     = conf_io_volctype(data,intlim,spm_type,prefix,suffix,verb,expert,lazy);
   calcroi                     = conf_roi_fun(outdir);
   [ROI,sROI,ROIsum]           = cat_conf_ROI(expert);
   resize                      = conf_vol_resize(data,prefix,expert,outdir);
   avg_img                     = conf_vol_average(data,outdir);
   realign                     = conf_vol_series_align(data);
   shootlong                   = conf_shoot(expert); 
-  sanlm                       = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert);
+  [sanlm,sanlm2]              = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,lazy,expert);
   biascorrlong                = conf_longBiasCorr(data,expert,prefix);
   data2mat                    = conf_io_data2mat(data,outdir);
   boxplot                     = conf_io_boxplot(outdir,subdir,prefix,expert);
   getCSVXML                   = cat_cfg_getCSVXML(outdir,expert);
+  file_move                   = conf_io_file_move; 
   %urqio                       = conf_vol_urqio; % this cause problems
   iqr                         = conf_stat_IQR(data_xml);
-  %qa                         = conf_vol_qa(data);
+  qa                          = conf_vol_qa(expert,outdir);
   
   
 % create main batch 
@@ -172,6 +187,7 @@ function tools = cat_conf_tools(expert)
   tools.values = { ...
     showslice, ...                        cat.stat.pre 
     ... qa, ...                           cat.stat.pre
+    qa, ...                               
     check_cov, ...                        cat.stat.pre
     check_cov2, ...                       cat.stat.pre
     quality_measures, ...                     cat.stat.pre
@@ -180,13 +196,14 @@ function tools = cat_conf_tools(expert)
     calcvol, ...                          cat.stat.pre
     calcroi, ...                          cat.stat.pre
       ROIsum, ...
-    iqr, ....                             cat.stat.pre
+    iqr, ...                              cat.stat.pre
     ...
     T2x, F2x, T2x_surf, F2x_surf, ...     cat.stat.models?
     ...
     ... SPLIT THIS FILE ?!
     ...
     sanlm, ...                            cat.pre.vtools.
+    sanlm2, ...
     maskimg, ...                          cat.pre.vtools.
     spmtype, ...                          cat.pre.vtools.
     headtrimming, ...                     cat.pre.vtools.
@@ -196,6 +213,7 @@ function tools = cat_conf_tools(expert)
     shootlong,...                         cat.pre.long.?          % hidden
     biascorrlong,...                      cat.pre.long.?          % hidden
     createTPMlong, ...                    cat.pre.long.createTPM  % hidden
+    long_report, ...                  cat.pre.long.report     % hidden
     ...
     createTPM, ...                        
     nonlin_coreg, ...                     cat.pre.vtools.
@@ -206,6 +224,7 @@ function tools = cat_conf_tools(expert)
     ...
     boxplot, ...                          cat.stat.eval ... print of XML data by the boxplot function and saving as images  
     getCSVXML, ...                        cat.stat.eval ... read out of XML/CSV data and export as batch dependency 
+    file_move, ...
     ...                                   
     };
   
@@ -214,7 +233,379 @@ function tools = cat_conf_tools(expert)
   %  tools.values = [tools.values,{urqio}]; 
   %end
 return
+%_______________________________________________________________________
+function file_move = conf_io_file_move
 
+% ---------------------------------------------------------------------
+% file_move Move/Delete Files
+% ---------------------------------------------------------------------
+
+
+% ---------------------------------------------------------------------
+% files Files to move/copy/delete
+% ---------------------------------------------------------------------
+files         = cfg_files;
+files.tag     = 'files';
+files.name    = 'Files to move/copy/delete';
+files.help    = {'These files will be moved, copied or deleted.'};
+files.filter = {'any'};
+files.ufilter = '.*';
+files.num     = [0 Inf];
+% ---------------------------------------------------------------------
+% moveto Move to
+% ---------------------------------------------------------------------
+moveto         = cfg_files;
+moveto.tag     = 'moveto';
+moveto.name    = 'Move to';
+moveto.help    = {'Files will be moved to the specified directory.'};
+moveto.filter = {'dir'};
+moveto.ufilter = '.*';
+moveto.num     = [1 1];
+% ---------------------------------------------------------------------
+% copyto Copy to
+% ---------------------------------------------------------------------
+copyto         = cfg_files;
+copyto.tag     = 'copyto';
+copyto.name    = 'Copy to';
+copyto.help    = {'Files will be moved to the specified directory.'};
+copyto.filter = {'dir'};
+copyto.ufilter = '.*';
+copyto.num     = [1 1];
+% ---------------------------------------------------------------------
+% moveto Move to
+% ---------------------------------------------------------------------
+moveto1         = cfg_files;
+moveto1.tag     = 'moveto';
+moveto1.name    = 'Move to';
+moveto1.help    = {'Files will be moved to the specified directory.'};
+moveto1.filter = {'dir'};
+moveto1.ufilter = '.*';
+moveto1.num     = [1 1];
+% ---------------------------------------------------------------------
+% pattern Pattern
+% ---------------------------------------------------------------------
+pattern         = cfg_entry;
+pattern.tag     = 'pattern';
+pattern.name    = 'Pattern';
+pattern.help    = {'The regular expression pattern to look for.'};
+pattern.strtype = 's';
+pattern.num     = [1  Inf];
+% ---------------------------------------------------------------------
+% repl Replacement
+% ---------------------------------------------------------------------
+repl         = cfg_entry;
+repl.tag     = 'repl';
+repl.name    = 'Replacement';
+repl.help    = {'This string (or pattern) will be inserted instead.'};
+repl.strtype = 's';
+repl.num     = [1  Inf];
+% ---------------------------------------------------------------------
+% patrep Pattern/Replacement Pair
+% ---------------------------------------------------------------------
+patrep         = cfg_branch;
+patrep.tag     = 'patrep';
+patrep.name    = 'Pattern/Replacement Pair';
+patrep.val     = {pattern repl };
+% ---------------------------------------------------------------------
+% patreplist Pattern/Replacement List
+% ---------------------------------------------------------------------
+patreplist         = cfg_repeat;
+patreplist.tag     = 'patreplist';
+patreplist.name    = 'Pattern/Replacement List';
+patreplist.help    = {'Regexprep supports a list of multiple patterns and corresponding replacements. These will be applied to the filename portion (without path, without extension) one after another. E.g., if your filename is ''testimage(.nii)'', and you replace ''test'' with ''xyz'' and ''xyzim'' with ''newtestim'', the final filename will be ''newtestimage.nii''.'};
+patreplist.values  = {patrep };
+patreplist.num     = [1 Inf];
+% ---------------------------------------------------------------------
+% unique Unique Filenames
+% ---------------------------------------------------------------------
+unique         = cfg_menu;
+unique.tag     = 'unique';
+unique.name    = 'Unique Filenames';
+unique.help    = {
+                  'If the regexprep operation results in identical output filenames for two or more input files, these can not be written/renamed to their new location without loosing data. If you are sure that your regexprep patterns produce unique filenames, you do not need to care about this.'
+                  'If you choose to append a running number, it will be zero-padded to make sure alphabetical sort of filenames returns them in the same order as the input files are.'
+                  }';
+unique.labels = {
+                 'Don''t Care'
+                 'Append Index Number'
+                 }';
+unique.values = {
+                 false
+                 true
+                 }';
+% ---------------------------------------------------------------------
+% moveren Move and Rename
+% ---------------------------------------------------------------------
+moveren         = cfg_branch;
+moveren.tag     = 'moveren';
+moveren.name    = 'Move and Rename';
+moveren.val     = {moveto1 patreplist unique };
+moveren.help    = {'The input files will be moved to the specified target folder. In addition, their filenames (not paths, not extensions) will be changed by replacing regular expression patterns using MATLABs regexprep function. Please consult MATLAB help and HTML documentation for how to specify regular expressions.'};
+
+ren         = cfg_branch;
+ren.tag     = 'ren';
+ren.name    = 'Rename';
+ren.val     = {patreplist unique };
+ren.help    = {'The input files will be moved to the specified target folder. In addition, their filenames (not paths, not extensions) will be changed by replacing regular expression patterns using MATLABs regexprep function. Please consult MATLAB help and HTML documentation for how to specify regular expressions.'};
+
+
+% ---------------------------------------------------------------------
+% copyto Copy to
+% ---------------------------------------------------------------------
+copyto1         = cfg_files;
+copyto1.tag     = 'copyto';
+copyto1.name    = 'Copy to';
+copyto1.help    = {'Files will be moved to the specified directory.'};
+copyto1.filter = {'dir'};
+copyto1.ufilter = '.*';
+copyto1.num     = [1 1];
+% ---------------------------------------------------------------------
+% pattern Pattern
+% ---------------------------------------------------------------------
+pattern         = cfg_entry;
+pattern.tag     = 'pattern';
+pattern.name    = 'Pattern';
+pattern.help    = {'The regular expression pattern to look for.'};
+pattern.strtype = 's';
+pattern.num     = [1  Inf];
+% ---------------------------------------------------------------------
+% repl Replacement
+% ---------------------------------------------------------------------
+repl         = cfg_entry;
+repl.tag     = 'repl';
+repl.name    = 'Replacement';
+repl.help    = {'This string (or pattern) will be inserted instead.'};
+repl.strtype = 's';
+repl.num     = [1  Inf];
+% ---------------------------------------------------------------------
+% patrep Pattern/Replacement Pair
+% ---------------------------------------------------------------------
+patrep         = cfg_branch;
+patrep.tag     = 'patrep';
+patrep.name    = 'Pattern/Replacement Pair';
+patrep.val     = {pattern repl };
+% ---------------------------------------------------------------------
+% patreplist Pattern/Replacement List
+% ---------------------------------------------------------------------
+patreplist         = cfg_repeat;
+patreplist.tag     = 'patreplist';
+patreplist.name    = 'Pattern/Replacement List';
+patreplist.help    = {'Regexprep supports a list of multiple patterns and corresponding replacements. These will be applied to the filename portion (without path, without extension) one after another. E.g., if your filename is ''testimage(.nii)'', and you replace ''test'' with ''xyz'' and ''xyzim'' with ''newtestim'', the final filename will be ''newtestimage.nii''.'};
+patreplist.values  = {patrep };
+patreplist.num     = [1 Inf];
+% ---------------------------------------------------------------------
+% unique Unique Filenames
+% ---------------------------------------------------------------------
+unique         = cfg_menu;
+unique.tag     = 'unique';
+unique.name    = 'Unique Filenames';
+unique.help    = {
+                  'If the regexprep operation results in identical output filenames for two or more input files, these can not be written/renamed to their new location without loosing data. If you are sure that your regexprep patterns produce unique filenames, you do not need to care about this.'
+                  'If you choose to append a running number, it will be zero-padded to make sure alphabetical sort of filenames returns them in the same order as the input files are.'
+                  }';
+unique.labels = {
+                 'Don''t Care'
+                 'Append Index Number'
+                 }';
+unique.values = {
+                 false
+                 true
+                 }';
+unique.val    = {false};                
+% ---------------------------------------------------------------------
+% copyren Copy and Rename
+% ---------------------------------------------------------------------
+copyren         = cfg_branch;
+copyren.tag     = 'copyren';
+copyren.name    = 'Copy and Rename';
+copyren.val     = {copyto1 patreplist unique };
+copyren.help    = {'The input files will be copied to the specified target folder. In addition, their filenames (not paths, not extensions) will be changed by replacing regular expression patterns using MATLABs regexprep function. Please consult MATLAB help and HTML documentation for how to specify regular expressions.'};
+% ---------------------------------------------------------------------
+% delete Delete
+% ---------------------------------------------------------------------
+delete         = cfg_const;
+delete.tag     = 'delete';
+delete.name    = 'Delete';
+delete.val     = {false};
+delete.help    = {'The selected files will be deleted.'};
+% ---------------------------------------------------------------------
+% action Action
+% ---------------------------------------------------------------------
+action         = cfg_choice;
+action.tag     = 'action';
+action.name    = 'Action';
+action.values  = {moveto copyto moveren copyren ren delete };
+
+
+file_move         = cfg_exbranch;
+file_move.tag     = 'file_move';
+file_move.name    = 'Move/Rename/Delete Files';
+file_move.val     = {files action };
+file_move.help    = {'Move, rename or delete files.'};
+file_move.prog    = @cat_io_file_move;
+file_move.vout    = @vout_file_move;
+
+return
+%_______________________________________________________________________
+function long_report = conf_long_report(data_vol,data_xml,expert)
+% -------------------------------------------------------------------------
+% Batch to create a final report of the processing of a set of files of one
+% (or multiple) subject(s).
+% 
+% RD202201: start of development for fast visualisation of longitudinal and
+%           test-retest data
+% -------------------------------------------------------------------------
+  data_vol.name         = 'Volume Data Files';
+  data_vol.num          = [0 Inf];
+  data_vol.val{1}       = {''};
+  
+  data_surf             = cfg_files;
+  data_surf.tag         = 'data_surf';
+  data_surf.name        = '(Left) Surface Data Files';
+  data_surf.filter      = 'any';
+  data_surf.ufilter     = 'lh.(?!cent|pial|white|sphe|defe|hull|pbt).*';
+  data_surf.num         = [0 Inf];
+  data_surf.help        = {'Surface data files. Both sides will be processed'};
+  data_surf.val{1}      = {''};
+   
+  avg_vol               = data_vol; 
+  avg_vol.tag           = 'avg_vol';
+  avg_vol.name          = 'Volume Average Data File (In Development)'; % ###### not implemented yet ######
+  avg_vol.num           = [0 1];
+  avg_vol.help          = {'Segmentation of an average volume T1 to estimate further measures.' ''}; 
+  avg_vol.val{1}        = {''};
+  avg_vol.hidden        = expert<2;
+
+  avg_surf              = data_surf; 
+  avg_surf.tag          = 'avg_vol';
+  avg_surf.name         = '(Left) Surface Average Data File (In Development)'; % ###### not implemented yet ######
+  avg_surf.num          = [0 1];
+  avg_surf.help         = {'Surface/thickness of an average volume T1 to estimate further measures.' ''}; 
+  avg_surf.val{1}       = {''}; 
+  avg_surf.hidden       = expert<2;
+  
+  % selected automatically ... need further controlling routines for covariance analysis
+  xmls                  = data_xml; 
+  xmls.name             = 'XML Data Files (In Development)'; % ###### not implemented yet ######
+  xmls.hidden           = expert<2; 
+  
+  timepoints            = cfg_entry;
+  timepoints.tag        = 'timepoints';
+  timepoints.name       = 'Timepoints (In Development)'; % ###### not implemented yet ######
+  timepoints.help       = {'Define difference between timepoints in years. '}; 
+  timepoints.strtype    = 'r';
+  timepoints.num        = [0 inf];
+  timepoints.val        = {[]}; 
+  timepoints.hidden     = expert<2;
+  
+  
+  % == options ==
+  smoothvol             = cfg_entry;
+  smoothvol.tag         = 'smoothvol';
+  smoothvol.name        = 'Volumetric Smoothing';
+  smoothvol.help        = {'FWHM of volumetric smoothing in mm.'}; 
+  smoothvol.strtype     = 'r';
+  smoothvol.num         = [1 1];
+  smoothvol.val         = {3}; 
+  
+  smoothsurf            = cfg_entry;
+  smoothsurf.tag        = 'smoothsurf';
+  smoothsurf.name       = 'Thickness Smoothing';
+  smoothsurf.help       = {'Amount of surface-based smoothing in mm'}; 
+  smoothsurf.strtype    = 'r';
+  smoothsurf.num        = [1 1];
+  smoothsurf.val        = {12}; 
+  
+  midpoint              = cfg_menu;
+  midpoint.tag          = 'midpoint';
+  midpoint.name         = 'Scaling (In Development)'; % ###### not implemented yet ######
+  midpoint.labels       = {
+    'first image'
+    'mean'
+    };
+  midpoint.values       = {0;1};
+  midpoint.val          = {0};
+  midpoint.help         = {'Data scaling by first image or by mean value. ' ''}; 
+  midpoint.hidden       = expert<2;
+  
+  boxplot               = cfg_menu;
+  boxplot.tag           = 'boxplot';
+  boxplot.name          = 'Boxplot (In Development)'; % ###### not implemented yet ######
+  boxplot.labels        = {
+    'no'
+    'yes'
+    };
+  boxplot.values        = {0;1};
+  boxplot.val           = {0};
+  boxplot.help          = {'Use boxplots.' ''};
+  boxplot.hidden        = expert < 2;
+  
+  plotGMWM              = cfg_menu;
+  plotGMWM.tag          = 'plotGMWM';
+  plotGMWM.name         = 'Plot WM and GM in one figure'; % ###### not implemented yet ######
+  plotGMWM.labels       = {
+    'no'
+    'yes'
+    };
+  plotGMWM.values       = {0;1};
+  plotGMWM.val          = {1};
+  plotGMWM.help         = {'Plot WM and GM in one figure. ' ''};
+  plotGMWM.hidden       = expert < 2;
+  
+  opts                  = cfg_exbranch;
+  opts.tag              = 'opts';
+  opts.name             = 'Options';
+  opts.val              = {smoothvol smoothsurf midpoint plotGMWM}; 
+  opts.help             = {'Specify some processing options.' ''};
+  opts.hidden           = expert<1;
+  
+  % == output ==
+  vols                  = cfg_menu;
+  vols.tag              = 'vols';
+  vols.name             = 'Difference Maps';
+  vols.labels           = {'No';'Yes'};
+  vols.values           = {0,1};
+  vols.val              = {0};
+  vols.help             = {'Write difference volume maps.' ''};
+  
+  surfs                 = cfg_menu;
+  surfs.tag             = 'surfs';
+  surfs.name            = 'Difference Surfaces Data Files';
+  surfs.labels          = {'No';'Yes'};
+  surfs.values          = {0,1};
+  surfs.val             = {0};
+  surfs.help            = {'Write difference surface data files.' ''};
+  
+  xml                   = cfg_menu;
+  xml.tag               = 'xml';
+  xml.name              = 'XML';
+  xml.labels            = {'No';'Yes'};
+  xml.values            = {0,1};
+  xml.val               = {1};
+  xml.help              = {'Write combined XML file.' ''};
+  
+  output                = cfg_exbranch;
+  output.tag            = 'output';
+  output.name           = 'Write Output Data';
+  output.val            = {vols surfs xml}; 
+  output.help           = {'Specify output data.' ''};
+  output.hidden         = expert<1;
+  
+  % == main ==
+  long_report           = cfg_exbranch;
+  long_report.tag       = 'long_report';
+  long_report.name      = 'Longitudinal Report';
+  if expert
+    long_report.val     = {data_vol avg_vol data_surf avg_surf xmls timepoints opts output};
+  else
+    long_report.val     = {data_vol data_surf};
+  end  
+  long_report.prog      = @cat_long_report;
+  %long_report.vout      = @vout_long_report; 
+  long_report.hidden    = expert<1;
+  long_report.help      = {
+    };
+return
 %_______________________________________________________________________
 function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
 % -------------------------------------------------------------------------
@@ -229,7 +620,7 @@ function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
   files.tag           = 'files';
   files.name          = 'Subjects';
   files.filter        = 'any';
-  files.help          = {'Select XML/NIFTI/GIFTI images of the subject that should be found in the CSV file. '};
+  files.help          = {'Select XML/NIFTI/GIFTI files of subjects those XML/CSV data should be extracted. '};
   
   % 0..1-file ... maybe n later
   csvfile             = cfg_files;
@@ -237,40 +628,31 @@ function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
   csvfile.tag         = 'csvfile';
   csvfile.name        = 'CSV file';
   csvfile.filter      = 'any';
-  csvfile.val         = {''};
+  csvfile.ufilter     = '.*csv';
+  csvfile.val         = {{''}};
   csvfile.help        = {
-   ['Select one CSV file that contains further information. The first line has to be the header with the name of the variables. ' ...
-    'The first row has to include an identifier for the selected subjects files give above, e.g. the subject ID, the filename, or path if the filename is not unique. ' ...
-    'E.g., a file IXI_IOP_493 can be idenfiefied by the subject ID 493 given in the IXI CSV table. ' ...
-    'However, filenames in BIDS are not suited for identification and you has to specify the "CSV subject ID in the filename" parameter to select the directory entry that include the ID. ']
+   ['Select one CSV file that contains further information, e.g. age or sex.  The first line has to be the header with the name of the variables.  ' ...
+    'The first row has to include an unique identifier for the selected subjects files give above, e.g. the subject ID, the filename, or path if the filename is not unique. ' ...
+    'For instance, a file IXI_IOP_493 can be identified by the subject ID 493 given in the IXI CSV table. ' ...
+    'However, filenames in BIDS are not suited for identification and you has to specify the "Path/filename selector" to select the directory entry that include the ID. ']
     ''
     };
  
-  csvid               = cfg_entry;
-  csvid.tag           = 'csvIDfd';
-  csvid.name          = 'CSV subject ID in the filename';
-  csvid.strtype       = 'w';
-  csvid.num           = [1 inf]; 
-  csvid.val           = {0}; 
-  csvid.help          = {
-   ['Because the filename (=0) does not allways defines the subject ID you can select another directory of the file path. ' ...
-    'E.g., for the file ".../myProject/GROUP/SUB01/TP01/T1w/001.nii" you have to define the 3rd ancestor (=3), ' ...
-    'whereas ".../myProject/GROUP/SUB01/TP01/T1w/report/catxml_001.xml" would require the 4th ancestor (=4). ']
-    ''
-    };
-  
+ 
   % set of variables names for extraction ... preselection TIV IQR ...
   % the variables were extracted and a depency for each created
   % The CSV selection is a bit more tricky. 
   fields              = cfg_entry;
   fields.tag          = 'fields';
-  fields.name         = 'Fieldnames';
+  fields.name         = 'XML and CSV fieldnames';
   fields.strtype      = 's+';
-  fields.num          = [1 inf]; 
+  fields.num          = [0 inf]; 
+  fields.val          = {{'ALLCSV'}};
   fields.help         = {
    ['Enter the fieldnames (XML) or columns names (CSV) you want to get here. ' ...
     'The fieldnames where used to create the depency object and will be converted to variables. ' ...
-    'The CSV columns should be useable as variable otherwise you have to rename them in the file. '] 
+    'The CSV columns should be useable as variable otherwise you have to rename them in the file. ' ...
+    'You can use ALLCSV to create variables of all CSV header fields. ' ] 
     ''
    ['E.g. the catxml contain the TIV in the subfield "subjectmeasures.vol_TIV" that will create the depency variable "subjectmeasures_vol_TIV". ' ...
     'To extract one value of a matrix or cell field use the matlab specification, e.g., to extract the GM value from "subjectmeasures.vol_CGW" use "subjectmeasures.vol_CGW(2)"' ...
@@ -281,16 +663,14 @@ function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
     '  SEX_ID_(1=m,2=f)'             
     '  subjectmeasures.vol_TIV'       
     '  subjectmeasures.vol_abs_CGW(2)'
+    '  ALLCSV'
     ''
     };
-  
-  
-  
   
     
   % quality measures (expert)
   QMfield               = cfg_menu;
-  QMfield.tag           = 'xmlfields';
+  QMfield.tag           = 'xmlfieldsQualityMeasures';
   QMfield.name          = 'Image quality';
   QMfield.labels        = {
     'Noise Contrast Ratio (NCR)'
@@ -310,7 +690,7 @@ function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
   
   % quality ratings 
   QRfield               = cfg_menu;
-  QRfield.tag           = 'xmlfields';
+  QRfield.tag           = 'xmlfieldsQualityRating';
   QRfield.name          = 'Image quality ratings';
   QRfield.labels        = {
     'Image Quality Rating (IQR)'
@@ -320,19 +700,19 @@ function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
     'Minimum tissue contrast'
     };
   QRfield.values        = {
-    'qualitratings.IQR'
-    'qualitratings.NCR'
-    'qualitratings.ICR'
-    'qualitratings.res_RMS'
-    'qualitratings.contrast'
+    'qualityratings.IQR'
+    'qualityratings.NCR'
+    'qualityratings.ICR'
+    'qualityratings.res_RMS'
+    'qualityratings.contrast'
     };
-  QRfield.val           = {'qualitratings.NCR'};
+  QRfield.val           = {'qualityratings.IQR'};
   QRfield.help          = {'CAT preprocessing image quality ratings (normalized marks).' ''};
   
   
   % surface measures
   SMfield               = cfg_menu;
-  SMfield.tag           = 'xmlfields';
+  SMfield.tag           = 'xmlfieldsSurfMeasure';
   SMfield.name          = 'Surface quality';
   SMfield.labels        = {
     ... 'Surface Euler number'
@@ -356,7 +736,7 @@ function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
   
   % segmenation measures
   USMfield               = cfg_menu;
-  USMfield.tag           = 'xmlfields';
+  USMfield.tag           = 'xmlfieldsSPMmeasures';
   USMfield.name          = 'Unified segmentation validation measures';
   USMfield.labels        = {
     'SPM log-likelyhood'
@@ -397,7 +777,7 @@ function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
   
   % individual measures
   IMfield               = cfg_menu;
-  IMfield.tag           = 'xmlfields';
+  IMfield.tag           = 'xmlfieldsMorphMeasures';
   IMfield.name          = 'Morphometric measures';
   IMfield.labels        = {
     'Total Intracranial Volume (TIV)'
@@ -435,7 +815,7 @@ function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
   
   % individual measures
   PDfield               = cfg_menu;
-  PDfield.tag           = 'xmlfields';
+  PDfield.tag           = 'xmlfieldsQualityMeasures';
   PDfield.name          = 'Predefined XML fields';
   PDfield.labels        = {
     'Total Intracranial Volume (TIV)'
@@ -502,15 +882,15 @@ function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
   %  opt.subsets     = false(1,numel(data)); 
   
   xmlfield0           = cfg_exbranch;
-  xmlfield0.tag       = 'xmlfields';
-  xmlfield0.name      = 'Data field (complex)';
+  xmlfield0.tag       = 'xmlfieldsFull';
+  xmlfield0.name      = 'Data field (full)';
   xmlfield0.val       = { ftitle  , fname , fspec , ylim}; 
   xmlfield0.help      = {'Specify set properties such as name or color' ''};
   
   
   xmlfield            = cfg_entry;
-  xmlfield.tag        = 'xmlfields';
-  xmlfield.name       = 'Data field (simple)';
+  xmlfield.tag        = 'xmlfieldsSimple';
+  xmlfield.name       = 'Data field';
   xmlfield.help       = { 
    ['Specify field for data extraction that result in one value per file, e.g., ' ...
     'measures.vol_rel_CGW(1) to extract the first (CSF) volume value. '] ''};
@@ -520,15 +900,15 @@ function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
   
   xmlfields           = cfg_repeat;
   xmlfields.tag       = 'xmlfields';
-  xmlfields.name      = 'XML-fields';
+  xmlfields.name      = 'XML fields';
   if expert>1
     xmlfields.values  = {xmlfield,xmlfield0,PDfield,USMfield,QMfield,QRfield,SMfield,IMfield};
   else
     xmlfields.values  = {xmlfield,xmlfield0,PDfield};
   end
   xmlfields.val       = {};
-  xmlfields.num       = [1 Inf];
-  xmlfields.forcestruct;
+  xmlfields.num       = [0 Inf];
+  xmlfields.forcestruct = 1;
   xmlfields.help      = {'Specify manually grouped XML files.'};
   
   % ------
@@ -554,18 +934,105 @@ function getCSVXML = cat_cfg_getCSVXML(outdir,expert)
     ''
     };
 
+  
+  csvid               = cfg_entry;
+  csvid.tag           = 'csvIDfd';
+  csvid.name          = 'Subpath selector';
+  csvid.strtype       = 'w';
+  csvid.num           = [0 inf]; 
+  csvid.val           = {[]}; 
+  csvid.help          = {
+   ['Because the filename (=0 or []) does not allways defines the subject ID you can select another directory of the file path. ' ...
+    'E.g., for the file ".../myProject/GROUP/SUB01/TP01/T1w/001.nii" you have to define the 3rd ancestor (=-3), ' ...
+    'whereas ".../myProject/GROUP/SUB01/TP01/T1w/report/catxml_001.xml" would require the 4th ancestor (=-4). ']
+    ''
+    };
+  
+  filesel             = cfg_entry;
+  filesel.tag         = 'filesel';
+  filesel.name        = 'Filepart selector';
+  filesel.help        = {'Limitation of x-axis. '}; 
+  filesel.strtype     = 'w';
+  filesel.num         = [0 inf];
+  filesel.val         = {[]}; 
+  filesel.help        = {'Specify a part of the filename, e.g. by 1 to select "IXI002" from "IXI002-Guys-0815-T1.nii". No intput uses the full filename. Two inputs can ' };
+  
+  fileseps            = cfg_entry;
+  fileseps.tag        = 'fileseps';
+  fileseps.name       = 'Filename seperators';
+  fileseps.strtype    = 's';
+  fileseps.val        = {'_-.'};
+  fileseps.num        = [0 inf];
+  fileseps.help       = {
+   'Seperators used within the filename. E.g. to select "IXI002" from "IXI002-Guys-0815-T1.nii" by defining also the ID filename selector with "1". '
+    };
+  
+  % path filename varialbes ? 
+  % pathsel + filesel + name
+  % filenameselector    
+  name            = cfg_entry;
+  name.tag        = 'name';
+  name.name       = 'Field / variable name';
+  name.strtype    = 's';
+  name.val        = {};
+  name.num        = [1 inf];
+  name.help       = {
+   'Select a unique name for the variable / field.'};
+  
+  fnamefield          = cfg_exbranch;
+  fnamefield.tag      = 'fnamefields';
+  fnamefield.name     = 'Filename field';
+  fnamefield.val      = {csvid filesel fileseps name};
+  fnamefield.help     = {'' ''};
+  
+  fnamefields         = cfg_repeat;
+  fnamefields.tag     = 'fnamefields';
+  fnamefields.name    = 'Filename fields';
+  fnamefields.values  = {fnamefield}; 
+  fnamefields.val     = {};
+  fnamefields.num     = [0 Inf];
+  %fnamefields.forcestruct = 0;
+  fnamefields.help    = {'Selectors to define the subject ID by a given path/filename, e.g., the IXI filename also include a site ID and weighting: "IXI002-Guys-0815-T1.nii'};
+  
+  % ############ improve help
+  idselector          = cfg_exbranch;
+  idselector.tag      = 'idselector';
+  idselector.name     = 'ID filename selector';
+  idselector.val      = {csvid filesel fileseps};
+  idselector.help     = {'Selectors to define the subject ID by a given path/filename, e.g., the IXI filename also include a site ID and weighting: "IXI002-Guys-0815-T1.nii'};
+    
+  verb                                = cfg_menu;
+  verb.tag                            = 'verb';
+  verb.name                           = 'Verbose output';
+  verb.labels                         = {'No' 'Yes' 'Yes (Details)'};
+  verb.values                         = {0 1 2};
+  verb.val                            = {1};
+  %verb.hidden                         = expert<1;
+  verb.help                           = {
+    'Be more or less verbose. '
+    ''
+    };
+  
   getCSVXML           = cfg_exbranch;
   getCSVXML.tag       = 'getCSVXML';
   getCSVXML.name      = 'XML/CSV readout';
-  getCSVXML.val       = {files csvfile csvdelkom csvid xmlfields fields outdir write};
+  getCSVXML.val       = {files csvfile csvdelkom xmlfields fields fnamefields idselector outdir write verb};
   getCSVXML.prog      = @cat_stat_getCSVXMLfield;
   getCSVXML.vout      = @vout_stat_getCSVXML;
   getCSVXML.hidden    = expert<1;
   getCSVXML.help      = {
-    'Batch to extract XML and CSV entries for a set of (processed) files.  For example, the IXI dataset came with a CSV file containing information about "IXI_ID;SEX_ID;HEIGHT;WEIGHT;...;AGE" for all subjects.  You can now use this batch to extract informations for a subset of files.  You need to select the processed files (e.g. the "catxml_*.xml" or "lh.thickness.*.gii" files) and the IXI.csv file.  You also need to select the delimiter type of the CSV file and specify how to distinguish the part of the filename that contains the subject ID (this must be the first column in the CSV file) and the fieldnames (e.g. "SEX_ID" or "AGE"). '
+    'This batch allows to extract XML and CSV entries and filename-parts for a given list of a subset of (processed) files to use the in statistical models.  ' 
+    '' % XML block
+   ['The XML extraction of the CAT*.xml allows for instance to extract informations from the CAT prepcrocessing, such as global volumes, image quality ratings or preprocessing setting, ' ...
+    'You need to select the processed files that define the used subjects, e.g. the "catxml_*.xml" or the "lh.thickness.*.gii" files or the original images. ' ...
+    'Moreover, specific atlas regions can be extracted from CAT atlas XML files. '] % is this useful ? Use a predefined batch for it, eg. by automaticly analyse the CSV atlas files
+    '' % CSV block
+   ['Many databases use CSV files to store information such as "IXI_ID; SEX_ID; HEIGHT; WEIGHT; ...; AGE" for the IXI dataset.  ' ...
+    'You also need to select the delimiter type of the CSV file and specify how to distinguish the part of the filename that contains the subject ID (this must be the first column in the CSV file) and the fieldnames (e.g. "SEX_ID" or "AGE").']
+    '' % FILE selector block ?
     'You can write the results into a text file or you can use the DEPENDENCY function of the SPM batches by choosing the column-wise output vectors. '
     ''
-    'Problems can occure if the ID is not fully unique, i.e. if a ID (e.g. 1) is part of another ID (e.g. 101). '
+    'Problems can occure if the ID is not fully unique, i.e. if a ID (e.g. 1) is part of another ID (e.g. 101), or if an ID is used multiple times. '
     };
 return
 
@@ -634,16 +1101,28 @@ function resize = conf_vol_resize(data,prefix,expert,outdir)
   restype.val     = {res}; 
   restype.help    = {'The images can be resize to (i) a specific resolution and (ii) to the space of another images (like in ImCalc). '};
   if ~scale.hidden
-    restype.help  = [ restype.help {'Moreover, the data of the volume can be rescaled, e.g., to adopt template data for other species. The images are not resliced in this case. '}];
+    restype.help  = [ restype.help; {'Moreover, the data of the volume can be rescaled, e.g., to adopt template data for other species. The images are not resliced in this case. '}];
   end
     
   % imcalc interpolation field
-  imcalc          = spm_cfg_imcalc;
-  method          = imcalc.val{6}.val{3}; 
+  imcalc            = spm_cfg_imcalc;
+  method            = imcalc.val{6}.val{3}; 
+  if expert>1 
+  % extended version with additional filtering filtering
+  % there are different levels available (FWHM size) but I want to keep it simple
+    method.labels{9}  = 'Trilinear (with smooth downsampling)';
+    method.values{9}  = -2001; 
+    method.labels{10} = '5th Degree Sinc (with light smooth downsampling)';
+    method.values{10} = -2005; 
+    method.help      = [ method.help'; { '    Trilinear / 5th Degree Sinc (with smooth downsampling)';  '    - If image dimensions are downsampled, prior Gaussian filtering allows denoising and simulation of the partial volume effect.  The FWHM can be defined as the ratio of the new to the original voxel size:   vx_vol_org ./ vx_vol_org - 1.  E.g. an image of 0.2x0.2x0.5 mm downsampled to 0.5x0.5x0.5 mm supports smoothing with FWHM=[3 3 0], which reduces noise along the downsampled axis. '; ''}];  
+  end
   clear imcalc
   
-  prefix.val      = {'r'}; 
-  
+  prefix.val      = {'r'};
+  prefix.help     = {
+    'Use "auto" to add resolution automatically, e.g., "r0.8_*.nii" for final resolution or "rx0.5_*.nii" for the scaling parameter. '
+    'If you want the original resolution use 0 in the resolution setting (autoprefix "rorg_") or 1 in the scaling setting. ' 
+    };
   resize          = cfg_exbranch;
   resize.tag      = 'resize';
   resize.name     = 'Resize images';
@@ -651,7 +1130,6 @@ function resize = conf_vol_resize(data,prefix,expert,outdir)
   resize.prog     = @cat_vol_resize;
   resize.vfiles   = @vout_resize;
   resize.vout     = @vout_resize;
-  %resize.hidden   = expert<2; 
   resize.help     = {'Interpolation of images.' ''};
 return
 
@@ -859,7 +1337,7 @@ function createTPM = conf_createTPM(data,expert,name,outdir)
 return
 
 %_______________________________________________________________________
-function createTPMlong = conf_createTPMlong(data)
+function createTPMlong = conf_createTPMlong(data,expert)
 % -------------------------------------------------------------------------
 % This is a special version of the cat_vol_createTPM batch only for the
 % longitudinal preprocessing without further GUI interaction and well
@@ -920,7 +1398,7 @@ function createTPMlong = conf_createTPMlong(data)
   createTPMlong.prog   = @cat_long_createTPM;
   createTPMlong.vfiles = @vout_createTPMlong;
   createTPMlong.vout   = @vout_createTPMlong;
-  createTPMlong.hidden = true; 
+  createTPMlong.hidden = expert<1; 
   createTPMlong.help   = {
     'Create individual TPMs for longitudinal preprocessing. This is a special version of the cat_vol_createTPM batch only for the longitudinal preprocessing without further GUI interaction and well defined input. '
    ['There has to be 6 tissue classes images (GM,WM,CSF,HD1,HD2,BG) that can be in the native space, the affine or a non-linear normalized space.  ' ...
@@ -994,37 +1472,157 @@ function longBiasCorr = conf_longBiasCorr(data,expert,prefix)
 return
 
 %_______________________________________________________________________
-function qa = conf_vol_qa(data) %#ok<DEFNU>
+function qa = conf_vol_qa(expert,outdir) 
+% Batch for estimation of image quality by a given input segmentation. 
+% There was the idea of a relative common batch that allows to use a wide
+% set of maps to allow personal adaptions, e.g., to measure in background
+% regions or to use atlas maps for region-specific results. However, this 
+% becomes quite complex and would focus on experts that have so specific 
+% knowledge that they better write there own code. 
+% So I try to keep it simple here to support our image quality measures 
+% also for other tissue segmentation, e.g. by SPM, FSL, FreeSurfer.  
+
   % update input
-  data.help = {'Select images for quality control.'};
+  data            = cfg_files;
+  data.tag        = 'images';
+  data.name       = 'Images';
+  data.help       = {'Select images that should be evaluated.'};
+  data.filter     = 'image';
+  data.ufilter    = '.*';
+  data.num        = [1 Inf];  
+  
+  catlab          = data; 
+  catlab.ufilter  = '^p0.*';
+  catlab.tag      = 'catp0'; 
+  catlab.name     = 'Default with CAT label map';
+  catlab.help     = {['Select CAT label map with brain tissues (p0*.nii).  Also label maps created by other tissue segmentations can be used, ' ...
+    'as long the following labeling is used: CSF=1, GM=2, and WM=3 with intermediate PVE values (e.g., 2.32 for 68% GM and 32% WM.  ']};
+  
+  catsegp         = data; 
+  catsegp.ufilter = '^p1.*';
+  catsegp.tag     = 'catp1'; 
+  catsegp.name    = 'Default with CAT segment maps';
+  catsegp.help    = {'Select corresponing CAT GM tissue segments of the selected images above (p1*.nii).  The WM and CSF maps were selected automatically.  ' ''};
+  
+  spmsegc         = data; 
+  spmsegc.ufilter = '^c1.*';
+  spmsegc.tag     = 'spmc1'; 
+  spmsegc.name    = 'Default with SPM segment maps';
+  spmsegc.help    = {'Select corresponing individual SPM GM tissue segments of the selected images above (c1*.nii).  The WM and CSF maps were selected automatically. ' ''};
+
+  gm              = data; 
+  gm.tag          = 'gm'; 
+  gm.name         = 'GM segment';
+  gm.help         = {'Select images with GM segmentation. ' ''};
+  wm              = data; 
+  wm.tag          = 'wm'; 
+  wm.name         = 'WM segment';
+  wm.help         = {'Select images with WM segmentation. ' ''};
+  cm              = data; 
+  cm.tag          = 'cm'; 
+  cm.name         = 'CSF segment';
+  cm.help         = {'Select images with CSF segmentation. ' ''};
+  seg             = cfg_exbranch; 
+  seg.tag         = 'seg';
+  seg.name        = 'Brain tissue segmentation';
+  seg.help        = {'Select tissue segments of other segmentations' ''}; 
+  
+% FSL segment maps  
+
+% FS label map
+
+  model           = cfg_choice; 
+  model.tag       = 'model';
+  model.name      = 'Segmentation';
+  model.values    = {catlab,catsegp,spmsegc,seg}; 
+  model.val       = {catlab}; 
+  model.help      = {[ ...
+    'Select a input segmentation for the estimation of the quality measures. ' ...
+    'The default model is developed for typcial structural T1/T2/PD-based images with a given brain tissue classification. ']}; 
+   
+  
+  % main options
+  % -----------------------------------------------------------------------
+  prefix          = cfg_entry;
+  prefix.tag      = 'prefix';
+  prefix.name     = 'Filename prefix';
+  prefix.strtype  = 's';
+  prefix.num      = [0 Inf];
+  prefix.val      = {'qc_'};
+  prefix.help     = {'Specify the string to be prepended to the filenames of the XML file(s). ' ''};
+
+  
+% Definition of own XML subfield to extend the CAT-XML file 
+%{
+  fdname          = cfg_entry; 
+  fdname.tag      = 'fdname';
+  fdname.name     = 'XML-fieldname';
+  fdname.strtype  = 's';
+  fdname.num      = [0 Inf];
+  fdname.val      = {'qc'};
+  fdname.help     = {
+    'Specify the field name in the "quality_measure" subfield that will include the quality measurements and ratings. ' ''}; 
+  
+  update          = cfg_menu;
+  update.tag      = 'fdupdate';
+  update.name     = 'Update result';
+  update.labels   = {'No' 'Yes'};
+  update.values   = {0 1};
+  update.val      = {1}; 
+  update.hidden   = ~expert; 
+  update.help     = {['Update (replace) an existing datafield. ' ...
+    'Otherwise, the data and time of this estimation process are added to the new fieldname. '];''};
+%}
+  
+  verb            = cfg_menu;
+  verb.tag        = 'verb';
+  verb.name       = 'Print results';
+  verb.labels     = {'0' '1'};
+  verb.values     = {0 1};
+  verb.val        = {1}; 
+  verb.help       = {'Print progress and results. ';''};
+
+  outdir.val{1}   = {'report'}; 
+  
+  opts            = cfg_branch;
+  opts.tag        = 'opts';
+  opts.name       = 'Options';
+  opts.val        = {outdir, prefix, verb }; % fdname, update,
+  opts.help       = {'Basic options. ' ''};
 
   % main
-  qa        = cfg_exbranch;
-  qa.tag    = 'qa';
-  qa.name   = 'CAT quality control';
-  qa.val    = {data};
-  qa.prog   = @cat_vol_qa;
-  qa.vfiles = @vout_qa;
-  qa.help   = {'CAT Quality Control of T1 images. '};
+  qa              = cfg_exbranch;
+  qa.tag          = 'iqe';
+  qa.name         = 'Image quality estimation';
+  qa.val          = {data, model, opts};
+  qa.prog         = @cat_vol_qa; 
+  qa.vfiles       = @vout_qa; % XML files + values
+  qa.hidden       = expert<2;
+  qa.help         = {'Image quality estimation based on a set of images and a given set of input segmentation defined by different models. '};
 return
   
 %_______________________________________________________________________
-function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
+function [sanlm,sanlm2] = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,lazy,expert)
 
   % --- update input variables ---
   data.help         = {'Select images for filtering.'};
   
   prefix.val        = {'sanlm_'};
   prefix.help       = {
-    'Specify the string to be prepended to the filenames of the filtered image file(s). Default prefix is "samlm_". Use the keyword "PARA" to add the strength of filtering, e.g. "sanlm_PARA" result in "sanlm_NC#_*.nii".'
+    'Specify the string to be prepended to the filenames of the filtered image file(s). Default prefix is "samlm_". Use the keyword "PARA" to add the name of the filter, e.g., "classic" or "optimized-medium".'
     ''
   };
-
-  suffix.val        = {''};
-  suffix.help       = {
-    'Specify the string to be appended to the filenames of the filtered image file(s). Default suffix is ''''.  Use "PARA" to add input parameters, e.g. "sanlm_*_NC#.##_RN#_RD#_RIA#.##_SR#_FSR#_RNI#_OL#.##_iterm#_iter#.nii" with NC=NCstr, RN=Rician noise, RD=resolution dependency, RIA=relative intensity adaptation, SR=sub-resolutions, FSR=force sub-resolution, RNI=replace NAN and INF, and OL=outlier correction.'
-    ''
-  };
+  if expert>1
+    prefix.help       = {
+      'Specify the string to be prepended to the filenames of the filtered image file(s). Default prefix is "samlm_". Use the keyword "PARA" to add the strength of filtering, e.g. "sanlm_PARA" result in "sanlm_NC#_*.nii".'
+      ''
+    };
+    suffix.val        = {''};
+    suffix.help       = {
+      'Specify the string to be appended to the filenames of the filtered image file(s). Default suffix is ''''.  Use the keyword "PARA" to add the name of the filter, e.g., "classic" or "optimized-medium".'
+      ''
+    };
+  end
   
 
   % --- new fields ---
@@ -1071,15 +1669,19 @@ function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
   NCstrm.name       = 'Strength of Noise Corrections';
   NCstrm.def        = @(val) cat_get_defaults('extopts.NCstr', val{:});
   NCstrm.help       = {
-    ['Strength of the (sub-resolution) spatial adaptive  non local means (SANLM) noise correction. Please note that the filter strength is automatically estimated. Change this parameter only for specific conditions. ' ...
+    ['Strength of the (sub-resolution) spatial adaptive non local means (SANLM) noise correction. Please note that the filter strength is automatically estimated. Change this parameter only for specific conditions. ' ...
      'The "light" option applies half of the filter strength of the adaptive "medium" cases, whereas the "strong" option uses the full filter strength, force sub-resolution filtering and applies an additional iteration. Sub-resolution filtering is only used in case of high image resolution below 0.8 mm or in case of the "strong" option.']
+    ['If you have scans with low amount of noise then use the "light" option. If you have data that was resampled or interpolated in some way (i.e., even within scanning/reconstruction) then the noise is often blurred over multiple voxels and has to be handled on lower resolutions available for the try the "strong" or "heavy" filter setting.' ...
+     'If you have multiple scans that should be averaged than you should use the ".. for average" filter settings.']
+     'The filter will always leave some low amount of noise in the data that is assumed by preprocessing routines such as the tissue classification with its Gaussian fitting.'
      ''
   };
-  NCstrm.values     = {2 -inf 4};
   if expert
-    NCstrm.labels   = {'light (2)','medium (3|-inf)','strong (4)'};
+    NCstrm.values   = {2 -inf 4 5 12 14};
+    NCstrm.labels   = {'light (adapted half strength; 2)','medium (adapted; default; -1|3|-inf)','strong (low-resolution filtering; 4)','heavy (low-resolution filtering with 2 iterations; 5)','light for averaging (adapted half strength; 12)','strong for averaging (low-resolution filtering; 14)',};
   else
-    NCstrm.labels   = {'light','medium','strong'};
+    NCstrm.values   = {2 -inf 4 5};
+    NCstrm.labels   = {'light','medium (default)','strong','heavy'};
   end
 
   addnoise          = cfg_entry;
@@ -1112,6 +1714,7 @@ function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
     relativeFilterStengthLimit.strtype  = 'r';
     relativeFilterStengthLimit.num      = [1 1];
     relativeFilterStengthLimit.val      = {1};
+    relativeFilterStengthLimit.hidden   = expert<2;
     relativeFilterStengthLimit.help     = {
       'Limit the relative noise correction to avoid over-filtering of low intensity areas. Low values will lead to less filtering in low intensity areas, whereas high values will be closer to the original filter. INF deactivates the filter. '
       ''
@@ -1123,6 +1726,7 @@ function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
     relativeFilterStengthLimit.labels   = {'Yes' 'No'};
     relativeFilterStengthLimit.values   = {1 0};
     relativeFilterStengthLimit.val      = {1};
+    relativeFilterStengthLimit.hidden   = expert<2;
     relativeFilterStengthLimit.help     = {
       'Limit the relative noise correction to avoid over-filtering of low intensities areas.'
       ''
@@ -1135,11 +1739,11 @@ function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
   relativeIntensityAdaption.strtype     = 'r';
   relativeIntensityAdaption.num         = [1 1];
   relativeIntensityAdaption.val         = {1};
+  relativeIntensityAdaption.hidden      = expert<2;
   relativeIntensityAdaption.help        = {
     'Strength of relative intensity adaptation, with 0 for no adaptation and 1 for full adaptation. The SANLM filter is often very successful in the background and removed nearly all noise. However, routines such as the SPM Unified Segmentation expect Gaussian distribution in all regions and is troubled by regions with too low variance. Hence, a relative limitation of SANLM correction is added here that is based on the bias reduced image intensity. '
     ''
   };
-
 
   % very special parameter ...
   % -----------------------------------------------------------------------
@@ -1173,7 +1777,7 @@ function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
   relativeIntensityAdaptionTH.strtype = 'r';
   relativeIntensityAdaptionTH.num     = [1 1];
   relativeIntensityAdaptionTH.val     = {2};
-  relativeIntensityAdaptionTH.hidden  = expert<1;
+  relativeIntensityAdaptionTH.hidden  = expert<2;
   relativeIntensityAdaptionTH.help    = {
     'Smoothing of the relative filter strength limitation.'
     ''
@@ -1185,7 +1789,7 @@ function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
   resolutionDependency.labels         = {'Yes' 'No'};
   resolutionDependency.values         = {1 0};
   resolutionDependency.val            = {0};
-  resolutionDependency.hidden         = expert<1;
+  resolutionDependency.hidden         = expert<2;
   resolutionDependency.help           = {
     'Resolution depending filtering with reduced filter strength in data with low spatial resolution defined by the "Range of resolution dependency".'
     ''
@@ -1209,7 +1813,7 @@ function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
   resolutionReduction.labels          = {'Yes (allways)' 'Yes (only highres <0.8 mm)' 'No'};
   resolutionReduction.values          = {11 1 0};
   resolutionReduction.val             = {0};
-  resolutionReduction.hidden          = expert<1;
+  %resolutionReduction.hidden          = expert<1;
   resolutionReduction.help            = {
     'Some MR images were interpolated or use a limited frequency spectrum to support higher spatial resolution with acceptable scan-times (e.g., 0.5x0.5x1.5 mm on a 1.5 Tesla scanner). However, this can result in "low-frequency" noise that can not be handled by the standard NLM-filter. Hence, an additional filtering step is used on a reduces resolution. As far as filtering of low resolution data will also remove anatomical information the filter use by default maximal one reduction with a resolution limit of 1.6 mm. I.e. a 0.5x0.5x1.5 mm image is reduced to 1.0x1.0x1.5 mm, whereas a 0.8x0.8x0.4 mm images is reduced to 0.8x0.8x0.8 mm and a 1x1x1 mm dataset is not reduced at all. '
     ''
@@ -1226,6 +1830,20 @@ function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
     'Be verbose.'
     ''
     };
+  
+  sharpening         = cfg_entry;
+  sharpening.tag     = 'sharpening';
+  sharpening.name    = 'Sharpening';
+  sharpening.strtype = 'r';
+  sharpening.num     = [1 1];
+  sharpening.val     = {1};
+  sharpening.hidden  = expert<2;
+  sharpening.help    = {
+    'By smoothing heavily noisy areas, fine structures and local contrasts such as cerebellar sublobuli can disappear.  The effect is similar to a real photo of a meadow at night and short exposure time (e.g., with a lot of noise), where the denoising filter merges everything into one large smooth area.  The sharpening tries to preserve local contrasts. '
+    'Sharpening is only applied in case of the optimized filters.'
+    ''
+  };
+  
   % -----------------------------------------------------------------------
 
 
@@ -1244,14 +1862,14 @@ function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
   nlm_optimized.name    = 'Optimized filter';
   nlm_optimized.val     = {NCstrm};
   nlm_optimized.help    = {
-      'Optimized SANLM filter with adaptive predefined parameters for simplified GUI cases.' 
+      'Optimized SANLM filter with predefined parameter settings.' 
   }; 
 
   nlm_expert          = cfg_branch;
   nlm_expert.tag      = 'expert';
   nlm_expert.name     = 'Optimized filter (expert options)';
   nlm_expert.hidden   = expert<0;
-  nlm_expert.val      = {NCstr iter iterm outlier relativeIntensityAdaption relativeIntensityAdaptionTH relativeFilterStengthLimit resolutionDependency resolutionDependencyRange resolutionReduction};
+  nlm_expert.val      = {NCstr iter iterm outlier addnoise relativeIntensityAdaption relativeIntensityAdaptionTH relativeFilterStengthLimit resolutionDependency resolutionDependencyRange resolutionReduction lazy};
   nlm_expert.help     = {
       'Optimized SANLM filter with all parameters.' 
   }; 
@@ -1264,31 +1882,27 @@ function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
   else
     nlmfilter.values    = {nlm_default nlm_optimized};
   end
-  if cat_get_defaults('extopts.NCstr')>0 && cat_get_defaults('extopts.NCstr')<=1
-    nlmfilter.val       = {nlm_default}; 
-  elseif expert
-    nlmfilter.val       = {nlm_expert}; 
-  else
-    nlmfilter.val       = {nlm_optimized}; 
-  end  
+  nlmfilter.val         = {nlm_optimized}; 
   if expert
     nlmfilter.help      = {
-      'Selection between the classical SANLM filter and an optimized SANLM filter with simplyfied and complex setting.' 
+      'Selection between the classical SANLM filter and an optimized SANLM filter with predefined settings or detailed parameterization. The classic filter is often too strong in normal data that was not interpolated or resampled and the default CAT12 preprocessing uses the medium optimized version. '
       ''
     }; 
   else
     nlmfilter.help      = {
-      'Selection between the classical SANLM filter and an optimized SANLM filter.' 
+      'Selection between the classical SANLM filter and an optimized SANLM filter. The classic filter is often too strong in normal data that was not interpolated or resampled and the default CAT12 preprocessing uses the medium optimized version. ' 
       ''
     };
   end
+  
+  % V1
   sanlm                 = cfg_exbranch;
   sanlm.tag             = 'sanlm';
   sanlm.name            = 'Spatially adaptive non-local means (SANLM) denoising filter';
   
   intlim.hidden         = expert<2;
   
-  sanlm.val             = {data spm_type prefix suffix intlim addnoise rician replaceNANandINF nlmfilter};
+  sanlm.val             = {data spm_type prefix suffix intlim rician replaceNANandINF nlmfilter};
   sanlm.prog            = @cat_vol_sanlm;
   sanlm.vout            = @vout_sanlm;
   sanlm.help            = {
@@ -1298,15 +1912,23 @@ function sanlm = conf_vol_sanlm(data,intlim,spm_type,prefix,suffix,expert)
     ''
   };
 
+  % V2
+  sanlm2                = sanlm; 
+  sanlm2.tag            = 'sanlm2';
+  sanlm2.name           = 'Spatially adaptive non-local means (SANLM) denoising filter V2';
+  sanlm2.val            = {data spm_type prefix suffix intlim rician sharpening replaceNANandINF nlmfilter};
+  sanlm2.prog           = @cat_vol_sanlm2;
+  sanlm2.hidden         = expert<2;
 
 return
 
 %_______________________________________________________________________
-function spmtype = conf_io_volctype(data,  intlim,  spm_type,prefix,suffix,expert,lazy)
+function spmtype = conf_io_volctype(data,  intlim,  spm_type,prefix,suffix,verb,expert,lazy)
   % update variables 
   data.help           = {'Select images for data type conversion';''};
   
   intlim.tag          = 'range';
+  intlim.num          = [1 inf];
   
   prefix.val          = {'PARA'};
   prefix.help         = {
@@ -1324,19 +1946,27 @@ function spmtype = conf_io_volctype(data,  intlim,  spm_type,prefix,suffix,exper
   spm_type.values(1)  = []; % remove native case
   spm_type.tag        = 'ctype';
   
+  lazy.hidden         = expert<1; 
+  verb.hidden         = expert<1; 
+  
   intscale            = cfg_menu;
   intscale.name       = 'Intensity scaling';
   intscale.tag        = 'intscale';
-  intscale.labels     = {'Yes (0-65535)','Yes (0-255)','Yes (0-1)','No'};
-  intscale.values     = {3,2,1,0};
-  intscale.val        = {2};
-  intscale.help       = {'Normalize image intensities.'};
+  if expert>1
+    intscale.labels   = {'No (round in case of integer)','Yes (0:1)','Yes (-1:1)','Yes (0:max)','Yes (min:max)', 'Yes (0:256)'};
+    intscale.values   = {0,1,-1,inf,-inf,2};
+  else
+    intscale.labels   = {'No (round in case of integer)','Yes (0:1)','Yes (-1:1)','Yes (0:max)','Yes (min:max)'};
+    intscale.values   = {0,1,-1,inf,-inf};
+  end
+  intscale.val        = {1};
+  intscale.help       = {'Normalize image intensities in range between (i) 0 and 1 (0:1) or (ii) between -1 and 1 (-1:1) balanced around zero, i.e., the absoluted values are ranged betweed 0 and 1. '};
 
   % new
   spmtype             = cfg_exbranch;
   spmtype.tag         = 'spmtype';
   spmtype.name        = 'Image data type converter'; 
-  spmtype.val         = {data spm_type prefix suffix intlim intscale lazy};
+  spmtype.val         = {data prefix suffix intlim spm_type intscale verb lazy};
   spmtype.prog        = @cat_io_volctype;
   spmtype.vout        = @vout_volctype;
   spmtype.help        = {
@@ -1347,10 +1977,12 @@ function spmtype = conf_io_volctype(data,  intlim,  spm_type,prefix,suffix,exper
 return
 
 %_______________________________________________________________________
-function headtrimming = conf_vol_headtrimming(intlim,spm_type,prefix,suffix,expert)
+function headtrimming = conf_vol_headtrimming(intlim,spm_type,prefix,suffix,verb,lazy,expert)
 
   suffix.hidden         = expert<1; 
   intlim.hidden         = expert<1; 
+  lazy.hidden           = expert<1;
+  intlim.num            = [1 inf]; 
   
   % update input variables
   intlim1               = intlim;
@@ -1358,10 +1990,20 @@ function headtrimming = conf_vol_headtrimming(intlim,spm_type,prefix,suffix,expe
   intlim1.name          = 'Global intensity limitation for masking';
   intlim1.val           = {90};
   intlim1.hidden        = expert<1; 
+  intlim1.num           = [1 Inf];
   intlim1.help          = {'General intensity limitation to remove strong outliers by using 90% of the original histogram values. Too high values will include background noise and do not allow trimming, whereas to low values will cut objects with low values (e.g. by image inhomogeneities). ' ''};
 
   prefix.val            = {'trimmed_'};
 
+  intscale              = cfg_menu;
+  intscale.name         = 'Intensity scaling';
+  intscale.tag          = 'intscale';
+  intscale.labels       = {'No','Yes','Yes (force positive values)'};
+  intscale.values       = {0,1,3};
+  intscale.val          = {0};
+  intscale.help         = {'Normalize image intensities in range between 0 and 1 (unsigned integer or forced scaling option) or -1 to 1 (signed integer / float). '};
+
+  
   % many subjects
   simages               = cfg_files;
   simages.tag           = 'simages';
@@ -1450,15 +2092,6 @@ function headtrimming = conf_vol_headtrimming(intlim,spm_type,prefix,suffix,expe
   pth.val               = {0.4};
   pth.help              = {'Percentual treshold for trimming. Lower values will result in a wider mask, ie. more air, whereas higher values will remove more air but maybe also brain regions with very low intensity.' ''};
 
-  avg                   = cfg_entry;
-  avg.tag               = 'avg';
-  avg.name              = 'Average images';
-  avg.strtype           = 'r';
-  avg.num               = [1 1];
-  avg.val               = {0};
-  avg.hidden            = expert<1; 
-  avg.help              = {'By default, only the source image is used for masking. However sometimes it is helpful to use the average of all additional images (avg=1) or the first n images inclusive th source image (avg>1) of the given set.' ''};
-
   open                  = cfg_entry;
   open.tag              = 'open';
   open.name             = 'Size of morphological opening of the mask';
@@ -1483,15 +2116,19 @@ function headtrimming = conf_vol_headtrimming(intlim,spm_type,prefix,suffix,expe
   mask.labels           = {'Yes','No'};
   mask.values           = {1,0};
   mask.val              = {1};
+  mask.hidden           = false; % expert < 1; % the field is important if multiple images are used and the first one is skull-stripped
+                                 % but this stripping/masking should not applied to the other images
   mask.help             = {'Use source image for trimming and final masking (e.g. for skull-stripping in longitudinal pipeline).'};
+
 
   % don't change data type
   spm_type.val         = {0};
+  spm_type.tag         = 'ctype';
   % --- main ---
   headtrimming         = cfg_exbranch;
   headtrimming.tag     = 'datatrimming';
   headtrimming.name    = 'Image data trimming'; 
-  headtrimming.val     = {timages prefix mask suffix intlim1 pth avg open addvox spm_type intlim};
+  headtrimming.val     = {timages prefix suffix mask intlim1 pth open addvox intlim spm_type intscale verb lazy};
   headtrimming.prog    = @cat_vol_headtrimming;
   headtrimming.vout    = @vout_headtrimming;
   headtrimming.help    = {
@@ -1563,8 +2200,8 @@ function [defs,defs2] = conf_vol_defs()
   field.ufilter   = '^(i)?y_.*\.nii$';
   field.num       = [1 Inf];
   field.help      = {[
-    'Select deformation fields for all subjects.' ...
-    'Use the "y_*.nii" to project data from subject to template space, and the "iy_*.nii" to map data from template to individual space.' ...
+    'Select deformation fields for all subjects. ' ...
+    'Use the "y_*.nii" to project data from subject to template space, and the "iy_*.nii" to map data from template to individual space. ' ...
     'Both deformation maps can be created in the CAT preprocessing by setting the "Deformation Field" flag to forward or inverse.' ... 
   ]};
 
@@ -1692,6 +2329,20 @@ function realign  = conf_vol_series_align(data)
   bparam.num      = [1 1];
   bparam.val      = {1e7};
 
+  setCOM        = cfg_menu;
+  setCOM.tag    = 'setCOM';
+  setCOM.name   = 'Use center-of-mass to set origin';
+  setCOM.help   = { ...
+      ''
+      'Use center-of-mass to roughly correct for differences in the position between image and template. This will internally correct the origin. '
+      ''
+      'If affine registration fails you can try to disable this option and/or set the origin manually. '
+    };
+  setCOM.def    = @(val) cat_get_defaults('extopts.setCOM', val{:});
+  setCOM.labels = {'No','Yes'};
+  setCOM.values = {0 1};
+
+
   wparam          = cfg_entry;   
   wparam.tag      = 'wparam';
   wparam.name     = 'Warping Regularisation';
@@ -1793,7 +2444,7 @@ function realign  = conf_vol_series_align(data)
   realign               = cfg_exbranch;
   realign.tag           = 'series';
   realign.name          = 'Longitudinal Registration';
-  realign.val           = {data noise bparam use_brainmask reduce reg write_rimg write_avg};
+  realign.val           = {data noise setCOM bparam use_brainmask reduce reg write_rimg write_avg};
   realign.help          = {
     'Longitudinal registration of series of anatomical MRI scans for a single subject.  It is based on inverse-consistent alignment among each of the subject''s scans, and incorporates a bias field correction.  Prior to running the registration, the scans should already be in very rough alignment, although because the model incorporates a rigid-body transform, this need not be extremely precise.  Note that there are a bunch of hyper-parameters to be specified.  If you are unsure what values to take, then the defaults should be a reasonable guess of what works.  Note that changes to these hyper-parameters will impact the results obtained.'
     ''
@@ -2182,7 +2833,7 @@ function quality_measures = conf_quality_measures
 
   quality_measures         = cfg_exbranch;
   quality_measures.tag     = 'quality_measures';
-  quality_measures.name    = 'Save quality parameters of large samples for external analysis';
+  quality_measures.name    = 'Check sample homogeneity for very large samples using mean z-score';
   quality_measures.val     = {data,globals,csv_name};
   quality_measures.prog    = @cat_stat_quality_measures;
   quality_measures.help    = {
@@ -2202,7 +2853,7 @@ function [check_cov, check_cov2] = conf_check_cov(data_xml,outdir,fname,save,exp
   % --- update input data ---
   data_xml.name     = 'Quality measures (leave emtpy for autom. search)';
   data_xml.help     = {
-    'Select optional the quality measures that are saved during segmentation as xml-files in the report folder. This additionally allows to analyze image quality parameters such as noise, bias, and weighted overall image quality.'
+    'Select optional the quality measures that are saved during segmentation as xml-files in the report folder. This allows to additionally analyze image quality parameters such as noise, bias, and weighted overall image quality.'
     'Please note, that the order of the xml-files should be the same as the other data files.'
     'Leave empty for automatically search for these xml-files.'
     };
@@ -2228,14 +2879,15 @@ function [check_cov, check_cov2] = conf_check_cov(data_xml,outdir,fname,save,exp
   gap.strtype       = 'n';
   gap.num           = [1 1];
   gap.val           = {3};
+  gap.hidden        = expert<2;
   gap.help          = {'To speed up calculations you can define that covariance is estimated only every x voxel. Smaller values give slightly more accurate covariance, but will be much slower.'};
 
   data_vol          = cfg_files;
   data_vol.name     = 'Sample data';
   data_vol.tag      = 'data_vol';
-  data_vol.filter   = 'image';
+  data_vol.filter   = {'image','resampled.*\.gii$'};
   data_vol.num      = [1 Inf];
-  data_vol.help     = {'These are the (spatially registered) data. They must all have the same image dimensions, orientation, voxel size etc. Furthermore, it is recommended to use unsmoothed files.'};
+  data_vol.help     = {'These are the (spatially registered or resampled) data. Volumes must all have the same image dimensions, orientation, voxel size and surfaces should be resampled with the same parameters. Furthermore, it is recommended to use unsmoothed files (i.e. for volumes).'};
 
   sample            = cfg_repeat;
   sample.tag        = 'sample';
@@ -2247,18 +2899,18 @@ function [check_cov, check_cov2] = conf_check_cov(data_xml,outdir,fname,save,exp
 
   check_cov         = cfg_exbranch;
   check_cov.tag     = 'check_cov';
-  check_cov.name    = 'Check sample homogeneity of 3D data';
+  check_cov.name    = 'Check Sample Homogeneity';
   if expert>1
-    check_cov.val     = {sample,data_xml,gap,nuisance, outdir,fname,save};
+    check_cov.val     = {sample,data_xml,gap,nuisance,outdir,fname,save};
   else
     check_cov.val     = {sample,data_xml,gap,nuisance};
   end
   check_cov.prog    = @cat_stat_check_cov;
   check_cov.help    = {
-    'In order to identify images with poor image quality or even artefacts you can use this function. Images have to be in the same orientation with same voxel size and dimension (e.g. normalized images without smoothing). The idea of this tool is to check the correlation of all files across the sample.'
+    'In order to identify data with poor data quality or even artefacts you can use this function. 3D images have to be in the same orientation with same voxel size and dimension (e.g. normalized images without smoothing) while surfaces have to be resampled and smoothed using the same parameters. The idea of this tool is to check the correlation of all data across the sample.'
     ''
-    'The correlation is calculated between all images and the mean for each image is plotted using a boxplot and the indicated filenames. The smaller the mean correlation the more deviant is this image from the sample mean. In the plot outliers from the sample are usually isolated from the majority of images which are clustered around the sample mean. The mean correlation is plotted at the y-axis and the x-axis reflects the image order.'
-    'If you have loaded quality measures, you can also display the ratio between weighted overall image quality (IQR) and mean correlation. These two are the most important measures for assessing image quality.'
+    'The correlation is calculated between all data and the mean for each data is plotted using a boxplot and the indicated filenames. The smaller the mean correlation the more deviant is this data from the sample mean. In the plot, outliers from the sample are usually isolated from the majority of data which are clustered around the sample mean. The mean correlation is plotted at the y-axis and the x-axis reflects the data order.'
+    'If you have loaded quality measures, you can also display the ratio between weighted overall image quality (IQR) and mean correlation. These two are the most important measures for assessing data quality.'
   };
 
 
@@ -3406,7 +4058,7 @@ PU = job.field1;
 PI = job.images;
 
 vf = cell(numel(PI),1);
-for i=1:numel(PU),
+for i=1:numel(PU), % ########### RD202201: i is not used  
     for m=1:numel(PI),
         [pth,nam,ext,num] = spm_fileparts(PI{m});
         
@@ -3417,6 +4069,8 @@ for i=1:numel(PU),
             filename = fullfile(pth,['mw' nam ext num]);
         case 0
             filename = fullfile(pth,['w' nam ext num]);
+        otherwise 
+            error('incorrect - DEP')
         end;
         vf{m} = filename;
     end
@@ -3441,6 +4095,8 @@ function vf = vout_defs2(job)
               filename = fullfile(pth,['mw' nam ext num]);
           case 0
               filename = fullfile(pth,['w' nam ext num]);
+          otherwise 
+            error('incorrect - DEP')
           end;
           vf{i,m} = filename;
       end
@@ -3638,11 +4294,24 @@ function dep = vout_resize(varargin)
 return;
 %_______________________________________________________________________
 function vf = vout_qa(job)
-  s  = cellstr(char(job.data)); vf = s; 
-  for i=1:numel(s),
+  if isfield(job,'data')
+    s  = cellstr(char(job.data)); vf = s; 
+  elseif isfield(job,'images')
+    s  = cellstr(char(job.images)); vf = s; 
+  else  
+    s  = {}; 
+    vf = {}; 
+  end
+  for i=1:numel(s)
       [pth,nam,ext,num] = spm_fileparts(s{i});
-      vf{i} = fullfile(pth,[job.prefix,nam,ext,num]);
-  end;
+      if isfield(job,'prefix') % old 
+        vf{i} = fullfile(pth,[job.prefix,nam,ext,num]);
+      elseif isfield(job,'opts') && isfield(job.opts,'prefix') 
+        vf{i} = fullfile(pth,[job.opts.prefix,nam,ext,num]);
+      else
+        vf{i} = fullfile(pth,[nam,ext,num]);
+      end  
+  end
 return;
 
 %------------------------------------------------------------------------
@@ -3747,4 +4416,29 @@ function dep = vout_stat_getCSVXML(job)
       end
     end
   end
+return
+function dep = vout_file_move(job)
+
+% Define virtual output for cfg_run_move_file. Output can be passed on to
+% either a cfg_files or an evaluated cfg_entry.
+%
+% This code is part of a batch job configuration system for MATLAB. See 
+%      help matlabbatch
+% for a general overview.
+%_______________________________________________________________________
+% Copyright (C) 2007 Freiburg Brain Imaging
+
+% Volkmar Glauche
+% $Id: cat_conf_tools.m 1982 2022-04-12 11:09:13Z dahnke $
+
+rev = '$Rev: 1982 $'; %#ok
+
+if ~isfield(job.action,'delete')
+    dep = cfg_dep;
+    dep.sname = 'Moved/Rename/Copied Files';
+    dep.src_output = substruct('.','files');
+    dep.tgt_spec   = cfg_findspec({{'class','cfg_files','strtype','e'}});
+else
+    dep = [];
+end
 return

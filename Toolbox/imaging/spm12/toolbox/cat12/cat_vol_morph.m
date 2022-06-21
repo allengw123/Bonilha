@@ -12,6 +12,11 @@ function vol = cat_vol_morph(vol,action,n,vx_vol)
 % for small n, where the convolution matrix for distance operations has 
 % to be larger. 
 %
+% If you call this function without any argument you can select the 
+% morphological operations, the number of iterations, and the threshold
+% interactively. Th output files will be saved as uint8 file with prepending
+% name and number of morphological operations.
+%
 %  out = cat_vol_morph(in,action[,n,vx_vol])
 %
 %  in     = input volume that will be thresholded at 0.5
@@ -22,27 +27,27 @@ function vol = cat_vol_morph(vol,action,n,vx_vol)
 %  n      = 1x1 double (default=1), will be rounded for standard 
 %           morphological operations, but not for distance-based 
 %           operations.
-%         = 1x2 for 'l' operation to extract the largend n(1) cluster 
+%         = 1x2 for 'l' operation to extract the largest n(1) cluster 
 %           with at last n(2) absolute (>1) or relative (<1) voxels
 %  vx_vol = 1x1 or 1x3 double (default=1)
 %  out    = volume with the same class like the input volume
 %
 % Actions:
 %   Morphological operations with 26-neighborhood 
-%   (cube/chessboard distance):
-%    - c  | dilate 
-%    - c  | erode  
+%   (cube distance):
+%    - d  | dilate 
+%    - e  | erode  
 %    - c  | close  
-%    - c  | open   
+%    - o  | open   
 %
 %   Morphological operations with 26-neighborhood 
-%   (cube/chessboard distance):
+%   (chessboard distance):
 %    - cd  | cdilate 
 %    - ce  | cerode  
 %    - cc  | cclose  
 %    - co  | copen   
 %
-%   Morphological operations with distance opereration (sphere):
+%   Morphological operations with distance operation (sphere):
 %    - dd | distdilate
 %    - de | disterode
 %    - dc | distclose
@@ -63,13 +68,43 @@ function vol = cat_vol_morph(vol,action,n,vx_vol)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_vol_morph.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_vol_morph.m 1953 2022-02-27 21:03:20Z gaser $
 
 
   if nargin < 4, vx_vol = 1; end
   if nargin < 3, n      = 1; end
   if nargin < 2, action = ''; end
-  if nargin < 1, help cat_vol_morph; return; end
+  
+  % interactive call
+  if nargin < 1
+    P = spm_select(Inf,'image','Select images');
+    V = spm_vol(P);
+
+    actions = {'dilate','erode','open','close','labclose','labopen','cdilate',...
+      'cerode','cclose','copen','labcclose','labcopen','labclosebg','labopenbg',...
+      'lab','distdilate','disterode','distclose','distopen','labdistclose','labdistopen'};
+    sel = spm_input('Operation ?',1,'m',actions);
+    action = actions{sel};
+    if strcmp(action,'lab')
+      n = spm_input('# of largest objects/# of voxels','+1', 'n', '1 10');
+    else
+      n = spm_input('Number of morphol. iterations','+1', 'n', '1');
+    end
+    th = spm_input('Threshold','+1', 'e', '0.5');
+
+    for i=1:length(V)
+      [pth,nam,ext] = spm_fileparts(V(i).fname);
+      vol = spm_read_vols(V(i)) > th;
+      vx_vol = sqrt(sum((V(i).mat(1:3,1:3)).^2));
+      out = cat_vol_morph(vol,action,n,vx_vol);
+      V(i).fname = fullfile(pth,[action num2str(n) '_' nam ext]);
+      V(i).dt(1) = 2;
+      V(i).pinfo(1) = 1;
+      spm_write_vol(V(i),out);
+    end
+    clear vol
+    return
+  end
   
   classVol = class(vol); 
   
@@ -86,6 +121,12 @@ function vol = cat_vol_morph(vol,action,n,vx_vol)
   end
   
   nn=n; n=double(n); n(1)=round(n(1)); 
+  switch action
+    case {'l'}
+      nv = ceil(nn(1) ./ mean(vx_vol)); 
+    otherwise
+      nv = ceil(nn ./ vx_vol); % used to enlarge images for closing
+  end
   switch lower(action)
     case {'l' 'lcc' 'lco' 'labcclose' 'labcopen' ...
               'lc' 'lo' 'labclose' 'labopen' ...
@@ -148,11 +189,11 @@ function vol = cat_vol_morph(vol,action,n,vx_vol)
         % we need to enlarge the image to avoid closing by the region that 
         % is not in the image
         sz = size(vol);
-        vol2 = zeros(sz(1)+(2*n),sz(2)+(2*n),sz(3)+(2*n),'uint8');
-        vol2(n+1:sz(1)+n,n+1:sz(2)+n,n+1:sz(3)+n) = uint8(vol);
+        vol2 = zeros(sz(1)+(2*nv(1)),sz(2)+(2*nv(2)),sz(3)+(2*nv(3)),'uint8');
+        vol2(nv(1)+1:sz(1)+nv(1),nv(2)+1:sz(2)+nv(2),nv(3)+1:sz(3)+nv(3)) = uint8(vol);
         vol2=cat_vol_morph(vol2,'cdilate',n,vx_vol); 
         vol2=cat_vol_morph(vol2,'cerode' ,n,vx_vol); 
-        vol = vol2(n+1:sz(1)+n,n+1:sz(2)+n,n+1:sz(3)+n)>0;
+        vol = vol2(nv(1)+1:sz(1)+nv(1),nv(2)+1:sz(2)+nv(2),nv(3)+1:sz(3)+nv(3))>0;
       elseif test==2
         % remove the background volume that is outside the dilation region
         [vol,BB] = cat_vol_resize(vol,'reduceBrain',vx_vol,1,vol>0); 
@@ -161,11 +202,11 @@ function vol = cat_vol_morph(vol,action,n,vx_vol)
         % the image boundary and final close the region between object and
         % image boundary.
         sz = size(vol);
-        vol2 = zeros(sz(1)+(2*n),sz(2)+(2*n),sz(3)+(2*n),'uint8');
-        vol2(n+1:sz(1)+n,n+1:sz(2)+n,n+1:sz(3)+n) = uint8(vol);
+        vol2 = zeros(sz(1)+(2*nv(1)),sz(2)+(2*nv(2)),sz(3)+(2*nv(3)),'uint8');
+        vol2(nv(1)+1:sz(1)+nv(1),nv(2)+1:sz(2)+nv(2),nv(3)+1:sz(3)+nv(3)) = uint8(vol);
         vol2=cat_vol_morph(vol2,'cdilate',n,vx_vol); 
         vol2=cat_vol_morph(vol2,'cerode' ,n,vx_vol); 
-        vol = vol2(n+1:sz(1)+n,n+1:sz(2)+n,n+1:sz(3)+n)>0;
+        vol = vol2(nv(1)+1:sz(1)+nv(1),nv(2)+1:sz(2)+nv(2),nv(3)+1:sz(3)+nv(3))>0;
         
         % add background
         vol = cat_vol_resize(vol,'dereduceBrain',BB);  
@@ -231,7 +272,7 @@ function vol = cat_vol_morph(vol,action,n,vx_vol)
     % are bad represented for lower resolutions and lead to unaccurate 
     % results.
     case {'distdilate' 'dd'}
-      [vol,BB] = cat_vol_resize(vol,'reduceBrain',vx_vol,n+1,vol>0); 
+      [vol,BB] = cat_vol_resize(vol,'reduceBrain',vx_vol,n + 1,vol>0); 
       
       if n>5 %|| (sum(vol(:)>0)/numel(vol))>0.8
         % faster for large distances and smaller objects 
@@ -253,11 +294,11 @@ function vol = cat_vol_morph(vol,action,n,vx_vol)
       vol = ~cat_vol_morph(~vol,'distdilate',nn,vx_vol); 
 
     case {'distclose' 'dc'}
-      [vol,BB] = cat_vol_resize(vol,'reduceBrain',vx_vol,n+1,vol>0); 
+      [vol,BB] = cat_vol_resize(vol,'reduceBrain',vx_vol,n + 1,vol>0); 
      
       sz   = size(vol);
-      vol2 = zeros(sz(1)+(2*n),sz(2)+(2*n),sz(3)+(2*n),'single');
-      vol2(n+1:sz(1)+n,n+1:sz(2)+n,n+1:sz(3)+n) = single(vol);
+      vol2 = zeros(sz(1)+(2*nv(1)),sz(2)+(2*nv(2)),sz(3)+(2*nv(3)),'single');
+      vol2(nv(1)+1:sz(1)+nv(1),nv(2)+1:sz(2)+nv(2),nv(3)+1:sz(3)+nv(3)) = single(vol);
       if n>5
         
         %nn = nn*1.41; n=round(nn);  
@@ -268,7 +309,7 @@ function vol = cat_vol_morph(vol,action,n,vx_vol)
         vol2 = cat_vol_morph(vol2,'distdilate',nn,vx_vol); 
         vol2 = cat_vol_morph(vol2,'disterode' ,nn,vx_vol);       
       end
-      vol  = vol | vol2(n+1:sz(1)+n,n+1:sz(2)+n,n+1:sz(3)+n);
+      vol  = vol | vol2(nv(1)+1:sz(1)+nv(1),nv(2)+1:sz(2)+nv(2),nv(3)+1:sz(3)+nv(3));
 
       % add background
       vol = cat_vol_resize(vol,'dereduceBrain',BB);  
@@ -283,10 +324,6 @@ function vol = cat_vol_morph(vol,action,n,vx_vol)
     case {'labdistopen' 'ldo'}
       vol = cat_vol_morph(vol,'distopen',nn,vx_vol); 
       vol = cat_vol_morph(vol,'lab',nn,vx_vol); % removing of other objects
-
-      
-      
-      
 
     %===================================================================
     case {'selftest' 'st'}
@@ -336,7 +373,9 @@ function vol = cat_vol_morph(vol,action,n,vx_vol)
   
   eval(sprintf('vol = %s(vol);',classVol));
   if isa(classVol,'uint8'); vol = 255*vol; end
+
 end
+
 function vol = cat_vol_morpho(vol,action,n,vx_vol)
 % ______________________________________________________________________
 % Morphological operations for a volume vol based on a 26-neighborhood 
@@ -380,7 +419,7 @@ function vol = cat_vol_morpho(vol,action,n,vx_vol)
 % Christian Gaser, Robert Dahnke
 % Structural Brain Mapping Group
 % University Jena 
-% $Id: cat_vol_morph.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_vol_morph.m 1953 2022-02-27 21:03:20Z gaser $
 
 % ______________________________________________________________________
 %
@@ -393,7 +432,6 @@ function vol = cat_vol_morpho(vol,action,n,vx_vol)
 % quality is necessary. 
 % For fast estimation the prefix 'f' should be added to the action.
 % ______________________________________________________________________
-
 
   if nargin < 4, vx_vol = 1; end
   if nargin < 3, n      = 1; end
@@ -552,4 +590,5 @@ function vol = cat_vol_morpho(vol,action,n,vx_vol)
   
   eval(sprintf('vol = %s(vol);',classVol));
   if isa(classVol,'uint8'); vol = 255*vol; end
+
 end

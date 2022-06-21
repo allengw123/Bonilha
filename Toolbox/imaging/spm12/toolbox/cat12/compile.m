@@ -20,7 +20,7 @@ function varargout = compile(comp,test,verb)
 %              function, as far as comparison function do somethimes 
 %              only similar things and the test cases are very simple)
 % ______________________________________________________________________
-% $Id: compile.m 1711 2020-09-03 15:46:07Z gaser $ 
+% $Id: compile.m 1921 2021-12-13 13:31:32Z dahnke $ 
 
 %#ok<*NASGU,*ASGLU,*LERR,*TRYNC>
 
@@ -67,6 +67,8 @@ function varargout = compile(comp,test,verb)
     if 0 % strcmp(mexext,'mexmaci64')
       mexflag=['-Dchar16_t=UINT16_T CFLAGS=''$CFLAGS -Wall -ansi -pedantic ' ...
         '-Wextra'' CPPLAGS=''$CPPFLAGS -Wall -ansi -pedantic -Wextra'''];
+    elseif strcmpi(spm_check_version,'octave')
+      mexflag=' -O -DOCTAVE';
     else
       mexflag=' -O -largeArrayDims COPTIMFLAGS=''-O3 -fwrapv -DNDEBUG''';
     end
@@ -110,7 +112,24 @@ function varargout = compile(comp,test,verb)
           if nci==1
             cd(catdir)
             %try
-              rc{nci}{ncj} = evalc([mexcmd ' ' mexflag ' ' nc{nci}{ncj}]);
+            
+            % clear function if it was maybe used before
+            if  strcmpi(spm_check_version,'octave') 
+              % replace expected endings to clear the function
+              str = strrep( strrep( nc{nci}{ncj}, '.cpp' , ''), '.c' , ''); 
+              evalc(['clear ' str]); 
+             
+              % not working yet - see also cat_io_xml
+              %{
+              pkglist = pkg('list'); 
+              if all( strfind( [pkglist{:}.name] , 'io') == 0 )  
+                pkg install -forge io
+              end
+              pkg load io
+              %}
+            end
+           
+            rc{nci}{ncj} = evalc([mexcmd ' ' mexflag ' ' nc{nci}{ncj}]);
             %{
             catch 
               rcc{nci}(ncj) = 1; 
@@ -210,10 +229,10 @@ function varargout = compile(comp,test,verb)
   
   %% test c-functions
   if test==1
-  
+   
     % testdata 
     % empty image with a NaN voxel
-    d0  = single(rand(10,10,10)); d0(5,5,5) = NaN;
+    d0  = rand(10,10,10,'single'); d0(5,5,5) = NaN;
     % simple segment image for distance and filter tests
     d1  = zeros(10,10,10,'single'); d1(3:8,:,:)=1; d1(9:10,:,:)=2; d1(5,5,5) = NaN;      
     d2  = zeros(10,10,10,'single'); d2(3,:,:)=0.8; d2(4:7,:,:)=1; 
@@ -228,7 +247,7 @@ function varargout = compile(comp,test,verb)
     d6  = zeros(13,13,10,'single'); d6(3,:,:)=0.2; d6(4:13,:,:)=1; d6(14,:,:)=1.2; d6(4,6:8,:)=0.5; 
           d6(15,:,:)=2; d6(2:5,7,:) = 0.1; d6(5:10,7,:) = 0.8; d6(10:end-4,7,:) = 0.3; 
           d6(6:end-1,[1:4,end-3:end],:) = 2; d6(13,10,:) = 1; d6(6:12,10,:) = 1.8; d6(2:3,8:9,:)  = 0.7;
-    if (verb>2), ds('d2','',1,d6,Ycsfdi/3*2,Ywmdi/3*2,Ygmti/2,5); colormap jet; end
+    %if (verb>2), ds('d2','',1,d6,Ycsfdi/3*2,Ywmdi/3*2,Ygmti/2,5); colormap jet; end
     d6(2:3,6:7,:)  = 0.5;
     %% ground truth distance map for the d1 map
     dc  = zeros(10,10,10,'single'); for si=3:8; dc(si,:,:)=si-2.5; end; dc(5,5,5) = NaN; % csf distance
@@ -258,11 +277,11 @@ function varargout = compile(comp,test,verb)
     d{ni} = cat_vol_median3(d1 + (d0-0.5)/10);         
     r(ni) = rms(d{ni} - d1);
     s(ni) = r(ni)<0.05;
-    % Median function for label images
+    %% Median function for label images
     %   ds('d2','',1,d0,d1/2,round(d1 + (d0-0.5)*1.2)/2,d{ni}/2,5)
     ni    = ni + 1;
     n{ni} = 'cat_vol_median3c';  % for label maps
-    d{ni} = cat_vol_median3c(round(d1 + (d0-0.5)*1.0));  % 
+    d{ni} = cat_vol_median3c(single(round(d1 + (d0-0.5)*1.0)));  % 
     r(ni) = rms(d{ni} - d1);
     s(ni) = r(ni)<0.05;
     
@@ -300,7 +319,7 @@ function varargout = compile(comp,test,verb)
     vx_vol = 8*[1 1 1]/(ip+1); n_iters = 16; sub = round(16/min(vx_vol));
     bias_fwhm = 60; init_kmeans = 0; mrf = 0.1; iters_icm = 50; n_classes = 3; pve = 5; 
     t1c  = double(t1+0); segc = cat_vol_ctype(seg+0); 
-    [txt,prob] = evalc('cat_amap(t1c,segc, n_classes, n_iters, sub, pve, init_kmeans, mrf, vx_vol, iters_icm, bias_fwhm)');
+    [txt,prob,mean] = evalc('cat_amap(t1c,segc, n_classes, n_iters, sub, pve, init_kmeans, mrf, vx_vol, iters_icm, bias_fwhm)');
     prob = prob(:,:,:,[1 2 3]);
     d{ni} = single(prob(:,:,:,1))/255 + single(prob(:,:,:,2))/255*2 + single(prob(:,:,:,3))/255*3; 
     r(ni) = rms(seg - d{ni}); 
@@ -427,11 +446,22 @@ function varargout = compile(comp,test,verb)
     dcl        = cat_vol_interp3f(d0nan,Rx,Ry,Rz,'linear'); 
     dcc        = cat_vol_interp3f(d0nan,Rx,Ry,Rz,'cubic'); 
     dml        = interp3(d0nan,Rx,Ry,Rz,'linear'); 
-    dmc        = interp3(d0nan,Rx,Ry,Rz,'cubic'); 
+    tol        = [10e-7 0.04];
+    if strcmpi(spm_check_version,'octave')
+      try 
+        % not implemented in 202112
+        dmc    = interp3(d0nan,Rx,Ry,Rz,'cubic'); 
+      catch
+        dmc    = interp3(d0nan,Rx,Ry,Rz,'spline'); 
+        tol    = [10e-4 0.11];
+      end
+    else
+      dmc      = interp3(d0nan,Rx,Ry,Rz,'cubic'); 
+    end
     d{ni}{1}   = dcl - dml; 
     d{ni}{2}   = dcc - dmc; 
     r(ni)      = rms(d{ni}{1}) + rms(d{ni}{2}) ; 
-    s(ni)      = rms(d{ni}{1})<10^-6 & rms(d{ni}{2})<0.04; 
+    s(ni)      = rms(d{ni}{1})<tol(1) & rms(d{ni}{2})<tol(2); 
     
     
     %% local values

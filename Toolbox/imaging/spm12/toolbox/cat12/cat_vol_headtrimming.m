@@ -14,10 +14,6 @@ function varargout = cat_vol_headtrimming(job)
 %    .pefix   .. filename prefix (char, default = 'trimmed_')
 %    .addvox  .. additional voxels around the box (default = 2); 
 %    .pth     .. percentual threshold to estimate the box (0.1);
-%    .avg     .. create the box on the average of ..
-%                  avg = 0 .. use only first image (default)
-%                  avg = 1 .. all
-%                  avg > 1 .. use image 1 to avg
 %    .verb    .. be verbose (default = 1) 
 %    .ctype   .. 'uint16';
 %    .range   .. 99.99;
@@ -29,7 +25,7 @@ function varargout = cat_vol_headtrimming(job)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_vol_headtrimming.m 1830 2021-05-27 16:15:21Z gaser $
+% $Id: cat_vol_headtrimming.m 1972 2022-03-16 10:32:57Z dahnke $
 
 
 % ______________________________________________________________________
@@ -38,7 +34,12 @@ function varargout = cat_vol_headtrimming(job)
 % ______________________________________________________________________
 
 
-  SVNid = '$Rev: 1830 $';
+  SVNid = '$Rev: 1972 $';
+  
+  if nargin == 0
+    help cat_vol_headtrimming; 
+    return; 
+  end
   
   %def.image_selector.subjectimages        = {{}}; % GUI input data structure 1
   %def.image_selector.manysubjects.simages = {};   % GUI input data structure 2
@@ -50,14 +51,14 @@ function varargout = cat_vol_headtrimming(job)
   def.suffix  = '';                   % add suffix to filename
   def.addvox  = 2;                    % add some voxels around the mask
   def.pth     = 0.4;                  % default threshold for masking with bg=0 and object~1 
-  def.avg     = 1;                    % handling of multiple images
   def.verb    = 1;                    % some output information
   def.open    = 2;                    % open operation for masking
   def.ctype   = 0;                    % default data type (0=native)
-  def.range   = 0;                    % data range for output 
+  def.intlim  = 1;                    % data range for output 
   def.range1  = 90;                   % internal scaling for masking
   def.returnOnlyFilename  = 0;        % 
   def.process_index = 1;              %
+  def.lazy    = 0; 
   job = cat_io_checkinopt(job,def);
 
   
@@ -182,102 +183,133 @@ function varargout = cat_vol_headtrimming(job)
   for si = 1:numel(job.images)
     if job.verb, fprintf('%58s: ',spm_str_manip(job.images{si}{1},'ra57')); end
     
-    %% estimate trimming parameter
-    V = spm_vol(char(job.images{si}));
-    Y = zeros(V(1).dim,'single');
-    if job.avg
-      for di = 1:max(1,min(numel(V,job.avg)))
-        Y = Y + single(spm_read_vols(V(di))); 
-      end
-      Y = Y ./ max(1,min(numel(V,job.avg)));
-    else
-      Y = single(spm_read_vols(V(1))); 
-    end
+    if ~job.lazy || any( cat_io_rerun( job.images{si}, job.images2{si} ) )
+      %% estimate trimming parameter
+      V = spm_vol(char(job.images{si})); % there could be more than one image per subject!
+      Y = single(spm_read_vols(V(1))); % here we use only the first image
 
-    % create mask
-    if job.mask, Ymask = Y > 0; end 
-    
-    % categorical data have data type uint8 or int16
-    % and typically < 1000 different values
-    categorical = 0;
-    if V(1).dt(1) == 2 || V(1).dt(1) == 4
-      h = hist(Y(:),1:max(Y(:)));
-      n_values = numel(unique(h));
-      if n_values < 1000
-        categorical = 1;
+      % create mask for skull-stripped images
+      if job.mask, Ymask = Y ~= 0; end
+
+      % categorical data have data type uint8 or int16
+      % and typically < 1000 different values
+      categorical = 0;
+      if V(1).dt(1) == 2 || V(1).dt(1) == 4 && min(Y(:))>=0 && V(1).pinfo(1) == 1
+        h = hist(Y(:),0:max(Y(:)));
+        n_values = numel(unique(h));
+        if n_values < 1000
+          categorical = 1;
+        end
       end
-    end
+
+      % skip most of steps that are only needed for non-categorical data
+      vx_vol  = sqrt(sum(V(1).mat(1:3,1:3).^2)); 
+      if categorical
+        Yb = Y;
+        Yb = cat_vol_morph(Yb,'ldc',10); 
+      else
+        % intensity normalization 
+        [Y,hth] = cat_stat_histth(smooth3(Y),job.range1,0); 
+        Y = (Y - hth(1)) ./ abs(diff(hth));
+
+        % masking
+        Yb = zeros(size(Y),'single'); 
+        Yb(2:end-1,2:end-1,2:end-1) = Y(2:end-1,2:end-1,2:end-1);
+        Yb = smooth3(Yb)>job.pth; 
+        Yb = cat_vol_morph(Yb,'do',job.open,vx_vol); 
+        Yb = cat_vol_morph(Yb,'l',[10 0.1]); 
+      end
+
+      addvox = job.addvox .* mean(max(1,vx_vol*2));
+      
+      [Yt,redB] = cat_vol_resize(Y,'reduceBrain',vx_vol,addvox,Yb);  %#ok<ASGLU>
+
+      % prefer odd or even x-size such as found in original data to prevent shifting issues
+      % at midline
+      if ~mod(redB.sizeTr(1),2) ~= ~mod(redB.sizeT(1),2)
+        % and add x-shifted image to increase bounding box by 1 voxel
+        if ~mod(redB.BB(1),2)
+          Yb(1:end-1,:,:) = Yb(1:end-1,:,:) + Yb(2:end,:,:);
+        else
+          Yb(2:end,:,:) = Yb(2:end,:,:) + Yb(1:end-1,:,:);
+        end
+        [Yt,redB] = cat_vol_resize(Y,'reduceBrain',vx_vol,addvox,Yb); %#ok<ASGLU>
+      end
+      
+      % estimate if we need negative values
+      if job.ctype ~= 0
+        if job.intscale == 3 % force positive values between 0 and 1 
+            intscale =  1; 
+        else % scaled values between 0 and |1|
+          if sum( Y(:)./max(abs(Y(:))) < 0.05 ) > numel(Y(:)) * 0.01
+            intscale = -1;
+          else
+            intscale =  1; 
+          end 
+        end 
+        % udpate for full range (use slope rather than fixed range)
+        if job.intscale == 0, intscale = intscale * inf; end
+      else % full range 
+        if any( V(1).dt(1) == [2 512 768] ) % uint
+          intscale = inf; 
+        else % int
+          intscale = -inf; 
+        end
+      end
+      
+      clear Yt Y;
+      % prepare update of AC orientation
+      mati  = spm_imatrix(V(1).mat); mati(1:3) = mati(1:3) + mati(7:9).*(redB.BB(1:2:end) - 1);
+
+
+      % trimming
+      Vo = V; 
+      for di = 1:numel(V)
+        if numel(V)>1 && di>1 && job.verb, fprintf('\n %57s: ',spm_str_manip(job.images{si}{di},'ra55')); end
         
-    % skip most of steps that are only needed for non-categorical data
-    if categorical
-      Yb = Y;
-    else
-      % intensity normalization 
-      [Y,hth] = cat_stat_histth(smooth3(Y),job.range1,0); 
-      Y = (Y - hth(1)) ./ abs(diff(hth));
-
-      % masking
-      Yb = zeros(size(Y),'single'); 
-      Yb(2:end-1,2:end-1,2:end-1) = Y(2:end-1,2:end-1,2:end-1);
-      Yb = smooth3(Yb)>job.pth; 
-      Yb = cat_vol_morph(Yb,'do',job.open,vx_vol); 
-      Yb = cat_vol_morph(Yb,'l',[10 0.1]); 
-    end
-
-    vx_vol  = sqrt(sum(V(1).mat(1:3,1:3).^2)); 
-    [Yt,redB] = cat_vol_resize(Y,'reduceBrain',vx_vol,job.addvox,Yb);  %#ok<ASGLU>
-    
-    % prefer odd or even x-size such as found in original data to prevent shifting issues
-    % at midline
-    if ~mod(redB.sizeTr(1),2) ~= ~mod(redB.sizeT(1),2)
-      % and add x-shifted image to increase bounding box by 1 voxel
-      if ~mod(redB.BB(1),2)
-        Yb(1:end-1,:,:) = Yb(1:end-1,:,:) + Yb(2:end,:,:);
-      else
-        Yb(2:end,:,:) = Yb(2:end,:,:) + Yb(1:end-1,:,:);
-      end
-      [Yt,redB] = cat_vol_resize(Y,'reduceBrain',vx_vol,job.addvox,Yb); %#ok<ASGLU>
-    end
-    
-    clear Yt Y;
-    % prepare update of AC orientation
-    mati  = spm_imatrix(V(1).mat); mati(1:3) = mati(1:3) + mati(7:9).*(redB.BB(1:2:end) - 1);
-    
-    
-    %% trimming
-    Vo = V; 
-    for di = 1:numel(V)
-      % optimize tissue intensity range if 0<range<100 or for changed datatype 
-      if (job.range>0 && job.range<100) || ...
-         (~isempty(job.ctype) && ( ...
-         ( isnumeric(job.ctype) && job.ctype>0) || ...
-         ( ischar(job.ctype) && ~strcmp(job.ctype,'native') ))) 
+        % optimize tissue intensity range if 0<range<100 or for changed datatype 
+        if 1 || ... (job.range>0 && job.range<100) || ...
+           (~isempty(job.ctype) && ( ...
+           ( isnumeric(job.ctype) && job.ctype>0) || ...
+           ( ischar(job.ctype) && ~strcmp(job.ctype,'native') ))) 
          
-        job2 = struct('data',job.images{si}{di},'verb',0,'ctype',job.ctype,...
-                      'range',job.range,'prefix',job.prefix,'suffix',job.suffix);
-        P = cat_io_volctype(job2);
-      else
-        copyfile(job.images1{si}{di},job.images2{si}{di});
-        P = job.images2{si}(di);
+          job2 = struct('data',job.images{si}{di},'ctype',job.ctype,'intscale',intscale,...
+                        'verb',job.verb*0.5,'range',job.intlim,'prefix',job.prefix,'suffix',job.suffix);
+          files = cat_io_volctype(job2);
+          Pdi = files.files;
+        else
+          if ~strcmp(job.images1{si}{di},job.images2{si}{di})
+            copyfile(job.images1{si}{di},job.images2{si}{di});
+          end
+          Pdi = job.images2{si}(di);
+        end
+        spm_progress_bar('Set',si + di/numel(V));
+
+        %% create ouput
+        Vo(di) = spm_vol(Pdi{1}); 
+        Yo     = single(spm_read_vols(Vo(di)));
+
+        % apply mask
+        if job.mask, Yo = Yo .* Ymask; end
+
+        [Yo,redB]  = cat_vol_resize(Yo,'reduceBrain',vx_vol,addvox,Yb); 
+        Vo(di).mat = spm_matrix(mati);
+        Vo(di).dim = redB.sizeTr;
+        if exist(Vo(di).fname,'file'), delete(Vo(di).fname); end % delete required in case of smaller file size!
+        spm_write_vol(Vo(di),Yo);
+        
+        % if there are multiple subjects with multiple images
+        if numel(job.images)>1 && numel(V)>1 && di>numel(V) && job.verb
+          fprintf('  ------------------------------------------------------------------------\n'); 
+        end
       end
-      spm_progress_bar('Set',si + di/numel(V));
     
-      % create ouput
-      Vo(di) = spm_vol(P{1}); 
-      Yo = single(spm_read_vols(Vo(di)));
-
-      % apply mask
-      if job.mask, Yo = Yo.*Ymask; end
-
-      Yo = cat_vol_resize(Yo,'reduceBrain',vx_vol,job.addvox,Yb); 
-      Vo(di).mat = spm_matrix(mati);
-      Vo(di).dim = redB.sizeTr;
-      if exist(Vo(di).fname,'file'), delete(Vo(di).fname); end % delete required in case of smaller file size!
-      spm_write_vol(Vo(di),Yo);
+    
+      %% be verbose
+      if job.verb, fprintf('saved %5.2f%%\n',100 - 100*((prod(redB.sizeTr) ./ prod(redB.sizeT)))); end
+    else
+      if job.verb, fprintf('exist\n'); end
     end
-    
-    %% be verbose
-    if job.verb, fprintf('saved %5.2f%%\n',100 - 100*((prod(redB.sizeTr) ./ prod(redB.sizeT)))); end
     spm_progress_bar('Set',si);
   end
   spm_progress_bar('Clear');

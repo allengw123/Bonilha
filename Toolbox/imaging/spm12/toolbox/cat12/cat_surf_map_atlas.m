@@ -11,7 +11,7 @@ function cat_surf_map_atlas(central_files, atlas_files)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_surf_map_atlas.m 1828 2021-05-20 20:53:18Z gaser $
+% $Id: cat_surf_map_atlas.m 1906 2021-11-16 16:55:46Z gaser $
 
 fsavgDir  = fullfile(spm('dir'),'toolbox','cat12','templates_surfaces'); 
 atlasDir  = fullfile(spm('dir'),'toolbox','cat12','atlases_surfaces');
@@ -57,7 +57,7 @@ for k = 1:size(hemi,1)
         
       cmd = sprintf('CAT_ResampleSurf -label "%s" "%s" "%s" "NULL" "%s" "%s"',...
         fs_central,fs_sphere,spherereg{1},fs_annot_txt,annot_txt{1});
-      [ST, RS] = cat_system(cmd); cat_check_system_output(ST,RS);
+      ST = cat_system(cmd);
       delete(fs_annot_txt)
       if ~ST
         fprintf('Save %s\n',annot_tmp{1});

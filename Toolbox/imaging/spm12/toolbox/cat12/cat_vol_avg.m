@@ -15,8 +15,21 @@ function out = cat_vol_avg(job)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_vol_avg.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_vol_avg.m 1970 2022-03-08 10:01:28Z gaser $
 %
+
+% interactive call function
+if ~nargin
+  job.outdir{1} = '';
+  job.data = cellstr(spm_select(Inf,'image','Select (spatially registered) images for average'));
+  [tmp, name]=spm_str_manip(spm_str_manip(job.data,'t'),'C');
+  pos = strfind(name.e,',1');
+  if ~isempty(pos)
+    name.e = name.e(1:pos-1);
+  end
+  Q = ['avg_' name.s name.e];
+  job.output = spm_input('Output filename',1,'s',Q);
+end
 
 [p,nam,ext] = spm_fileparts(job.output);
 if isempty(p)
@@ -38,10 +51,10 @@ out.files = { fullfile(p,[nam ext]) };
 N = nifti(char(job.data));
 
 if length(N)>1 && any(any(diff(cat(1,N.dat.dim),1,1),1))
-	error('images don''t all have same dimensions')
+  error('images don''t all have same dimensions')
 end
 if max(max(max(abs(diff(cat(3,N.mat),1,3))))) > 1e-8
-	error('images don''t all have same orientation & voxel size')
+  error('images don''t all have same orientation & voxel size')
 end
 
 d = N(1).dat.dim;
@@ -66,3 +79,6 @@ Nout.dat.fname = out.files{1};
 create(Nout);
 Nout.dat(:,:,:,:,:) = avg;
 
+if ~nargout
+  clear out
+end

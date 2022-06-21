@@ -130,7 +130,7 @@ function varargout = cat_spm_results_ui(varargin)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_spm_results_ui.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_spm_results_ui.m 1951 2022-02-23 08:45:57Z gaser $
  
  
 %==========================================================================
@@ -246,7 +246,7 @@ function varargout = cat_spm_results_ui(varargin)
 % spm_results_ui.m r7388
 %__________________________________________________________________________
  
-SVNid = '$Rev: 1791 $'; 
+SVNid = '$Rev: 1951 $'; 
 
 %-Condition arguments
 %--------------------------------------------------------------------------
@@ -293,56 +293,58 @@ switch lower(Action), case 'setup'                         %-Set up results
         [SPM,xSPM] = spm_getSPM(varargin{2});
       end
     else
-        if exist(fullfile(spm('dir'),'toolbox','TFCE'),'dir')
-          [spmmatfile, sts] = spm_select(1,'^SPM\.mat$','Select SPM.mat');
-          swd = spm_file(spmmatfile,'fpath');
-          warning off
-          load(fullfile(swd,'SPM.mat'),'SPM','xSPM');
-          warning on
+      if exist(fullfile(spm('dir'),'toolbox','TFCE'),'dir')
+        [spmmatfile, sts] = spm_select(1,'^SPM\.mat$','Select SPM.mat');
+        swd = spm_file(spmmatfile,'fpath');
+        warning off
+        load(fullfile(swd,'SPM.mat'),'SPM','xSPM');
+        warning on
 
-          [Ic,xCon] = spm_conman(SPM,'T&F',Inf,'    Select contrast(s)...');
-          xCon(Ic).Vspm = spm_data_hdr_read(xCon(Ic).Vspm.fname);
-          SPM.Ic = Ic; SPM.xCon = xCon;
-          SPM.swd = swd;
+        [Ic,xCon] = spm_conman(SPM,'T&F',Inf,'    Select contrast(s)...','',1);
+        if ~isempty(xCon(Ic).Vspm) && exist(SPM.swd,'dir')
+          xCon(Ic).Vspm = spm_data_hdr_read(fullfile(SPM.swd,xCon(Ic).Vspm.fname));
+        end
+        SPM.Ic = Ic; SPM.xCon = xCon;
+        SPM.swd = swd;
 
-          % data or analysis moved or data are on a different computer?
-          if isfield(SPM.xVol,'G') && ischar(SPM.xVol.G)
-            if ~exist(SPM.xVol.G,'file')
-              [pp2,ff2,xx2] = spm_fileparts(SPM.xVol.G);
-              if ~isempty(strfind(ff2,'.central.freesurfer')) | ~isempty(strfind(ff2,['.central.' cat_get_defaults('extopts.shootingsurf')]))
-                if strfind(pp2,'templates_surfaces_32k')
-                  SPM.xVol.G = fullfile(spm('dir'),'toolbox','cat12','templates_surfaces_32k',[ff2 xx2])
-                else
-                  SPM.xVol.G = fullfile(spm('dir'),'toolbox','cat12','templates_surfaces',[ff2 xx2]);
-                end
+        % data or analysis moved or data are on a different computer?
+        if isfield(SPM.xVol,'G') && ischar(SPM.xVol.G)
+          if ~exist(SPM.xVol.G,'file')
+            [pp2,ff2,xx2] = spm_fileparts(SPM.xVol.G);
+            if ~isempty(strfind(ff2,'.central.freesurfer')) | ~isempty(strfind(ff2,['.central.' cat_get_defaults('extopts.shootingsurf')]))
+              if strfind(pp2,'templates_surfaces_32k')
+                SPM.xVol.G = fullfile(spm('dir'),'toolbox','cat12','templates_surfaces_32k',[ff2 xx2])
+              else
+                SPM.xVol.G = fullfile(spm('dir'),'toolbox','cat12','templates_surfaces',[ff2 xx2]);
               end
-              % modified SPM.mat hast to be saved
-              save(fullfile(swd,'SPM.mat'),'SPM','-v7.3');
             end
+            % modified SPM.mat hast to be saved
+            save(fullfile(swd,'SPM.mat'),'SPM','-v7.3');
           end
-                    
-          % check for existing TFCE results for this contrast
-          if numel(Ic)==1 & exist(fullfile(swd,sprintf('%s_log_p_%04d.nii',xCon(Ic).STAT,Ic))) || ...
-                            exist(fullfile(swd,sprintf('%s_log_p_%04d.gii',xCon(Ic).STAT,Ic)))
-            stat_str = {'TFCE',xCon(Ic).STAT};
-            statType = spm_input('Type of statistic',1,'m',...
-                sprintf('TFCE (non-parametric)|%s (non-parametric)|%s (SPM parametric)',...
-                xCon(Ic).STAT,xCon(Ic).STAT),[],1);
-            if statType < 3
-              use_tfce = 1;
-              SPM.statType = stat_str{statType};
-              [SPM,xSPM] = tfce_getSPM(SPM);
-              xSPM.statType = stat_str{statType};
-            else
-              use_tfce = 0;
-              [SPM,xSPM] = spm_getSPM(SPM);
-              xSPM.statType = xCon(Ic).STAT;
-            end
+        end
+
+        % check for existing TFCE results for this contrast
+        if numel(Ic)==1 && (exist(fullfile(swd,sprintf('%s_log_p_%04d.nii',xCon(Ic).STAT,Ic))) || ...
+                          exist(fullfile(swd,sprintf('%s_log_p_%04d.gii',xCon(Ic).STAT,Ic))))
+          stat_str = {'TFCE',xCon(Ic).STAT};
+          statType = spm_input('Type of statistic',1,'m',...
+              sprintf('TFCE (non-parametric)|%s (non-parametric)|%s (SPM parametric)',...
+              xCon(Ic).STAT,xCon(Ic).STAT),[],1);
+          if statType < 3
+            use_tfce = 1;
+            SPM.statType = stat_str{statType};
+            [SPM,xSPM] = tfce_getSPM(SPM);
+            xSPM.statType = stat_str{statType};
           else
             use_tfce = 0;
             [SPM,xSPM] = spm_getSPM(SPM);
             xSPM.statType = xCon(Ic).STAT;
           end
+        else
+          use_tfce = 0;
+          [SPM,xSPM] = spm_getSPM(SPM);
+          xSPM.statType = xCon(Ic).STAT;
+        end
       else
         if nargin > 1
           [SPM,xSPM] = spm_getSPM(varargin{2});
@@ -842,7 +844,7 @@ switch lower(Action), case 'setup'                         %-Set up results
 
         %-SPM area - used for Volume of Interest analyses
         %------------------------------------------------------------------
-        if spm_mesh_detect(xSPM.Vspm) | use_tfce
+        if spm_mesh_detect(xSPM.Vspm)
             Enable = 'off';
         else
             Enable = 'on';
@@ -1111,6 +1113,18 @@ switch lower(Action), case 'setup'                         %-Set up results
         hC1  = uimenu(hC,'Label','Label using');
         
         list = spm_atlas('List','installed');
+        
+        [csv_files, n_csv] = cat_vol_findfiles(cat_get_defaults('extopts.pth_templates'), '*.csv');
+        if numel(list) < n_csv
+          disp('Install CAT12 atlases');
+          try
+            cat_install_atlases;
+          catch
+            disp('Writing error during atlas installation: Please check file permissions.');
+          end
+          list = spm_atlas('List','installed');
+        end
+        
         if use_tfce
           clist = 'tfce_list';
         else
@@ -1121,11 +1135,7 @@ switch lower(Action), case 'setup'                         %-Set up results
                 'Callback',sprintf('%s(''label'',''%s''); cat_spm_results_ui(''spm_list_cleanup'');',clist,list(i).name));
         end
         if isempty(list), set(hC1,'Enable','off'); end
-        
-        %hC2  = uimenu(hC,'Label','Download Atlas...',...
-        %    'Separator','on',...
-        %    'Callback','spm_atlas(''install'');');
-        
+                
         varargout = {hC};
     
 
@@ -1895,7 +1905,7 @@ function out = cat_spm_run_results(job)
 % Copyright (C) 2008-2018 Wellcome Trust Centre for Neuroimaging
 
 % Guillaume Flandin
-% $Id: cat_spm_results_ui.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_spm_results_ui.m 1951 2022-02-23 08:45:57Z gaser $
 
 
 cspec = job.conspec;

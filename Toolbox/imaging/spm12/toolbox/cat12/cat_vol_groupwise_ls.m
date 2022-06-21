@@ -1,6 +1,7 @@
-function out = cat_vol_groupwise_ls(Nii, output, prec, w_settings, b_settings, s_settings, ord, use_brainmask, reduce)
+function out = cat_vol_groupwise_ls(Nii, output, prec, w_settings, b_settings, s_settings, ord, use_brainmask, reduce, setCOM, isores)
 % Groupwise registration via least squares
-% FORMAT out = spm_groupwise_ls(Nii, output, prec, w_settings, b_settings, s_settings, ord, use_brainmask, reduce)
+% FORMAT out = spm_groupwise_ls(Nii, output, prec, w_settings, b_settings, ...
+%              s_settings, ord, use_brainmask, reduce, setCOM, isores)
 % Nii    - a nifti object for two or more image volumes.
 % output - a cell array of output options (as character strings).
 %          'wimg   - write realigned images to disk
@@ -25,6 +26,9 @@ function out = cat_vol_groupwise_ls(Nii, output, prec, w_settings, b_settings, s
 % reduce     - reduce bounding box at final resolution level because usually
 %              there is a lot of air around the head after registration of 
 %              multiple scans
+% setCOM     - set origin using center-of-mass
+% isores     - force isotropic average resolution
+%              (0-default,1-best,2-worst,3-optimal,<0-defines resolution)
 %
 %_______________________________________________________________________
 % Copyright (C) 2012 Wellcome Trust Centre for Neuroimaging
@@ -54,13 +58,15 @@ end
 
 % Specify default settings
 %-----------------------------------------------------------------------
-if nargin<3, prec       = NaN; end
-if nargin<4, w_settings = [0 1 80 20 80]; end
-if nargin<5, b_settings = [0 0 1e6]; end
-if nargin<6, s_settings = 6; end
-if nargin<7, ord        = [3 3 3 0 0 0]; end
-if nargin<8, use_brainmask = 1; end
-if nargin<9, reduce     = 1; end
+if nargin<3,  prec       = NaN; end
+if nargin<4,  w_settings = [0 1 80 20 80]; end
+if nargin<5,  b_settings = [0 0 1e6]; end
+if nargin<6,  s_settings = 6; end
+if nargin<7,  ord        = [3 3 3 0 0 0]; end
+if nargin<8,  use_brainmask = 1; end
+if nargin<9,  reduce     = 1; end
+if nargin<10, setCOM     = 1; end
+if nargin<11, isores     = 0; end % force isotropic average resolution (0-default,1-best,2-worst,3-optimal)
 
 % If settings are not subject-specific, then generate
 %-----------------------------------------------------------------------
@@ -75,6 +81,19 @@ for i=1:numel(Nii)
   Nii(i).dat.scl_slope = 100/g*Nii(i).dat.scl_slope;
   Nii(i).dat.scl_inter = 100/g*Nii(i).dat.scl_inter;
 end
+
+% correct origin using COM
+if setCOM
+  for i=1:numel(Nii)
+    M0 = spm_imatrix(Nii(i).mat);
+    M  = spm_imatrix(cat_vol_set_com(spm_vol(Nii(i).dat.fname))); 
+    M0(1:3) = M0(1:3) - M(1:3);
+    Nii(i).mat = spm_matrix(M0);
+  end
+  clear M0 M; 
+end
+
+fprintf('\n------------------------------------------------------------------------\n');
 
 % Determine noise estimates when unknown
 for i=1:numel(Nii)
@@ -107,7 +126,13 @@ for i=1:numel(Nii)
     dm = [size(Nii(i).dat) 1];
     d  = max(d, dm(1:3));
 end
-d  = min(d);
+if isores
+  d = max(d);
+elseif isores<0
+  d = -isores;
+else
+  d = min(d);
+end
 
 % Specify highest resolution data
 %-----------------------------------------------------------------------
@@ -148,9 +173,33 @@ end
 % Stuff for figuring out the orientation, dimensions etc of the highest resolution template
 %-----------------------------------------------------------------------
 Mat0 = cat(3,pyramid(1).img.mat);
+if isores ~= 0   
+  %% RD20220217: use best resolution and create an isotropic output 
+  mati      = spm_imatrix(Mat0); 
+  vx_vol    = mati(7:9); 
+  switch isores 
+    case 1
+      vx_vol = min(vx_vol); 
+    case 2 % need at least something like 2 mm
+      vx_vol = min(2,max(vx_vol));
+    case 3 
+      % optimal - keep the volume similar but move it a bit torwards one
+      %   eg. 1.0x1.0x3.0 > 1.2, 0.5x0.5x1.0 > 0.7
+      vx_vol  = floor( (prod(abs(vx_vol)).^(1/3) ).^0.5  * 10 ) / 10;
+    case 4 % similar volume and between 1 and 2 mm
+      vx_vol  = min(2,max(1,min(vx_vol)));  
+    otherwise
+      vx_vol  = repmat(-isores,1,3);
+  end
+  cdim      = mati(7:9) ./ vx_vol; 
+  mati(7:9) = vx_vol; 
+  Mat0      = spm_matrix(mati); 
+else
+  cdim      = [1 1 1];
+end
 dims = zeros(numel(Nii),3);
 for i=1:size(dims,1)
-    dims(i,:) = Nii(i).dat.dim(1:3);
+    dims(i,:) = round(Nii(i).dat.dim(1:3) .* cdim);
 end
 [pyramid(1).mat,pyramid(1).d] = compute_avg_mat(Mat0,dims);
 pyramid(1).sc   = abs(det(pyramid(1).mat(1:3,1:3)));
@@ -175,6 +224,7 @@ brainmask = [];
 % check whether reduce option is enabled for non-linear registration
 if all(isfinite(w_settings(:))) & reduce
   reduce = 0;
+  use_brainmask = 0; 
   fprintf('Reducing bounding box is not supported for non-linear registration and will be disabled.\n');
 end
 
@@ -256,11 +306,23 @@ for level=nlevels:-1:1 % Loop over resolutions, starting with the lowest
 
     spm_plot_convergence('Clear');
     spm_plot_convergence('Init',['Optimising (level ' num2str(level) ')'],'Objective Function','Step');
-    for iter=1:(2*2^(level-1)+1) % Use more iterations at lower resolutions (its faster, so may as well)
+    for iter=1:(2*2^(level-1)+1) % / 8 % Use more iterations at lower resolutions (its faster, so may as well) ############# RD20220213 marked
+      % RD20220213: markings for future experiments
+      %  I marked some parts of using bias correction and deformations, 
+      %  because they are interesting in case case of development, adaptions 
+      %  of the scanner protocol or device itself.
+      %  Soft, very low frequency changes could be interesting. However, 
+      %  the necessary adaptions of the long pipeline are curenty to much 
+      %  for this quite rare case that would remain still complicated.
+      %  Changes would need extra flag for the protocol case. 
+      %  The developmental changes would require separate processing of the
+      %  average (with deformation) and of the single time-points (without
+      %  deformations) to get correct measurements.
 
 
         % Compute deformations from initial velocities
         %-----------------------------------------------------------------------
+        
         for i=1:numel(param)
             if all(isfinite(w_settings(i,:)))
                 [param(i).y,param(i).J] = spm_shoot3d(param(i).v0,[vx w_settings(i,:)*sc],s_settings(i,:));
@@ -276,11 +338,11 @@ for level=nlevels:-1:1 % Loop over resolutions, starting with the lowest
             % for i=1:numel(param), fprintf('  %12.5g %12.5g %12.5g', prec(i)*ss(i), param(i).eb, param(i).ev); end; fprintf('  0\n');
 
             if (level == 1) && (iter == 1)
-            
+              vx_vol  = sqrt(sum(pyramid(level).mat(1:3,1:3).^2)); 
+              
               % reduce bounding box at final resolution level
               if reduce
                 fprintf('Reduce bounding box for final resolution level.\n');
-                vx_vol  = sqrt(sum(pyramid(level).mat(1:3,1:3).^2)); 
                 
                 % intensity normalization using 99% of data (to ignore outliers)
                 [msk,hth] = cat_stat_histth(smooth3(mu),0.99,0); 
@@ -528,9 +590,10 @@ for level=nlevels:-1:1 % Loop over resolutions, starting with the lowest
             end
             clear r_avg
         end
-
-        if any(all(isfinite(b_settings),2))
+        
+        if any(all(isfinite(b_settings),2)) %&& level>4 %######## RD20220213 marked  
             % Bias field
+            %fprintf('Bias %d-%d\n',level,iter); % ######## RD20220213 marked
             %=======================================================================
             % Recompute template data
             %-----------------------------------------------------------------------
@@ -606,12 +669,12 @@ for level=nlevels:-1:1 % Loop over resolutions, starting with the lowest
             clear mu
         end
 
-
-        if any(all(isfinite(w_settings),2))
+        if any(all(isfinite(w_settings),2)) %&& level>4 % ########## RD20220213 marked
             % Deformations
             %=======================================================================
             % Recompute template data (with gradients)
             %-----------------------------------------------------------------------
+            %fprintf('Defs %d-%d\n',level,iter); %##########   RD20220213 marked 
             [mu,ss,nvox,D] = compute_mean(pyramid(level), param, ord);
             % for i=1:numel(param), fprintf('  %12.5g %12.5g %12.5g', prec(i)*ss(i), param(i).eb, param(i).ev); end; fprintf('  2\n');
 
@@ -1255,7 +1318,7 @@ function [M_avg,d] = compute_avg_mat(Mat0,dims)
 % Copyright (C) 2012-2019 Wellcome Trust Centre for Neuroimaging
 
 % John Ashburner
-% $Id: cat_vol_groupwise_ls.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_vol_groupwise_ls.m 1982 2022-04-12 11:09:13Z dahnke $
 
 
 % Rigid-body matrices computed from exp(p(1)*B(:,:,1)+p(2)+B(:,:,2)...)

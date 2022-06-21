@@ -15,21 +15,25 @@ function varargout = cat_check_system_output(status,result,debugON,trerr)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_check_system_output.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_check_system_output.m 1906 2021-11-16 16:55:46Z gaser $
 
   if ~exist('debugON','var'), debugON=0; end
   if ~exist('trerr','var'), trerr=1; end
-  if nargout>0, varargout{1} = false; end 
+  if nargout>0, varargout{1} = false; varargout{2} = result; end 
   
   % replace special characters
   result = genstrarray(result);
   
-  if status || ...
+  if status > 1 || ...
      ~isempty(strfind(result,'ERROR')) || ...
      ~isempty(strfind(result,'Segmentation fault'))
-    if nargout>0, varargout{1} = true; end
+    if nargout>0, varargout{1} = true; varargout{2} = result; end
     if trerr
-      error('CAT:system_error',result); 
+      try
+        error('CAT:system_error',sprintf(result)); 
+      catch
+        fprintf('%s',sprintf(result)); 
+      end
     else
       cat_io_cprintf('warn','CAT:system_error:%s',sprintf(result)); 
     end

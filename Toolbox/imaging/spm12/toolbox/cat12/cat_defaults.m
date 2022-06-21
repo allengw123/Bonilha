@@ -13,7 +13,7 @@ function cat_defaults
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_defaults.m 1842 2021-06-01 14:41:58Z gaser $
+% $Id: cat_defaults.m 1976 2022-03-21 12:38:34Z gaser $
 
 clear global cat; 
 global cat
@@ -169,6 +169,7 @@ cat.extopts.resval       = [1.0 0.30];   % resolution value and its tolerance ra
 % use BIDS data structure
 [cat_ver cat_rel] = cat_version;
 cat.extopts.bids_folder  = fullfile('..','derivatives',[cat_ver '_' cat_rel]); % default relative BIDS path for saving data
+cat.extopts.bids_yes     = 0; % use BIDS structure for saving data
 
 % check for multiple cores is different for octave
 if strcmpi(spm_check_version,'octave')
@@ -258,7 +259,7 @@ cat.extopts.vdist          = 2;   % mesh resolution (experimental, do not change
 cat.extopts.pbtlas         = 0;   % reduce myelination effects (experimental, not yet working properly!)
 cat.extopts.thick_measure  = 1;   % distance method for estimating thickness:  1 - Tfs: Freesurfer method using mean(Tnear1,Tnear2) (default in 12.7+); 0 - Tlink: linked distance (used before 12.7)
 cat.extopts.thick_limit    = 5;   % upper limit for Tfs thickness measure similar to Freesurfer (only valid if cat.extopts.thick_measure is set to "1"
-cat.extopts.close_parahipp = 0;   % optionally apply closing inside mask for parahippocampal gyrus to get rid of the holes that lead to large
+cat.extopts.close_parahipp = 1;   % optionally apply closing inside mask for parahippocampal gyrus to get rid of deep holes that lead to large
                                   % cuts in gyri after topology correction. However, this may also lead to poorer quality of topology 
                                   % correction for other data and should be only used if large cuts in the parahippocampal areas occur
 cat.extopts.scale_cortex   = 0.7; % scale intensity values for cortex to start with initial surface that is closer to GM/WM border to prevent that gyri/sulci are glued 
@@ -303,6 +304,7 @@ cat.extopts.atlas       = { ...
   fullfile(cat.extopts.pth_templates,'cobra.nii')               0  {'gm','wm'}         1; ... % hippocampus-amygdala-cerebellum-subcortex, 5 subjects, 0.6 mm voxel size 
   fullfile(cat.extopts.pth_templates,'hammers.nii')             0  {'csf','gm','wm'}   0; ... % atlas based on 30 subjects with 95 regions
   fullfile(cat.extopts.pth_templates,'thalamus.nii')            0  {'gm'}              0; ... % thalamic nuclei based on DTI from 70 subjects with 14 regions
+  fullfile(cat.extopts.pth_templates,'suit.nii')                0  {'gm','wm'}         0; ... % cerebellar lobes from 20 subjects
   fullfile(cat.extopts.pth_templates,'ibsr.nii')                0  {'csf','gm','wm'}   0; ... % less regions, 18 subjects, low-res T1 image quality
   fullfile(cat.extopts.pth_templates,'aal3.nii')                1  {'gm'}              0; ... % many regions, but only labeled on one subject 
   fullfile(cat.extopts.pth_templates,'mori.nii')                1  {'gm','wm'}         0; ... % only one subject, but with WM regions
