@@ -137,7 +137,7 @@ if ~isempty(dti)
         dti_new = ['DTI_',new_subject_name,'.nii'];
         if contains(dti.name,'.gz')
             filenames = gunzip(fullfile(dti.folder,dti.name));
-            movefile(filenames{:},fullfile(subject_folder,dti_new));
+            movefile(filenames{:},fullfile(subject_folder,fMRI_new));
         else
             copyfile(fullfile(dti.folder,dti.name),fullfile(subject_folder,dti_new))
         end
