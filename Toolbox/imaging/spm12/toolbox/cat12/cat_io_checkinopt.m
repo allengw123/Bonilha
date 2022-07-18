@@ -1,5 +1,5 @@
 function res = cat_io_checkinopt(opt, def, cond)
-% format: res = checkin(opt,def,cond)
+% format: res = cat_io_checkinopt(opt,def,cond)
 % ______________________________________________________________________
 %
 % Christian Gaser, Robert Dahnke
@@ -7,7 +7,7 @@ function res = cat_io_checkinopt(opt, def, cond)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_io_checkinopt.m 1791 2021-04-06 09:15:54Z gaser $
+% $Id: cat_io_checkinopt.m 1993 2022-05-19 09:23:00Z gaser $
 
 
   if ~exist('def','var'),  def=[]; end

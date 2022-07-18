@@ -20,10 +20,10 @@ function spm_cat12(varargin)
 %
 % ______________________________________________________________________
 % Christian Gaser, Robert Dahnke
-% $Id: spm_cat12.m 1987 2022-04-25 12:28:37Z gaser $
+% $Id: spm_cat12.m 1988 2022-05-02 10:30:43Z gaser $
 
 
-rev = '$Rev: 1987 $';
+rev = '$Rev: 1988 $';
 global deffile;
 global cprintferror;  % temporary, because of JAVA errors in cat_io_cprintf ... 20160307
 %try clearvars -global deffile;  end %#ok<TRYNC>

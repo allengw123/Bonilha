@@ -24,7 +24,7 @@ function cat_run_job1639(job,tpm,subj)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_run_job1639.m 1972 2022-03-16 10:32:57Z dahnke $
+% $Id: cat_run_job1639.m 1992 2022-05-13 08:05:20Z dahnke $
 
 %#ok<*WNOFF,*WNON>
 
@@ -454,7 +454,8 @@ function cat_run_job1639(job,tpm,subj)
       obj.reg      = job.opts.warpreg;
       obj.samp     = job.opts.samp; % resolution of SPM preprocessing (def. 3, 1.5 as last highest TPM optimal level)               
       obj.tol      = job.opts.tol;  % stopping criteria for SPM iteration of outer/inner loops
-      obj.newtol   = 1; % stopping criteria for outer (=tol) and inner loop:
+      obj.newtol   = 1 + ( isfield(job,'useprior') && ~isempty(job.useprior) ); 
+                        % stopping criteria for outer (=tol) and inner loop:
                         %  -1-old SPM (>9 iters, inner=tol), 
                         %   0-old CAT more outer iterations (>19 iter, inner=tol),  
                         %   1-new optimal/faster with additional AUC criteria to have SPM minimum iterations (>9 iters, inner=1e-2)

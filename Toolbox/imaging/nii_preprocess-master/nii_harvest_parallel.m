@@ -1,13 +1,4 @@
-function nii_harvest (baseDir)
-
-%Please note, DTI processing is disabled in nii_harvest_parallel!!!
-
-
-outDir = '/media/chris/ABC_EXPRESS/ABC_ASL_IN';
-baseDir = '/media/chris/ABC_EXPRESS/_ABC_MASTER_DB';
-
-outDir = '/media/chris/ABC_EXPRESS/del_IN';
-baseDir = '/media/chris/ABC_EXPRESS/del_DB';
+function nii_harvest_parallel (baseDir,outDir)
 
 % if the correct environment variables are set in the environment, override
 % the above
@@ -82,15 +73,16 @@ subjDirs = subFolderSub(baseDir);
 subjDirs = sort(subjDirs);
 
 if ~isempty(getenv('nii_harvest_subjDirs'))
-    subjDirs = {getenv('nii_harvest_subjDirs')}
+    subjDirs = {getenv('nii_harvest_subjDirs')};
 end
 
 
 %set up parallel loop variables
-numLoops = 10;
-subjDirsSize = length(subjDirs)
-div = floor(subjDirsSize/numLoops)
-modRemainder = mod(subjDirsSize,numLoops)
+pool = parpool;
+numLoops = pool.NumWorkers;
+subjDirsSize = length(subjDirs);
+div = floor(subjDirsSize/numLoops);
+modRemainder = mod(subjDirsSize,numLoops);
 
 %parfor i = 1:numLoops
 parfor i = 1:numLoops
@@ -114,7 +106,7 @@ modalityKeysVerbose = {'Lesion','T1','T2','ASL','ASLrev','Rest_','fMRI','fme1','
 modalityDependency =  [0,       1,   1,   0,    6,       0,      0,     0,     0,     0,     0           0         ]; %e.g. T1 and T2 must be from same study as lesion
 
 modalityKeys = strrep(modalityKeysVerbose,'_',''); 
-xperimentKeys = {'CNABC','ABC','LARC','POLAR','SE','LIME','CT','R01','CAT'}; %order specifies priority: 1st item checked first!
+xperimentKeys = {'pre','post','session'}; %order specifies priority: 1st item checked first!
 %create empty structure
 blank = [];
 blank.subjName = [];

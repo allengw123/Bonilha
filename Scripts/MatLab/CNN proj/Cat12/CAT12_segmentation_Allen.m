@@ -2,11 +2,17 @@
 clear
 clc
 
+% Add github path
+githubpath = '/home/bonilha/Documents/GitHub/Bonilha';
+% githubpath = 'C:\Users\allen\Documents\GitHub\Bonilha';
+cd(githubpath)
+allengit_genpath(githubpath,'imaging')
+
 %Start local parpool
 parpool('local');
 
 %Assigning main folder: will look through all subfolders for matching files
-datafolder='F:\PatientData\LargeSet_4_7\Cat12';
+datafolder='/media/bonilha/AllenProj/PatientData/disease_dur/Cat12';
 diseasefolders = {dir(datafolder).name};
 
 %Reassiging common arbitrary variables
@@ -17,8 +23,9 @@ nworkers = n.NumWorkers;
 %surface. Note, to ensure rows are equal (to prevent spm_jobman error),
 %emtpy cells are populated with previous entry in row. Thus, the resulting
 %jobman output will overwrite the previous output with identical data.
-location_tpm = 'C:\Users\bonilha\Documents\MATLAB\spm12\tpm\TPM.nii';
-location_shooting_tpm = 'C:\Users\bonilha\Documents\MATLAB\spm12\toolbox\cat12\templates_MNI152NLin2009cAsym\Template_0_GS.nii';
+spm12_path = fileparts(which('spm'));
+location_tpm = fullfile(spm12_path,'tpm','TPM.nii');
+location_shooting_tpm = fullfile(spm12_path,'toolbox','cat12','templates_MNI152NLin2009cAsym','Template_0_GS.nii');
 
 for d=1:numel(diseasefolders)
     
@@ -39,7 +46,7 @@ for d=1:numel(diseasefolders)
     while i <= length(subjects)
         for j = 1:nworkers
            if i <= length(subjects)
-            subfolder=dir(fullfile(subjects(i).folder,subjects(i).name,'T1','*n*'));
+            subfolder=dir(fullfile(subjects(i).folder,subjects(i).name,'*T1*'));
             niftifile=fullfile(subfolder(1).folder,subfolder(1).name);
             matlabbatch{j,k}.spm.tools.cat.estwrite.data = {niftifile};
             matlabbatch{j,k}.spm.tools.cat.estwrite.data_wmh = {''};

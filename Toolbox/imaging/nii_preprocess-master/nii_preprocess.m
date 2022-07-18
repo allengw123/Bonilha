@@ -1,4 +1,4 @@
-function matName = nii_preprocess(imgs, matName, checkForUpdates, hideInteractiveGraphs)
+function matName = nii_preprocess(imgs, matName, checkForUpdates, hideInteractiveGraphs,parallel)
 %preprocess data from multiple modalities3
 % imgs.T1: filename of T1 scan - ONLY REQUIRED INPUT: ALL OTHERS OPTIONAL
 % imgs.T2: filename used to draw lesion, if absent lesion drawn on T1
@@ -25,6 +25,10 @@ if nargin < 1 %, error('Please use nii_preprocess_gui to select images');
     [f, p] = uigetfile('*limegui.mat', 'Select a mat file');
     imgs = fullfile(p,f);
 end;
+if ~exist('parallel','var')
+    parallel = false;
+end
+
 if isempty(spm_figure('FindWin','Graphics')), 
     spm fmri; 
     %spm_get_defaults('cmdline',true); %enable command line mode in scripts
@@ -66,19 +70,22 @@ if true
     tStart = timeSub(tStart,'T1');
     
     try
-        imgs = doVBMSub(imgs, matName);    
-    catch
+        imgs = doVBMSub(imgs, matName);
+        tStart = timeSub(tStart,'VBM');
+    catch e
         warning('Cat12-based VBM failed, see logfile for details');
     end
     
     imgs = doRestSub(imgs, matName); %TR= 1.850 sec, descending; %doRestSub(imgs, matName, 2.05, 5); %Souvik study
-    
+    tStart = timeSub(tStart,'REST');
+
     try
         imgs = doAslSub(imgs, matName);
+        tStart = timeSub(tStart,'ASL');
     catch
         warning('BASIL-based ASL processing failed, see logfile for details');
     end
-    tStart = timeSub(tStart,'ASL');
+    
     
     %This will need to be customized if you use fMRI tasks
     %In general, create an fMRIprocessing mat file which you will call via dofMRISub_Task function
@@ -96,7 +103,7 @@ if true
 
     tStart = timeSub(tStart,'fMRI');
     %warning('Skipping DTI');
-    if true
+    if ~parallel
         if ~isempty(imgs.DTI)
             if ~nii_check_dims({imgs.DTI; imgs.DTIrev}), error('Fix DTI'); end;
             imgs = removeDotDtiSub(imgs);
@@ -124,9 +131,9 @@ if true
             %doDkiTractSub(imgs,matName, dkiDir, 'AICHA');
             %-->(un)comment next line for JHU tractography
             doDkiTractSub(imgs,matName, dkiDir, 'jhu');
+            tStart = timeSub(tStart,'DKI');
         end
     end
-    tStart = timeSub(tStart,'DKI');
     %matName
     %addLimeVersionSub(matName); %update versioning
 end
@@ -280,14 +287,7 @@ ax  = axes('Position',[0.0 0.1 1.0 1.0],'Visible','off','Parent',fig);
 text(pos(1)+0.0,pos(2)+0.01, n,'Parent',ax, 'FontSize',8, 'fontn','Arial', 'color','red');
 %end orthSub()
 
-
-%added RNN  
-%Performs cat12 initial processing on T1-weighted structural image
-%*In the case of lesioned brains, performs cat12 on enantiomorphically
-%healed brain, i.e. 'eT1'
 function imgs = doVBMSub(imgs, matName)
-
-
 %these lines confirm presence of eT1 (stolen from doDTISub)
 targetImage = imgs.T1;
 eT1 = prefixSub('e',imgs.T1); %enantimorphic image
@@ -295,7 +295,7 @@ if exist(eT1,'file'), targetImage = eT1; end; %if no lesion, use raw T1
 if ~exist(targetImage,'file'), fprintf('doVBM unable to find %s\n', targetImage); return; end; %required
 global ForceVBM; %e.g. user can call "global ForceVBM;  ForceVBM = true;"
 if isempty(ForceVBM) && isFieldSub(matName, 'VBM_volume_WMH'), fprintf('Skipping VBM (already done) %s\n',targetImage); return;  end;
-if contains(targetImage,'dummy','IgnoreCase',true) 
+if contains(targetImage,'dummy','IgnoreCase',true)
     fprintf('Skipping VBM (dummy T1 acquired in previous session) %s\n',targetImage);
     return;
 end
@@ -303,6 +303,7 @@ end
 p = spm('Dir');
 SPM_file_arg = {[targetImage ',1']};
 TPM_arg = {fullfile(p, 'tpm/TPM.nii')};
+shootingtpm = {fullfile(p,'toolbox','cat12','templates_MNI152NLin2009cAsym','Template_0_GS.nii')};
 if ~exist(fullfile(p, 'tpm/TPM.nii'),'file')
     error('Failed to find TPM.nii at: %s',fullfile(p, 'tpm/TPM.nii'));
 end
@@ -311,9 +312,10 @@ dartelTPM_arg = {fullfile(p, 'toolbox/cat12/templates_MNI152NLin2009cAsym/Templa
 if ~exist(fullfile(p, 'toolbox/cat12/templates_MNI152NLin2009cAsym/Template_0_GS.nii'),'file')
     error('Failed to find dartelTemplate at: %s',fullfile(p, 'toolbox/cat12/templates_1.50mm/Template_1_IXI555_MNI152.nii'));
 end
-                          
+                         
 %do cat12 if not already done
 if ~isFieldSub(matName,'vbm_gm')
+base = fileparts(which("nii_preprocess"));
 catbatch{1}.spm.tools.cat.estwrite.data = SPM_file_arg;
 catbatch{1}.spm.tools.cat.estwrite.nproc = 4;
 catbatch{1}.spm.tools.cat.estwrite.opts.tpm = TPM_arg;
@@ -345,12 +347,11 @@ catbatch{1}.spm.tools.cat.estwrite.output.ROImenu.atlases.Schaefer2018_200Parcel
 catbatch{1}.spm.tools.cat.estwrite.output.ROImenu.atlases.Schaefer2018_400Parcels_17Networks_order = 0;
 catbatch{1}.spm.tools.cat.estwrite.output.ROImenu.atlases.Schaefer2018_600Parcels_17Networks_order = 0;
 catbatch{1}.spm.tools.cat.estwrite.output.ROImenu.atlases.ownatlas = {
-                                                                         '/home/chris/neuro/NiiStat/roi/AICHA.nii,1'
-                                                                         '/home/chris/neuro/NiiStat/roi/aal.nii,1'
-                                                                         '/home/chris/neuro/NiiStat/roi/aalcat.nii,1'
-                                                                         '/home/chris/neuro/NiiStat/roi/bro.nii,1'
-                                                                         '/home/chris/neuro/NiiStat/roi/cat.nii,1'
-                                                                         '/home/chris/neuro/NiiStat/roi/jhu.nii,1'
+                                                                         [fullfile(base,'roi','AICHA.nii'),',1']
+                                                                         [fullfile(base,'roi','aal.nii'),',1']
+                                                                         [fullfile(base,'roi','aalcat.nii'),',1']
+                                                                         [fullfile(base,'roi','bro.nii'),',1']
+                                                                         [fullfile(base,'roi','jhu.nii'),',1']
                                                                          };
 catbatch{1}.spm.tools.cat.estwrite.output.surface = 1;
 catbatch{1}.spm.tools.cat.estwrite.output.GM.native = 1;
@@ -361,9 +362,9 @@ catbatch{1}.spm.tools.cat.estwrite.output.WM.native = 1;
 catbatch{1}.spm.tools.cat.estwrite.output.WM.warped = 1;
 catbatch{1}.spm.tools.cat.estwrite.output.WM.mod = 1;
 catbatch{1}.spm.tools.cat.estwrite.output.WM.dartel = 0;
-catbatch{1}.spm.tools.cat.estwrite.output.WMH.native = 0; % ALLEN EDIT original val =1
-catbatch{1}.spm.tools.cat.estwrite.output.WMH.warped = 0; % ALLEN EDIT original val =1
-catbatch{1}.spm.tools.cat.estwrite.output.WMH.mod = 0; % ALLEN EDIT original val =1
+catbatch{1}.spm.tools.cat.estwrite.output.WMH.native = 0; % Allen edit original 1
+catbatch{1}.spm.tools.cat.estwrite.output.WMH.warped = 0; % Allen edit original 1
+catbatch{1}.spm.tools.cat.estwrite.output.WMH.mod = 0; % Allen edit original 1
 catbatch{1}.spm.tools.cat.estwrite.output.WMH.dartel = 0;
 catbatch{1}.spm.tools.cat.estwrite.output.labelnative = 1;
 catbatch{1}.spm.tools.cat.estwrite.output.bias.warped = 1;
@@ -371,9 +372,10 @@ catbatch{1}.spm.tools.cat.estwrite.output.jacobianwarped = 0;
 catbatch{1}.spm.tools.cat.estwrite.output.warps = [1 1];
 catbatch{1}.spm.tools.cat.estwrite.output.rmat = 0;
 
-spm_jobman('run',catbatch);
+spm_jobman('run',catbatch)
 clear catbatch
 end
+
 
 %%CHOOSE files to store in the mat file for later analysis
 [p, n, x] = fileparts(imgs.T1);
@@ -429,7 +431,7 @@ spm_jobman('run',tivbatch);
 pause(10);
 if exist(fullfile(p,'TIV.txt'),'file')
     TIVdata = textread(fullfile(p,'TIV.txt')); %Volume values =  Total,GM,WM,CSF,WMH
-    m = matfile(matName,'Writable',true)
+    m = matfile(matName,'Writable',true);
     m.VBM_volume_Total = TIVdata(1);
     m.VBM_volume_GM  = TIVdata(2);
     m.VBM_volume_WM  = TIVdata(3);
@@ -707,11 +709,11 @@ end;
     %else
     %    command= [fileparts(which(mfilename)) filesep 'dti_1_eddy.sh'];
     %end
-     if isempty(imgs.DKIrev)
+    if isempty(imgs.DKIrev)
     command=sprintf('%s "%s"',command, dki_d);
-     else
+    else
     command=sprintf('%s "%s" "%s"',command, dki_d, dki_dr);
-     end
+    end
      
     doFslCmd (command);
     doDkiCoreSub(imgs.T1, imgs.DKI, matName)
@@ -1542,26 +1544,26 @@ delMat(imgs.Rest);
 %%% commented out by GY, March 4, 2017
 %nii_rest(imgs);
 %%% instead: (GY)
-rest_prefix = nii_rest (imgs)
+rest_prefix = nii_rest (imgs);
 
 %7/2016 "dsw" nof "dw" as smoothing is now prior to detrending (for Chinese-style ALFF)
 prefix = 'a'; %assume slice time 'a'ligned
 restName = prefixSub(['dsw', prefix ],imgs.Rest);
-if ~exist(restName,'file'),
+if ~exist(restName,'file')
     prefix = ''; %unaligned: multi-band
     restName = prefixSub(['dsw', prefix ],imgs.Rest);
     if ~exist(restName,'file')
         error('Catastrophic unspecified resting state error %s', restName);
     end
-end; %required
+end %required
 %nii_nii2mat (prefixSub(['fdsw', prefix ],imgs.Rest), 'rest', matName)
 nii_nii2mat (prefixSub(rest_prefix,imgs.Rest), 'rest', matName) % slightly modified by GY, March 3
 nii_nii2mat (prefixSub(['palf_dsw', prefix ],imgs.Rest), 'alf', matName) %detrended
 nii_nii2mat (prefixSub(['palf_sw', prefix ],imgs.Rest), 'palf', matName) %conventional linear trends only
-vox2mat(prefixSub(['mean' ],imgs.Rest), 'NativeRestAve', matName); %no prefix: prior to slice time
-vox2mat(prefixSub(['wmean' ],imgs.Rest), 'RestAve', matName); %no prefix: prior to slice time
+vox2mat(prefixSub('mean' ,imgs.Rest), 'NativeRestAve', matName); %no prefix: prior to slice time
+vox2mat(prefixSub('wmean' ,imgs.Rest), 'RestAve', matName); %no prefix: prior to slice time
 %vox2mat(prefixSub(['wbmean' ],imgs.Rest), 'RestAve', matName);
-vox2mat(prefixSub(['wbmaskmean' ],imgs.Rest), 'RestAve', matName); % Grigori added "mask"
+vox2mat(prefixSub('wbmaskmean' ,imgs.Rest), 'RestAve', matName); % Grigori added "mask"
 
 %end doRestSub()
 
@@ -1572,13 +1574,13 @@ function delImgs(prefix, fnm)
 %e.g. delImgs('sw', 'X.nii') would delete wX.nii and swX.nii
 [pth,nam] = spm_fileparts(fnm);
 fnmMat = fullfile(pth,[nam,'.mat']);
-for i = 1: numel(prefix),
+for i = 1: numel(prefix)
     p = prefix(end-i+1:end);
     d = prefixSub(p, fnm);
     if exist(d,'file'), delete(d); end; %delete image
     d = prefixSub(p, fnmMat);
     if exist(d,'file'), delete(d); end; %delete lmat
-end;
+end
 %end delImgs()
 
 function delMat(fnm)
