@@ -237,7 +237,7 @@ parfor sbj = 1:numel(sbj_dir)
                         ~isempty(lesion)
                         ~isempty(dti)*4]);
                     if num_files_detected == num_files
-                        cont = false;
+                        cont = false
                         break
                     end
                 end
@@ -469,7 +469,6 @@ parfor sbj = 1:numel(sbj_dir)
         errors{sbj} = e.message;
         sbj_error{sbj} = sbj_dir(sbj).name;
         rmdir(subject_folder,'s');
-    end
 end
 
 % Check if there were any errors

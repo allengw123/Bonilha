@@ -1,145 +1,117 @@
-ROIid,,,ROIabbr,,,ROIname,,,ROIcolor,,,,,,,,,,,,,
-1,,,2001,,,Precentral_L,,,42,8,26,,,,,,,,,,,
-2,,,2002,,,Precentral_R,,,158,144,12,,,,,,,,,,,
-3,,,2101,,,Frontal_Sup_L,,,36,140,234,,,,,,,,,,,
-4,,,2102,,,Frontal_Sup_R,,,198,214,54,,,,,,,,,,,
-5,,,2111,,,Frontal_Sup_Orb_L,,,20,26,64,,,,,,,,,,,
-6,,,2112,,,Frontal_Sup_Orb_R,,,132,90,98,,,,,,,,,,,
-7,,,2201,,,Frontal_Mid_L,,,150,134,250,,,,,,,,,,,
-8,,,2202,,,Frontal_Mid_R,,,66,2,168,,,,,,,,,,,
-9,,,2211,,,Frontal_Mid_Orb_L,,,92,146,18,,,,,,,,,,,
-10,,,2212,,,Frontal_Mid_Orb_R,,,174,26,20,,,,,,,,,,,
-11,,,2301,,,Frontal_Inf_Oper_L,,,252,30,218,,,,,,,,,,,
-12,,,2302,,,Frontal_Inf_Oper_R,,,12,24,120,,,,,,,,,,,
-13,,,2311,,,Frontal_Inf_Tri_L,,,234,14,24,,,,,,,,,,,
-14,,,2312,,,Frontal_Inf_Tri_R,,,126,46,16,,,,,,,,,,,
-15,,,2321,,,Frontal_Inf_Orb_L,,,168,120,126,,,,,,,,,,,
-16,,,2322,,,Frontal_Inf_Orb_R,,,170,64,142,,,,,,,,,,,
-17,,,2331,,,Rolandic_Oper_L,,,206,52,62,,,,,,,,,,,
-18,,,2332,,,Rolandic_Oper_R,,,244,76,146,,,,,,,,,,,
-19,,,2401,,,Supp_Motor_Area_L,,,132,224,56,,,,,,,,,,,
-20,,,2402,,,Supp_Motor_Area_R,,,214,188,40,,,,,,,,,,,
-21,,,2501,,,Olfactory_L,,,18,250,126,,,,,,,,,,,
-22,,,2502,,,Olfactory_R,,,186,70,98,,,,,,,,,,,
-23,,,2601,,,Frontal_Sup_Medial_L,,,130,76,100,,,,,,,,,,,
-24,,,2602,,,Frontal_Sup_Medial_R,,,156,108,248,,,,,,,,,,,
-25,,,2611,,,Frontal_Med_Orb_L,,,90,58,92,,,,,,,,,,,
-26,,,2612,,,Frontal_Med_Orb_R,,,166,22,64,,,,,,,,,,,
-27,,,2701,,,Rectus_L,,,156,200,114,,,,,,,,,,,
-28,,,2702,,,Rectus_R,,,146,104,112,,,,,,,,,,,
-29,,,3001,,,Insula_L,,,12,206,44,,,,,,,,,,,
-30,,,3002,,,Insula_R,,,190,144,54,,,,,,,,,,,
-31,,,4001,,,Cingulum_Ant_L,,,84,234,106,,,,,,,,,,,
-32,,,4002,,,Cingulum_Ant_R,,,204,100,50,,,,,,,,,,,
-33,,,4011,,,Cingulum_Mid_L,,,182,0,192,,,,,,,,,,,
-34,,,4012,,,Cingulum_Mid_R,,,212,126,22,,,,,,,,,,,
-35,,,4021,,,Cingulum_Post_L,,,60,42,120,,,,,,,,,,,
-36,,,4022,,,Cingulum_Post_R,,,170,140,220,,,,,,,,,,,
-37,,,4101,,,Hippocampus_L,,,72,44,180,,,,,,,,,,,
-38,,,4102,,,Hippocampus_R,,,136,14,142,,,,,,,,,,,
-39,,,4111,,,ParaHippocampal_L,,,100,184,34,,,,,,,,,,,
-40,,,4112,,,ParaHippocampal_R,,,168,150,68,,,,,,,,,,,
-41,,,4201,,,Amygdala_L,,,206,156,240,,,,,,,,,,,
-42,,,4202,,,Amygdala_R,,,24,36,234,,,,,,,,,,,
-43,,,5001,,,Calcarine_L,,,92,184,112,,,,,,,,,,,
-44,,,5002,,,Calcarine_R,,,118,52,186,,,,,,,,,,,
-45,,,5011,,,Cuneus_L,,,138,180,152,,,,,,,,,,,
-46,,,5012,,,Cuneus_R,,,142,74,106,,,,,,,,,,,
-47,,,5021,,,Lingual_L,,,46,246,10,,,,,,,,,,,
-48,,,5022,,,Lingual_R,,,212,60,178,,,,,,,,,,,
-49,,,5101,,,Occipital_Sup_L,,,86,104,92,,,,,,,,,,,
-50,,,5102,,,Occipital_Sup_R,,,94,184,78,,,,,,,,,,,
-51,,,5201,,,Occipital_Mid_L,,,140,86,52,,,,,,,,,,,
-52,,,5202,,,Occipital_Mid_R,,,244,50,200,,,,,,,,,,,
-53,,,5301,,,Occipital_Inf_L,,,162,18,140,,,,,,,,,,,
-54,,,5302,,,Occipital_Inf_R,,,42,238,192,,,,,,,,,,,
-55,,,5401,,,Fusiform_L,,,28,132,184,,,,,,,,,,,
-56,,,5402,,,Fusiform_R,,,44,186,148,,,,,,,,,,,
-57,,,6001,,,Postcentral_L,,,64,34,106,,,,,,,,,,,
-58,,,6002,,,Postcentral_R,,,82,136,16,,,,,,,,,,,
-59,,,6101,,,Parietal_Sup_L,,,12,176,32,,,,,,,,,,,
-60,,,6102,,,Parietal_Sup_R,,,0,230,142,,,,,,,,,,,
-61,,,6201,,,Parietal_Inf_L,,,122,118,50,,,,,,,,,,,
-62,,,6202,,,Parietal_Inf_R,,,16,200,154,,,,,,,,,,,
-63,,,6211,,,SupraMarginal_L,,,220,58,52,,,,,,,,,,,
-64,,,6212,,,SupraMarginal_R,,,166,222,174,,,,,,,,,,,
-65,,,6221,,,Angular_L,,,240,130,134,,,,,,,,,,,
-66,,,6222,,,Angular_R,,,58,244,84,,,,,,,,,,,
-67,,,6301,,,Precuneus_L,,,208,106,146,,,,,,,,,,,
-68,,,6302,,,Precuneus_R,,,66,112,194,,,,,,,,,,,
-69,,,6401,,,Paracentral_Lobule_L,,,26,178,254,,,,,,,,,,,
-70,,,6402,,,Paracentral_Lobule_R,,,230,128,224,,,,,,,,,,,
-71,,,7001,,,Caudate_L,,,62,44,74,,,,,,,,,,,
-72,,,7002,,,Caudate_R,,,198,218,38,,,,,,,,,,,
-73,,,7011,,,Putamen_L,,,20,20,198,,,,,,,,,,,
-74,,,7012,,,Putamen_R,,,202,228,144,,,,,,,,,,,
-75,,,7021,,,Pallidum_L,,,114,66,94,,,,,,,,,,,
-76,,,7022,,,Pallidum_R,,,16,160,170,,,,,,,,,,,
-77,,,7101,,,Thalamus_L,,,176,232,192,,,,,,,,,,,
-78,,,7102,,,Thalamus_R,,,92,188,188,,,,,,,,,,,
-79,,,8101,,,Heschl_L,,,100,186,196,,,,,,,,,,,
-80,,,8102,,,Heschl_R,,,164,72,56,,,,,,,,,,,
-81,,,8111,,,Temporal_Sup_L,,,48,78,126,,,,,,,,,,,
-82,,,8112,,,Temporal_Sup_R,,,244,116,122,,,,,,,,,,,
-83,,,8121,,,Temporal_Pole_Sup_L,,,130,76,118,,,,,,,,,,,
-84,,,8122,,,Temporal_Pole_Sup_R,,,32,198,24,,,,,,,,,,,
-85,,,8201,,,Temporal_Mid_L,,,210,176,242,,,,,,,,,,,
-86,,,8202,,,Temporal_Mid_R,,,56,104,126,,,,,,,,,,,
-87,,,8211,,,Temporal_Pole_Mid_L,,,54,72,46,,,,,,,,,,,
-88,,,8212,,,Temporal_Pole_Mid_R,,,122,238,12,,,,,,,,,,,
-89,,,8301,,,Temporal_Inf_L,,,232,18,60,,,,,,,,,,,
-90,,,8302,,,Temporal_Inf_R,,,16,218,208,,,,,,,,,,,
-91,,,9001,,,Cerebelum_Crus1_L,,,98,206,246,,,,,,,,,,,
-92,,,9002,,,Cerebelum_Crus1_R,,,90,148,120,,,,,,,,,,,
-93,,,9011,,,Cerebelum_Crus2_L,,,252,56,84,,,,,,,,,,,
-94,,,9012,,,Cerebelum_Crus2_R,,,20,196,186,,,,,,,,,,,
-95,,,9021,,,Cerebelum_3_L,,,208,56,176,,,,,,,,,,,
-96,,,9022,,,Cerebelum_3_R,,,38,110,10,,,,,,,,,,,
-97,,,9031,,,Cerebelum_4_5_L,,,206,134,18,,,,,,,,,,,
-98,,,9032,,,Cerebelum_4_5_R,,,0,146,224,,,,,,,,,,,
-99,,,9041,,,Cerebelum_6_L,,,106,78,104,,,,,,,,,,,
-100,,,9042,,,Cerebelum_6_R,,,122,150,52,,,,,,,,,,,
-101,,,9051,,,Cerebelum_7b_L,,,86,30,122,,,,,,,,,,,
-102,,,9052,,,Cerebelum_7b_R,,,98,122,104,,,,,,,,,,,
-103,,,9061,,,Cerebelum_8_L,,,2,58,20,,,,,,,,,,,
-104,,,9062,,,Cerebelum_8_R,,,86,82,70,,,,,,,,,,,
-105,,,9071,,,Cerebelum_9_L,,,110,214,246,,,,,,,,,,,
-106,,,9072,,,Cerebelum_9_R,,,146,182,198,,,,,,,,,,,
-107,,,9081,,,Cerebelum_10_L,,,200,220,218,,,,,,,,,,,
-108,,,9082,,,Cerebelum_10_R,,,102,60,118,,,,,,,,,,,
-109,,,9100,,,Vermis_1_2,,,160,36,240,,,,,,,,,,,
-110,,,9110,,,Vermis_3,,,166,238,48,,,,,,,,,,,
-111,,,9120,,,Vermis_4_5,,,14,128,220,,,,,,,,,,,
-112,,,9130,,,Vermis_6,,,122,204,222,,,,,,,,,,,
-113,,,9140,,,Vermis_7,,,230,158,84,,,,,,,,,,,
-114,,,9150,,,Vermis_8,,,162,130,0,,,,,,,,,,,
-115,,,9160,,,Vermis_9,,,170,26,178,,,,,,,,,,,
-116,,,9170,,,Vermis_10,,,46,32,76,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,2
-,,,,,,,,,,,,,,,,,,,,,,2
+ROIid;ROIabbr;ROIname;ROIcolor
+1;Precentral_L;Precentral_L;42 8 26
+2;Precentral_R;Precentral_R;158 144 12
+3;Frontal_Sup_L;Frontal_Sup_L;36 140 234
+4;Frontal_Sup_R;Frontal_Sup_R;198 214 54
+5;Frontal_Sup_Orb_L;Frontal_Sup_Orb_L;20 26 64
+6;Frontal_Sup_Orb_R;Frontal_Sup_Orb_R;132 90 98
+7;Frontal_Mid_L;Frontal_Mid_L;150 134 250
+8;Frontal_Mid_R;Frontal_Mid_R;66 2 168
+9;Frontal_Mid_Orb_L;Frontal_Mid_Orb_L;92 146 18
+10;Frontal_Mid_Orb_R;Frontal_Mid_Orb_R;174 26 20
+11;Frontal_Inf_Oper_L;Frontal_Inf_Oper_L;252 30 218
+12;Frontal_Inf_Oper_R;Frontal_Inf_Oper_R;12 24 120
+13;Frontal_Inf_Tri_L;Frontal_Inf_Tri_L;234 14 24
+14;Frontal_Inf_Tri_R;Frontal_Inf_Tri_R;126 46 16
+15;Frontal_Inf_Orb_L;Frontal_Inf_Orb_L;168 120 126
+16;Frontal_Inf_Orb_R;Frontal_Inf_Orb_R;170 64 142
+17;Rolandic_Oper_L;Rolandic_Oper_L;206 52 62
+18;Rolandic_Oper_R;Rolandic_Oper_R;244 76 146
+19;Supp_Motor_Area_L;Supp_Motor_Area_L;132 224 56
+20;Supp_Motor_Area_R;Supp_Motor_Area_R;214 188 40
+21;Olfactory_L;Olfactory_L;18 250 126
+22;Olfactory_R;Olfactory_R;186 70 98
+23;Frontal_Sup_Medial_L;Frontal_Sup_Medial_L;130 76 100
+24;Frontal_Sup_Medial_R;Frontal_Sup_Medial_R;156 108 248
+25;Frontal_Med_Orb_L;Frontal_Med_Orb_L;90 58 92
+26;Frontal_Med_Orb_R;Frontal_Med_Orb_R;166 22 64
+27;Rectus_L;Rectus_L;156 200 114
+28;Rectus_R;Rectus_R;146 104 112
+29;Insula_L;Insula_L;12 206 44
+30;Insula_R;Insula_R;190 144 54
+31;Cingulum_Ant_L;Cingulum_Ant_L;84 234 106
+32;Cingulum_Ant_R;Cingulum_Ant_R;204 100 50
+33;Cingulum_Mid_L;Cingulum_Mid_L;182 0 192
+34;Cingulum_Mid_R;Cingulum_Mid_R;212 126 22
+35;Cingulum_Post_L;Cingulum_Post_L;60 42 120
+36;Cingulum_Post_R;Cingulum_Post_R;170 140 220
+37;Hippocampus_L;Hippocampus_L;72 44 180
+38;Hippocampus_R;Hippocampus_R;136 14 142
+39;ParaHippocampal_L;ParaHippocampal_L;100 184 34
+40;ParaHippocampal_R;ParaHippocampal_R;168 150 68
+41;Amygdala_L;Amygdala_L;206 156 240
+42;Amygdala_R;Amygdala_R;24 36 234
+43;Calcarine_L;Calcarine_L;92 184 112
+44;Calcarine_R;Calcarine_R;118 52 186
+45;Cuneus_L;Cuneus_L;138 180 152
+46;Cuneus_R;Cuneus_R;142 74 106
+47;Lingual_L;Lingual_L;46 246 10
+48;Lingual_R;Lingual_R;212 60 178
+49;Occipital_Sup_L;Occipital_Sup_L;86 104 92
+50;Occipital_Sup_R;Occipital_Sup_R;94 184 78
+51;Occipital_Mid_L;Occipital_Mid_L;140 86 52
+52;Occipital_Mid_R;Occipital_Mid_R;244 50 200
+53;Occipital_Inf_L;Occipital_Inf_L;162 18 140
+54;Occipital_Inf_R;Occipital_Inf_R;42 238 192
+55;Fusiform_L;Fusiform_L;28 132 184
+56;Fusiform_R;Fusiform_R;44 186 148
+57;Postcentral_L;Postcentral_L;64 34 106
+58;Postcentral_R;Postcentral_R;82 136 16
+59;Parietal_Sup_L;Parietal_Sup_L;12 176 32
+60;Parietal_Sup_R;Parietal_Sup_R;0 230 142
+61;Parietal_Inf_L;Parietal_Inf_L;122 118 50
+62;Parietal_Inf_R;Parietal_Inf_R;16 200 154
+63;SupraMarginal_L;SupraMarginal_L;220 58 52
+64;SupraMarginal_R;SupraMarginal_R;166 222 174
+65;Angular_L;Angular_L;240 130 134
+66;Angular_R;Angular_R;58 244 84
+67;Precuneus_L;Precuneus_L;208 106 146
+68;Precuneus_R;Precuneus_R;66 112 194
+69;Paracentral_Lobule_L;Paracentral_Lobule_L;26 178 254
+70;Paracentral_Lobule_R;Paracentral_Lobule_R;230 128 224
+71;Caudate_L;Caudate_L;62 44 74
+72;Caudate_R;Caudate_R;198 218 38
+73;Putamen_L;Putamen_L;20 20 198
+74;Putamen_R;Putamen_R;202 228 144
+75;Pallidum_L;Pallidum_L;114 66 94
+76;Pallidum_R;Pallidum_R;16 160 170
+77;Thalamus_L;Thalamus_L;176 232 192
+78;Thalamus_R;Thalamus_R;92 188 188
+79;Heschl_L;Heschl_L;100 186 196
+80;Heschl_R;Heschl_R;164 72 56
+81;Temporal_Sup_L;Temporal_Sup_L;48 78 126
+82;Temporal_Sup_R;Temporal_Sup_R;244 116 122
+83;Temporal_Pole_Sup_L;Temporal_Pole_Sup_L;130 76 118
+84;Temporal_Pole_Sup_R;Temporal_Pole_Sup_R;32 198 24
+85;Temporal_Mid_L;Temporal_Mid_L;210 176 242
+86;Temporal_Mid_R;Temporal_Mid_R;56 104 126
+87;Temporal_Pole_Mid_L;Temporal_Pole_Mid_L;54 72 46
+88;Temporal_Pole_Mid_R;Temporal_Pole_Mid_R;122 238 12
+89;Temporal_Inf_L;Temporal_Inf_L;232 18 60
+90;Temporal_Inf_R;Temporal_Inf_R;16 218 208
+91;Cerebelum_Crus1_L;Cerebelum_Crus1_L;98 206 246
+92;Cerebelum_Crus1_R;Cerebelum_Crus1_R;90 148 120
+93;Cerebelum_Crus2_L;Cerebelum_Crus2_L;252 56 84
+94;Cerebelum_Crus2_R;Cerebelum_Crus2_R;20 196 186
+95;Cerebelum_3_L;Cerebelum_3_L;208 56 176
+96;Cerebelum_3_R;Cerebelum_3_R;38 110 10
+97;Cerebelum_4_5_L;Cerebelum_4_5_L;206 134 18
+98;Cerebelum_4_5_R;Cerebelum_4_5_R;0 146 224
+99;Cerebelum_6_L;Cerebelum_6_L;106 78 104
+100;Cerebelum_6_R;Cerebelum_6_R;122 150 52
+101;Cerebelum_7b_L;Cerebelum_7b_L;86 30 122
+102;Cerebelum_7b_R;Cerebelum_7b_R;98 122 104
+103;Cerebelum_8_L;Cerebelum_8_L;2 58 20
+104;Cerebelum_8_R;Cerebelum_8_R;86 82 70
+105;Cerebelum_9_L;Cerebelum_9_L;110 214 246
+106;Cerebelum_9_R;Cerebelum_9_R;146 182 198
+107;Cerebelum_10_L;Cerebelum_10_L;200 220 218
+108;Cerebelum_10_R;Cerebelum_10_R;102 60 118
+109;Vermis_1_2;Vermis_1_2;160 36 240
+110;Vermis_3;Vermis_3;166 238 48
+111;Vermis_4_5;Vermis_4_5;14 128 220
+112;Vermis_6;Vermis_6;122 204 222
+113;Vermis_7;Vermis_7;230 158 84
+114;Vermis_8;Vermis_8;162 130 0
+115;Vermis_9;Vermis_9;170 26 178
+116;Vermis_10;Vermis_10;46 32 76

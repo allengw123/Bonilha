@@ -2,13 +2,16 @@ clear all
 close all
 clc
 
-gitpath='C:\Users\allen\Documents\GitHub\Bonilha';
+gitpath = '/home/bonilha/Documents/GitHub/Bonilha';
+
+% gitpath='C:\Users\allen\Documents\GitHub\Bonilha';
 cd(gitpath)
 
 allengit_genpath(gitpath)
 %% Define Variables
 
-datadir='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\sEEG project\PatientData';
+% datadir='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\sEEG project\PatientData';
+datadir='/media/bonilha/AllenProj/sEEG_project/PatientData';
 
 % Create Functional analysis folder
 functionaldir=fullfile(datadir,'Analysis','Functional');
@@ -91,10 +94,10 @@ for sbj=1:numel(subjID)
     func_electrodes=load(fullfile(datadir,wrk_sbjID,'sEEG','Electrodes.mat')).Electrodes;
     func_electrodes=unique(cellfun(@(x) [x{:}],regexp(func_electrodes,'\D','match'),'UniformOutput',false));
     
-    if nnz(~strcmp(sort(func_electrodes),sort(struct_electrodes))) ~=0
-        disp(['Structural and Functional Electrode MISMATCH....',wrk_sbjID])
-        return
-    end
+%     if nnz(~strcmp(sort(func_electrodes),sort(struct_electrodes))) ~=0
+%         disp(['Structural and Functional Electrode MISMATCH....',wrk_sbjID])
+%         return
+%     end
     
     % load structural connectivity data
     struct_con=[];
@@ -676,36 +679,37 @@ end
 %%%%%%% Examine Beta Freq, 66% threshold, fa
 tempdat=figdat.beta.p66.fa;
 
-% % Calculate median
-% tempavg=cellfun(@(x) median(x,1),tempdat,'UniformOutput',false);
-% inputmat=reshape([tempavg{:}],[7,numel(tempdat)])';
+% Calculate median
+tempavg=cellfun(@(x) median(x,1),tempdat,'UniformOutput',false);
+inputmat=reshape([tempavg{:}],[7,numel(tempdat)])';
 
-% % Normalize to baseline
-% for r=1:size(inputmat,1)
-%     tempbl=inputmat(r,1);
-%     for c=1:size(inputmat,2)
-%         inputmat(r,c)=inputmat(r,c)-tempbl;
-%     end
-% end
+% Normalize to baseline
+for r=1:size(inputmat,1)
+    tempbl=inputmat(r,1);
+    for c=1:size(inputmat,2)
+        inputmat(r,c)=inputmat(r,c)-tempbl;
+    end
+end
 
-% % Calculate phase difference
-% phasediff=[];
-% for c=2:size(inputmat,2)
-%     phasediff(:,c-1)=inputmat(:,c)-inputmat(:,c-1);
-% end
+% Calculate phase difference
+phasediff=[];
+for c=2:size(inputmat,2)
+    phasediff(:,c-1)=inputmat(:,c)-inputmat(:,c-1);
+end
 
-% % Calculate phase difference (% change)
-% phasediff=[];
-% for c=2:size(inputmat,2)
-%     phasediff(:,c-1)=(inputmat(:,c)-inputmat(:,c-1))./inputmat(:,c-1)*100;
-% end
+% Calculate phase difference (% change)
+phasediff=[];
+for c=2:size(inputmat,2)
+    phasediff(:,c-1)=(inputmat(:,c)-inputmat(:,c-1))./inputmat(:,c-1)*100;
+end
 
 
 % Assume each clip independent
-respdat=cell2mat(tempdat(1:6));
-nonrespdat=cell2mat(tempdat(7:9));
+respdat=cell2mat(tempdat(1:7));
+nonrespdat=cell2mat(tempdat(8:9));
 
 % Normalize to baseline
+respnorm = [];
 for r=1:size(respdat,1)
     tempbl=respdat(r,1);
     for c=1:size(respdat,2)
@@ -713,15 +717,16 @@ for r=1:size(respdat,1)
     end
 end
 
+nonrespnorm = [];
 for r=1:size(nonrespdat,1)
     tempbl=nonrespdat(r,1);
     for c=1:size(nonrespdat,2)
         nonrespnorm(r,c)=nonrespdat(r,c)-tempbl;
     end
 end
-% 
-% x=respnorm(:,[1 3 4 5])
-% x=nonrespnorm(:,[1 3 4 5])
+
+x=respnorm(:,[1 3 4 5])
+y=nonrespnorm(:,[1 3 4 5])
 
 % Calculate phase difference
 respdatdiff=[];

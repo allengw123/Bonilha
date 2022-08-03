@@ -2,16 +2,13 @@ clear all
 close all
 clc
 
-<<<<<<< Updated upstream
 % gitpath='C:\Users\allen\Documents\GitHub\Bonilha';
-gitpath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
-=======
-gitpath='C:\Users\allen\Google Drive\GitHub\Bonilha';
->>>>>>> Stashed changes
+gitpath = '/home/bonilha/Documents/GitHub/Bonilha';
+
 cd(gitpath)
 allengit_genpath(gitpath)
 %% Insert Info
-datadir='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\sEEG project\PatientData';
+datadir='/media/bonilha/AllenProj/sEEG_project/PatientData';
 analysisdir=fullfile(datadir,'Analysis');
 
 Patient_ID={dir(fullfile(datadir,'Patient *')).name};
@@ -327,3 +324,64 @@ struc_ccm=customcolormap([0 1],{'#0068FF','#022454'});
 colormap(struc_ccm)
 caxis([0 max(std_nonresp_struct,[],'all')]);
 title('Non-Responders')
+
+%% t-test structure non-resp vs resp
+
+resp_fa = cat(3,struct_con.P001, ...
+    struct_con.P002, ...
+    struct_con.P003, ...
+    struct_con.P006, ...
+    struct_con.P009, ...
+    struct_con.P012, ...
+    struct_con.P013);
+
+nonresp_fa =cat(3,struct_con.P502, ...
+    struct_con.P503);
+
+[~,P,~,STATS] = ttest2(resp_fa,nonresp_fa,'dim',3);
+T = STATS.tstat;
+
+b_P = P;
+b_T = T;
+
+b_P(P > 0.05/numel(find(~isnan(STATS.tstat)))) = NaN;
+b_T(P > 0.05/numel(find(~isnan(STATS.tstat)))) = NaN;
+figure;
+imagesc(b_T)
+title('t-values FA (bonf)')
+colorbar
+%% t-test structure non-resp vs resp coherence
+
+phase = {'Basline','Early','Mid','Late'};
+for t = 1:4
+    resp_coh = cat(4,beta_coh.P001(:,:,t,:), ...
+        beta_coh.P002(:,:,t,:), ...
+        beta_coh.P003(:,:,t,:), ...
+        beta_coh.P006(:,:,t,:), ...
+        beta_coh.P009(:,:,t,:), ...
+        beta_coh.P012(:,:,t,:), ...
+        beta_coh.P013(:,:,t,:));
+    
+    nonresp_coh =cat(4,beta_coh.P502(:,:,t,:), ...
+        beta_coh.P503(:,:,t,:));
+    
+    
+    [~,P,~,STATS] = ttest2(permute(resp_coh,[1 2 4 3]),permute(nonresp_coh,[1 2 4 3]),'dim',3);
+    T = STATS.tstat;
+    
+    b_P = P;
+    b_T = T;
+    
+    b_P(P > 0.05/numel(find(~isnan(STATS.tstat)))) = NaN;
+    b_T(P > 0.05/numel(find(~isnan(STATS.tstat)))) = NaN;
+    figure;
+    imagesc(b_T)
+    title('t-values Coherence (bonf)')
+    subtitle(phase{t})
+    colorbar
+end
+
+fn = fieldnames(beta_coh);
+for i = 1:9
+    size(beta_coh.(fn{i}),4)
+end

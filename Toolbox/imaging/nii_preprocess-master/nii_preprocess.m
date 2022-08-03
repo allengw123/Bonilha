@@ -349,7 +349,6 @@ catbatch{1}.spm.tools.cat.estwrite.output.ROImenu.atlases.Schaefer2018_600Parcel
 catbatch{1}.spm.tools.cat.estwrite.output.ROImenu.atlases.ownatlas = {
                                                                          [fullfile(base,'roi','AICHA.nii'),',1']
                                                                          [fullfile(base,'roi','aal.nii'),',1']
-                                                                         [fullfile(base,'roi','aalcat.nii'),',1']
                                                                          [fullfile(base,'roi','bro.nii'),',1']
                                                                          [fullfile(base,'roi','jhu.nii'),',1']
                                                                          };

@@ -70,7 +70,7 @@ if isempty(gcp('nocreate'))
 %     c = parcluster;
 %     c.NumWorkers = floor(l_cores*.5);% Hyperthread CPUs to 1.5x log+real cores)
 %     pool = c.parpool(floor(l_cores*.5));
-    pool = parpool(8);
+    pool = parpool();
 else
     pool = gcp('nocreate');
 end
