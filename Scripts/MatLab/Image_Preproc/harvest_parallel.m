@@ -24,6 +24,9 @@ GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
 INPUT_PATH = '/media/bonilha/Elements/Master_Epilepsy_Database_SYNC';
 OUTPUT_PATH = '/media/bonilha/Elements/MasterSet';
 DISEASE_TAG = 'Patients';
+SKIP_PROBLEM_TAG = true; %true = don't preprocess subjects with a "problem" string attached at the end
+HYPER_THREAD = true; % MAY CAUSE OVERHEATING. Since moving a lot of files, CPUs will benefit from hyperthreading
+RECHECK_ALREADY_FORMATED = false;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,7 +50,7 @@ mkdir(nii_preproc_database)
 cd(nii_preproc_database)
 
 % Prepare file for nii_harvest_parallel
-[errors] = prep_niiharvest(raw_database,nii_preproc_database);
+[errors] = prep_niiharvest(raw_database,nii_preproc_database,SKIP_PROBLEM_TAG,HYPER_THREAD);
 if ~isempty(errors)
     incorrect_input = true;
     while incorrect_input
@@ -118,7 +121,7 @@ end
             
 %% Functions
 
-function [error_output] = prep_niiharvest(database_path,output_database)
+function [error_output] = prep_niiharvest(database_path,output_database,SKIP_PROBLEM_TAG,HYPER_THREAD)
 error_output = [];
 % Obtain Directories
 sbj_dir = dir(database_path);
@@ -139,6 +142,24 @@ disp(['New Subjects Detect: ',nns])
 errors = cell(1,numel(sbj_dir));
 sbj_error = cell(1,numel(sbj_dir));
 
+if HYPER_THREAD
+    core_info = evalc('feature(''numcores'')');
+    l_cores = regexp(core_info,'MATLAB was assigned: ','split');
+    l_cores = str2double(extractBefore(l_cores{2},' logical cores'));
+    if ~isempty(gcp('nocreate'))
+        pool = gcp('nocreate');
+        delete(pool)
+    end
+    disp('WARNING....')
+    disp('HYPER THREADING ENABLE')
+    disp('MAY CAUSE OVERHEATING')
+    disp('WARNING....')
+
+    c = parcluster;
+    c.NumWorkers = l_cores;
+    pool = c.parpool(l_cores);
+end
+
 % Parallel Processing REQUIRED
 parfor sbj = 1:numel(sbj_dir)
     warning('off','all')
@@ -146,16 +167,33 @@ parfor sbj = 1:numel(sbj_dir)
         if startsWith(sbj_dir(sbj).name,'.')
             continue
         end
-    
+        
+        if SKIP_PROBLEM_TAG
+            if endsWith(sbj_dir(sbj).name,'problem')
+                continue
+            end
+        end
+
+        % Define pipeline Status file
+        statusFile = fullfile(output_database,new_subject_name,'PipelineStatus.txt');
+
+        % Skip if pipeline Status file exists (i.e., reformated already)
+        if ~RECHECK_ALREADY_FORMATED
+            
+            if any(exist(statusFile,'file'))
+                continue
+            end
+        end
+
         % Find Subject Name/Folder
         subject_name = sbj_dir(sbj).name;
-        subject_folder = sbj_dir(sbj).folder;
+        subject_input_folder = sbj_dir(sbj).folder;
     
         % Define New Subject name (no '_' allowed)
         new_subject_name = strrep(subject_name,'_','');
 
         % Find Session Type based on T1 labels 
-        s_dir = dir(fullfile(subject_folder,subject_name,'*T1*'));
+        s_dir = dir(fullfile(subject_input_folder,subject_name,'*T1*'));
         t1_names = {s_dir.name};
         
         if isempty(t1_names) % Make sure there is T1 present
@@ -184,11 +222,15 @@ parfor sbj = 1:numel(sbj_dir)
                 t1_names(cellfun(@(x) contains(x,secondary{i}),t1_names)) = [];
             end
         end
-        if numel(t1_names) == numel(aq)
-        else
-            errors{sbj} = 'Number of unique Sessions do not match number of unique T1 (T1 file naming error)';
-            sbj_error{sbj} = sbj_dir(sbj).name;
-            continue
+        if ~numel(t1_names) == numel(aq)
+
+            % Remove .gz files to see if that fixes the problem
+            t1_names(cellfun(@(x) contains(x,'.gz'),t1_names)) = [];
+            if  ~numel(t1_names) == numel(aq)
+                errors{sbj} = 'Number of unique Sessions do not match number of unique T1 (T1 file naming error)';
+                sbj_error{sbj} = sbj_dir(sbj).name;
+                continue
+            end
         end
     
         cont = true;
@@ -202,19 +244,19 @@ parfor sbj = 1:numel(sbj_dir)
         
                 % Detect T1/RS/LS files
                 if strcmp(aq_type,'session')
-                    T1 = dir(fullfile(database_path,subject_name,'*T1*.nii*'));
+                    T1 = dir(fullfile(database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
                     T2 = dir(fullfile(database_path,subject_name,'*T2*.nii*'));
                     RS = dir(fullfile(database_path,subject_name,'*rs*.nii*'));
                     dti = dir(fullfile(database_path,subject_name,'*diff*.nii*'));
                     lesion = []; %THERE IS NO LESION FOR SESSION
                 elseif strcmp(aq_type,'pre')
-                    T1 = dir(fullfile(database_path,subject_name,['*',aq_type,'*T1*.nii*']));
+                    T1 = dir(fullfile(database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
                     T2 = dir(fullfile(database_path,subject_name,['*',aq_type,'*T2*.nii*']));
                     RS = dir(fullfile(database_path,subject_name,['*',aq_type,'*rs*.nii*']));
                     lesion = []; %THERE IS NO LESION FOR PRE
                     dti = dir(fullfile(database_path,subject_name,['*',aq_type,'*diff*.nii*']));
                 elseif strcmp(aq_type,'pos')
-                    T1 = dir(fullfile(database_path,subject_name,['*',aq_type,'*T1*.nii*']));
+                    T1 = dir(fullfile(database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
                     T2 = dir(fullfile(database_path,subject_name,['*',aq_type,'*T2*.nii*']));
                     RS = dir(fullfile(database_path,subject_name,['*',aq_type,'*rs*.nii*']));
                     lesion = dir(fullfile(database_path,subject_name,'*les.nii*')); % ONLY LESION FOR POS
@@ -226,9 +268,12 @@ parfor sbj = 1:numel(sbj_dir)
                         break
                     end
                 end
-    
-                % Define pipeline Status file and check if it has been completed
-                statusFile = fullfile(output_database,new_subject_name,'PipelineStatus.txt');
+                % Define Subject Image Folders
+                subject_output_folder = fullfile(output_database,new_subject_name,aq_type);
+                removal_dir = fileparts(subject_output_folder);
+
+                % Recheck already formated folders to see if any need
+                % updating
                 if any(exist(statusFile,'file'))
                     num_files = numel(dir(fullfile(output_database,new_subject_name,aq_type,['*',new_subject_name,'*'])));
                     num_files_detected = sum([~isempty(T1)
@@ -239,16 +284,21 @@ parfor sbj = 1:numel(sbj_dir)
                     if num_files_detected == num_files
                         cont = false;
                         break
+                    else
+                        rmdir(removal_dir,'s');
                     end
                 end
     
+                % Create Subject Image Folder
+                mkdir(subject_output_folder)
+                               
                 %%%%%%%%%%%%%%%%%%%%% Transfer T1
                 % Remove Secondary
                 T1 = T1(cellfun(@isempty,extractBetween({T1.name},'T1','.nii')));
                 if isempty(T1)
                     errors{sbj} = [aq_type,' secondary scan removal failed for T1'];
                     sbj_error{sbj} = sbj_dir(sbj).name;
-                    rmdir(subject_folder,'s');
+                    rmdir(removal_dir,'s');
                     cont = false;
                     break
                 end
@@ -257,17 +307,15 @@ parfor sbj = 1:numel(sbj_dir)
                 modality = [modality;{'T1'}];
                 status = [status;{fullfile(T1.folder,T1.name)}];
         
-                % Make Subject Image Folders
-                subject_folder = fullfile(output_database,new_subject_name,aq_type);
-                mkdir(subject_folder)
+                
             
                 % Transfer T1 image
                 T1_new = ['T1_',new_subject_name,'.nii'];
                 if contains(T1.name,'.gz')
                     filenames = gunzip(fullfile(T1.folder,T1.name));
-                    movefile(filenames{:},fullfile(subject_folder,T1_new));
+                    movefile(filenames{:},fullfile(subject_output_folder,T1_new));
                 else
-                    copyfile(fullfile(T1.folder,T1.name),fullfile(subject_folder,T1_new))
+                    copyfile(fullfile(T1.folder,T1.name),fullfile(subject_output_folder,T1_new))
                 end
             
                 %%%%%%%%%%%%%%%%%%% Transfer T2
@@ -282,7 +330,7 @@ parfor sbj = 1:numel(sbj_dir)
                     if isempty(T2)
                         errors{sbj} = [aq_type,' secondary scan removal failed for T2'];
                         sbj_error{sbj} = sbj_dir(sbj).name;
-                        rmdir(subject_folder,'s');
+                        rmdir(removal_dir,'s');
                         cont = false;
                         break
                     end
@@ -294,9 +342,9 @@ parfor sbj = 1:numel(sbj_dir)
                     T2_new = ['T2_',new_subject_name,'.nii'];
                     if contains(T2.name,'.gz')
                         filenames = gunzip(fullfile(T2.folder,T2.name));
-                        movefile(filenames{:},fullfile(subject_folder,T2_new));
+                        movefile(filenames{:},fullfile(subject_output_folder,T2_new));
                     else
-                        copyfile(fullfile(T2.folder,T2.name),fullfile(subject_folder,T2_new))
+                        copyfile(fullfile(T2.folder,T2.name),fullfile(subject_output_folder,T2_new))
                     end
                 end
 
@@ -311,10 +359,10 @@ parfor sbj = 1:numel(sbj_dir)
                         % Check json file
                         rs_json = fullfile(RS(r).folder,[extractBefore(RS(r).name,'.nii'),'.json']);
                         if ~any(exist(rs_json,'file'))
-                            if r == numel(rs)
+                            if r == numel(RS)
                                 errors{sbj} = [aq_type,'_rs.json file missing'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
-                                rmdir(subject_folder,'s');
+                                rmdir(removal_dir,'s');
                                 cont = false;
                                 break
                             end
@@ -325,13 +373,13 @@ parfor sbj = 1:numel(sbj_dir)
                         RS_new = ['Rest_',new_subject_name,'.nii'];
                         if contains(RS(r).name,'.gz')
                             filenames = gunzip(fullfile(RS(r).folder,RS(r).name));
-                            movefile(filenames{:},fullfile(subject_folder,RS_new));
+                            movefile(filenames{:},fullfile(subject_output_folder,RS_new));
                         else
-                            copyfile(fullfile(RS(r).folder,RS(r).name),fullfile(subject_folder,RS_new))
+                            copyfile(fullfile(RS(r).folder,RS(r).name),fullfile(subject_output_folder,RS_new))
                         end
     
                         % Copy RS json
-                        copyfile(rs_json,fullfile(subject_folder,strrep(RS_new,'.nii','.json')))
+                        copyfile(rs_json,fullfile(subject_output_folder,strrep(RS_new,'.nii','.json')))
                         
                         % Update RS Status
                         modality = [modality;{'RS'}];
@@ -359,9 +407,9 @@ parfor sbj = 1:numel(sbj_dir)
                     lesion_new = ['Lesion_',new_subject_name,'.nii'];
                     if contains(lesion.name,'.gz')
                         filenames = gunzip(fullfile(lesion.folder,lesion.name));
-                        movefile(filenames{:},fullfile(subject_folder,lesion_new));
+                        movefile(filenames{:},fullfile(subject_output_folder,lesion_new));
                     else
-                        copyfile(fullfile(lesion.folder,lesion.name),fullfile(subject_folder,lesion_new))
+                        copyfile(fullfile(lesion.folder,lesion.name),fullfile(subject_output_folder,lesion_new))
                     end
                 end
         
@@ -382,7 +430,7 @@ parfor sbj = 1:numel(sbj_dir)
                             if d == numel(dti)
                                 errors{sbj} = [aq_type,'_DTI.bval files missing'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
-                                rmdir(subject_folder,'s');
+                                rmdir(removal_dir,'s');
                                 cont = false;
                                 break
                             end
@@ -394,7 +442,7 @@ parfor sbj = 1:numel(sbj_dir)
                             if d == numel(dti)
                                 errors{sbj} = [aq_type,'_DTI.bvec file missing'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
-                                rmdir(subject_folder,'s');
+                                rmdir(removal_dir,'s');
                                 cont = false;
                                 break
                             end
@@ -414,7 +462,7 @@ parfor sbj = 1:numel(sbj_dir)
                             if d == numel(dti)
                                 errors{sbj} = aq_type,'_DTI.bval values <12';
                                 sbj_error{sbj} = sbj_dir(sbj).name;
-                                rmdir(subject_folder,'s');
+                                rmdir(removal_dir,'s');
                                 cont = false;
                             end
                         else
@@ -423,15 +471,15 @@ parfor sbj = 1:numel(sbj_dir)
                             dti_new = ['DTI_',new_subject_name,'.nii'];
                             if contains(dti(d).name,'.gz')
                                 filenames = gunzip(fullfile(dti(d).folder,dti(d).name));
-                                movefile(filenames{:},fullfile(subject_folder,dti_new));
+                                movefile(filenames{:},fullfile(subject_output_folder,dti_new));
                             else
-                                copyfile(fullfile(dti(d).folder,dti(d).name),fullfile(subject_folder,dti_new))
+                                copyfile(fullfile(dti(d).folder,dti(d).name),fullfile(subject_output_folder,dti_new))
                             end
     
                             % Copy DTI bval/bvec/json
-                            copyfile(bval,fullfile(subject_folder,['DTI_',new_subject_name,'.bval']))
-                            copyfile(bvec,fullfile(subject_folder,['DTI_',new_subject_name,'.bvec']))
-                            copyfile(dti_json,fullfile(subject_folder,['DTI_',new_subject_name,'.json']))
+                            copyfile(bval,fullfile(subject_output_folder,['DTI_',new_subject_name,'.bval']))
+                            copyfile(bvec,fullfile(subject_output_folder,['DTI_',new_subject_name,'.bvec']))
+                            copyfile(dti_json,fullfile(subject_output_folder,['DTI_',new_subject_name,'.json']))
     
                             % Update DTI Status
                             modality = [modality;{'DTI'}];
@@ -468,7 +516,7 @@ parfor sbj = 1:numel(sbj_dir)
     catch e
         errors{sbj} = e.message;
         sbj_error{sbj} = sbj_dir(sbj).name;
-        rmdir(subject_folder,'s');
+        rmdir(removal_dir,'s');
     end
 end
 
