@@ -234,7 +234,7 @@ for s =  1: nSubj
         anyNewImg = true;
     end
     
-    %if imgs(s).nii.DTI.function nii_harvest_parallel (baseDir,outDir)newImg, ForceDTI = true; end;
+    %if imgs(s).nii.DTI.newImg, ForceDTI = true; end;
     
     %fprintf('%s %d\n', f{i}, imgs.nii.(f{i}).newImg);
     if exist(subjDir,'file') == 0, mkdir(subjDir); end;
@@ -284,12 +284,7 @@ for s =  1: nSubj
             %if imgs(s).nii.DTI.newImg, setAcpcSubDTI (matNameGUI); end;
         end
         %process the data
-        try
-            nii_preprocess(mat,[],process1st,true,true);
-        catch
-            disp(['ERROR IN ',subj])
-        end
-
+        nii_preprocess(mat,[],process1st,true,true);
       
         matName = fullfile(subjDir, sprintf('T1_%s_%s_lime.mat', subj, imgs(s).nii.T1.x));
         if isPreprocess

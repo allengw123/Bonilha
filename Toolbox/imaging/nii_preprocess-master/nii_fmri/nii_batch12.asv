@@ -634,7 +634,7 @@ nSessions = numel(fmriCell);
 nVol = sum(cellfun('prodofsize',fmriCell));
 fprintf('fMRI has %d sessions for a total of %d volumes\n',nSessions, nVol);
 if (nVol < 12)
-    error('Too few volumes: this script expects 4D fMRI images');
+    error(['Too few volumes: this script expects 4D fMRI images (current is ',num2str(nVol),')');
 end
 if (nSessions > 5)
     error('Too many sessions: provide the FIRST volume from each 4D image');
@@ -1255,15 +1255,12 @@ if ~exist('verbose', 'var'),
 end;
 fslEnvSub;
 cmd = fslCmdSub(command);
+cmd = ['export FSLDIR=',fslDirSub,'; ',cmd]
+% Add "export FSLDIR" - AJC edit
 
-% Add "export FSLDIR" - Allen C
 if verbose
     fprintf('Running \n %s\n', cmd);
     [status,cmdout]  = system(cmd,'-echo');
-
-    al_cmd = ' ;source /usr/local/fsl/etc/fslconf/fsl.sh; bet "/home/allenchang/Downloads/PIT_PL_0012/fMRI/pos_rs/meanPIT_PL_0012_pos_rs.nii" "/home/allenchang/Downloads/PIT_PL_0012/fMRI/pos_rs/bmaskmeanPIT_PL_0012_pos_rs.nii.gz" -R -f 0.3'
-    [status,cmdout]  = system(al_cmd,'-echo')
-
 else
   [status,cmdout]  = system(cmd);
 end

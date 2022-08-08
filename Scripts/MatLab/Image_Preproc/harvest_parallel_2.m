@@ -196,7 +196,8 @@ parfor sbj = 1:numel(sbj_dir)
         end
     end      
     
-    % Attempt to format images
+    image_types = {'T1','T2','rs','dti'};
+    
     try
         % Find Session Type based on T1 labels 
         s_dir = dir(fullfile(subject_input_folder,subject_name,'*T1*'));
@@ -218,85 +219,64 @@ parfor sbj = 1:numel(sbj_dir)
         if isempty(aq)
             aq = [aq,{'session'}];
         end 
-        
-        % Check to see all sessions are accounted for
-        secondary = extractBetween(t1_names,'T1','.nii');
-        secondary(cellfun(@isempty,secondary)) = [];
-        secondary = unique(secondary);
-        if ~isempty(secondary)
-            for i = 1:numel(secondary)
-                t1_names(cellfun(@(x) contains(x,secondary{i}),t1_names)) = [];
-            end
-        end
-        if ~(numel(t1_names) == numel(aq))
-            
-            new_t1_names = [];
-            for a = 1:numel(aq)
-                aq_t1_names = t1_names(contains(t1_names,aq{a}));
-                if numel(aq_t1_names) > 1
-                    % Remove .gz files to see if that fixes the problem
-                    new_t1_names = [new_t1_names aq_t1_names(~cellfun(@(x) contains(x,'.gz'),aq_t1_names))];
-                else
-                    new_t1_names = [new_t1_names aq_t1_names{:}];
-                end
-            end
-            t1_names = new_t1_names;
-            
-            if ~(numel(t1_names) == numel(aq))
-                errors{sbj} = 'Number of unique Sessions do not match number of unique T1 (T1 file naming error)';
-                sbj_error{sbj} = sbj_dir(sbj).name;
-                continue
-            end
-        end
-    
-        cont = true;
-        while cont
 
-            % Transfer Modalities of each Aquisition Session
-            modality = [];
-            status = [];
-            for a = 1:numel(aq)
-                aq_type = aq{a};
+        % Attempt to format images
+        for a = 1:numel(aq)
+            error = parseimage(subject_input_folder,subject_name,aq{a},'T1',true,false,false)
+        end
+    catch e
+        errors{sbj} = e.message;
+        sbj_error{sbj} = sbj_dir(sbj).name;
+        rmdir(removal_dir,'s');
+    end
+end
+
+% Check if there were any errors
+errors(cellfun(@isempty,errors)) = [];
+sbj_error(cellfun(@isempty,sbj_error)) = [];
+clc
+if ~isempty(errors)
+    error_output =[sbj_error' errors'];
+end
+
+end
+
+function error = parseimage(subject_input_folder,subject_name,session,image_type,required_log,json_log,bval_log)
         
-                T1 = [];
-                T2 = [];
-                RS = [];
-                dti = [];
-                lesion = [];
-                % Detect T1/RS/LS files
-                if strcmp(aq_type,'session')
-                    T1 = dir(fullfile(database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
-                    T2 = dir(fullfile(database_path,subject_name,'*T2*.nii*'));
-                    RS = dir(fullfile(database_path,subject_name,'*rs*.nii*'));
-                    dti = dir(fullfile(database_path,subject_name,'*diff*.nii*'));
-                    lesion = []; %THERE IS NO LESION FOR SESSION
-                elseif strcmp(aq_type,'pre')
-                    T1 = dir(fullfile(database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
-                    T2 = dir(fullfile(database_path,subject_name,['*',aq_type,'*T2*.nii*']));
-                    RS = dir(fullfile(database_path,subject_name,['*',aq_type,'*rs*.nii*']));
-                    lesion = []; %THERE IS NO LESION FOR PRE
-                    dti = dir(fullfile(database_path,subject_name,['*',aq_type,'*diff*.nii*']));
-                elseif strcmp(aq_type,'pos')
-                    T1 = dir(fullfile(database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
-                    T2 = dir(fullfile(database_path,subject_name,['*',aq_type,'*T2*.nii*']));
-                    RS = dir(fullfile(database_path,subject_name,['*',aq_type,'*rs*.nii*']));
-                    lesion = dir(fullfile(database_path,subject_name,'*les.nii*')); % ONLY LESION FOR POS
-                    dti = dir(fullfile(database_path,subject_name,['*',aq_type,'*diff*.nii*']));
-                    if isempty(lesion)
-                        errors{sbj} = 'Post Nifti found but missing LESION';
-                        sbj_error{sbj} = sbj_dir(sbj).name;
-                        cont = false;
-                        break
-                    end
-                end
+image_dir = dir(fullfile(subject_input_folder,subject_name,['*',image_type,'*.nii*']));
+    % Detect image
+    if strcmp(session,'session')
+        T1 = dir(fullfile(database_path,subject_name,t1_names{contains(t1_names,session)}));
+        T2 = dir(fullfile(database_path,subject_name,'*T2*.nii*'));
+        RS = dir(fullfile(database_path,subject_name,'*rs*.nii*'));
+        dti = dir(fullfile(database_path,subject_name,'*diff*.nii*'));
+        lesion = []; %THERE IS NO LESION FOR SESSION
+    elseif strcmp(session,'pre')
+        T1 = dir(fullfile(database_path,subject_name,t1_names{contains(t1_names,session)}));
+        T2 = dir(fullfile(database_path,subject_name,['*',session,'*T2*.nii*']));
+        RS = dir(fullfile(database_path,subject_name,['*',session,'*rs*.nii*']));
+        lesion = []; %THERE IS NO LESION FOR PRE
+        dti = dir(fullfile(database_path,subject_name,['*',session,'*diff*.nii*']));
+    elseif strcmp(session,'pos')
+        T1 = dir(fullfile(database_path,subject_name,t1_names{contains(t1_names,session)}));
+        T2 = dir(fullfile(database_path,subject_name,['*',session,'*T2*.nii*']));
+        RS = dir(fullfile(database_path,subject_name,['*',session,'*rs*.nii*']));
+        lesion = dir(fullfile(database_path,subject_name,'*les.nii*')); % ONLY LESION FOR POS
+        dti = dir(fullfile(database_path,subject_name,['*',session,'*diff*.nii*']));
+        if isempty(lesion)
+            errors{sbj} = 'Post Nifti found but missing LESION';
+            sbj_error{sbj} = sbj_dir(sbj).name;
+            cont = false;
+        end
+    end
 
                 % Define Subject Image Folders
-                subject_output_folder = fullfile(output_database,new_subject_name,aq_type);
+                subject_output_folder = fullfile(output_database,new_subject_name,session);
 
                 % Recheck already formated folders to see if any need
                 % updating
                 if any(exist(statusFile,'file'))
-                    num_files = numel(dir(fullfile(output_database,new_subject_name,aq_type,['*',new_subject_name,'*'])));
+                    num_files = numel(dir(fullfile(output_database,new_subject_name,session,['*',new_subject_name,'*'])));
                     num_files_detected = sum([~isempty(T1)
                         ~isempty(T2)
                         ~isempty(RS)*2
@@ -304,7 +284,6 @@ parfor sbj = 1:numel(sbj_dir)
                         ~isempty(dti)*4]);
                     if num_files_detected == num_files
                         cont = false;
-                        break
                     else
                         rmdir(removal_dir,'s');
                     end
@@ -317,11 +296,10 @@ parfor sbj = 1:numel(sbj_dir)
                 % Remove Secondary
                 T1 = T1(cellfun(@isempty,extractBetween({T1.name},'T1','.nii')));
                 if isempty(T1)
-                    errors{sbj} = [aq_type,' secondary scan removal failed for T1'];
+                    errors{sbj} = [session,' secondary scan removal failed for T1'];
                     sbj_error{sbj} = sbj_dir(sbj).name;
                     rmdir(removal_dir,'s');
                     cont = false;
-                    break
                 end
             
                 % Record Status
@@ -347,11 +325,10 @@ parfor sbj = 1:numel(sbj_dir)
                     % Remove Secondary
                     T2 = T2(cellfun(@isempty,extractBetween({T2.name},'T2','.nii')));
                     if isempty(T2)
-                        errors{sbj} = [aq_type,' secondary scan removal failed for T2'];
+                        errors{sbj} = [session,' secondary scan removal failed for T2'];
                         sbj_error{sbj} = sbj_dir(sbj).name;
                         rmdir(removal_dir,'s');
                         cont = false;
-                        break
                     end
 
                     % Remove extra .gz if present
@@ -387,7 +364,7 @@ parfor sbj = 1:numel(sbj_dir)
                         rs_json = fullfile(RS(r).folder,[extractBefore(RS(r).name,'.nii'),'.json']);
                         if ~any(exist(rs_json,'file'))
                             if r == numel(RS)
-                                errors{sbj} = [aq_type,'_rs.json file missing'];
+                                errors{sbj} = [session,'_rs.json file missing'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
                                 rmdir(removal_dir,'s');
                                 cont = false;
@@ -409,9 +386,9 @@ parfor sbj = 1:numel(sbj_dir)
                             hdr = spm_vol(sesname);
                         end
                         nvol = length(hdr);
-                        if nvol < 12
+                        if nvol < 2
                             if r == numel(RS)
-                                errors{sbj} = [aq_type,' RS files only contains <12 volumes'];
+                                errors{sbj} = [session,' RS files only contains one volume'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
                                 rmdir(removal_dir,'s');
                                 cont = false;
@@ -441,7 +418,6 @@ parfor sbj = 1:numel(sbj_dir)
 
                 % Break out of the aquisition forloop if error is found
                 if cont == false
-                    break
                 end
 
                 %%%%%%%%%%%%%%%% Transfer Lesion
@@ -479,7 +455,7 @@ parfor sbj = 1:numel(sbj_dir)
                         % Check bval files
                         if ~any(exist(bval,'file'))
                             if d == numel(dti)
-                                errors{sbj} = [aq_type,'_DTI.bval files missing'];
+                                errors{sbj} = [session,'_DTI.bval files missing'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
                                 rmdir(removal_dir,'s');
                                 cont = false;
@@ -491,7 +467,7 @@ parfor sbj = 1:numel(sbj_dir)
                         % Check bvec files
                         if ~any(exist(bvec,'file'))
                             if d == numel(dti)
-                                errors{sbj} = [aq_type,'_DTI.bvec file missing'];
+                                errors{sbj} = [session,'_DTI.bvec file missing'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
                                 rmdir(removal_dir,'s');
                                 cont = false;
@@ -503,7 +479,7 @@ parfor sbj = 1:numel(sbj_dir)
                         % Check json files
                         if ~any(exist(dti_json,'file'))
                             if d == numel(dti)
-                                errors{sbj} = [aq_type,'_DTI.json file missing'];
+                                errors{sbj} = [session,'_DTI.json file missing'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
                                 rmdir(removal_dir,'s');
                                 cont = false;
@@ -519,11 +495,11 @@ parfor sbj = 1:numel(sbj_dir)
                         if n < 12
                             % If <12 try second scan
                             modality = [modality;{'DTI'}];
-                            status = [status;{[aq_type,'_DTI.bval values less than 12(',num2str(n),')']}];
+                            status = [status;{[session,'_DTI.bval values less than 12(',num2str(n),')']}];
                             
                             % If all scans fail to have >11 then throw error
                             if d == numel(dti)
-                                errors{sbj} = [aq_type,'_DTI.bval values <12'];
+                                errors{sbj} = [session,'_DTI.bval values <12'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
                                 rmdir(removal_dir,'s');
                                 cont = false;
@@ -555,43 +531,23 @@ parfor sbj = 1:numel(sbj_dir)
 
                 % Break out of the aquisition forloop if error is found
                 if cont == false
-                    break
+                    
                 end
                 
                 % Create file note
                 fid = fopen(statusFile, 'wt' );
-                fprintf(fid, '%s\n',aq_type);
+                fprintf(fid, '%s\n',session);
                 for i = 1:numel(modality)
                     fprintf(fid, '-%s ... %s\n',modality{i}, status{i});
                 end
                 fclose(fid); 
+                % Display Complete Update
+                disp([sbj_dir(sbj).name,' formatting completed'])
+                cont = false;
             end
 
-            % Break out of the while forloop if error is found
-            if cont == false
-                break
-            end
 
-            % Display Complete Update
-            disp([sbj_dir(sbj).name,' formatting completed'])
-            cont = false;
-        end
-    catch e
-        errors{sbj} = e.message;
-        sbj_error{sbj} = sbj_dir(sbj).name;
-        rmdir(removal_dir,'s');
-    end
-end
 
-% Check if there were any errors
-errors(cellfun(@isempty,errors)) = [];
-sbj_error(cellfun(@isempty,sbj_error)) = [];
-clc
-if ~isempty(errors)
-    error_output =[sbj_error' errors'];
-end
-
-end
 
 function setup_brainagedir(brainage_path,spm_path)
     
