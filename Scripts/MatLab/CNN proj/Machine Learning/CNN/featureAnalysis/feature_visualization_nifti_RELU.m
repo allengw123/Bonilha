@@ -1,14 +1,14 @@
 clear all
 clc
 
-% gitPath='C:\Users\allen\Documents\GitHub\Bonilha';
-gitPath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
+gitPath='C:\Users\allen\Documents\GitHub\Bonilha';
+% gitPath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
 
 cd(gitPath)
 allengit_genpath(gitPath,'imaging')
 
-% dataPath='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output\featureWeights';
-dataPath = 'F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\Ip_RELU';
+dataPath='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output\featureWeights';
+% dataPath = 'F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\Ip_RELU';
 cd(dataPath)
 files={dir(fullfile(dataPath,'*.nii')).name};
 example=load_nii('EXAMPLE.nii');

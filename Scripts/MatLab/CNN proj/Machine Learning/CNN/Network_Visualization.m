@@ -2,18 +2,18 @@
 clear
 clc
 
-% githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
-githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
+githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
+% githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
 
 cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
 % Inputs:
 % CNNoutput='F:\CNN output';
-CNNoutput='F:\CNN output\2D_CNN\MATLAB\AgeRegress';
+% CNNoutput='F:\CNN output\2D_CNN\MATLAB\AgeRegress';
 % CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output';
 % CNNoutput = 'C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\CFRedo';
-% CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\AgeReg';
+CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\AgeReg';
 
 
 cd(CNNoutput)
