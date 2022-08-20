@@ -1,5 +1,233 @@
 ------------------------------------------------------------------------
-r1987 | gaser | 2022-04-25 14:27:55
+r2000 | gaser | 2022-06-17 14:56:41
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       html/cat.html
+M       html/cat.txt
+M       html/cat_references.html
+
+(1) Changed: Updated CAT12 references.
+------------------------------------------------------------------------
+r1999 | gaser | 2022-06-17 14:38:19 +0200 (Fri, 17 Jun 2022) | 7 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+
+(1) Changed: Adapted call of spm_cfg_imcalc to newer functionality in SPM12
+             in cat_conf_tools.m.
+
+------------------------------------------------------------------------
+r1998 | dahnke | 2022-06-17 11:57:40 +0200 (Fri, 17 Jun 2022) | 18 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_stat_marks.m
+M       cat_vol_headtrimming.m
+M       cat_vol_qa.m
+M       cat_vol_resize.m
+
+(1) Fixed:     Light changes of the QC in cat_stat_marks and cat_vol_qa.
+							 Adaptions for the edge-to-contrast-ratio (ECR) resolution measure
+               res_ECR (previously named res_grad). Further added the structural 
+               image quality rating (SIQR) as successor of IQR that also include 
+               ECR. Replace old tissue peak estimation with cat_stat_nanmean by 
+               cat_stat_kmeans that should be more reliable (currently flagged 
+               for further tests).
+(2) Fixed:     Tiny corrections in cat_vol_resize.
+(3) Fixed:     Corrected bug in cat_vol_headtrimming with some atlas datasets. 
+
+
+------------------------------------------------------------------------
+r1997 | gaser | 2022-06-16 11:17:25 +0200 (Thu, 16 Jun 2022) | 14 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_plot_boxplot.m
+M       cat_plot_histogram.m
+MM      cat_plot_scatter.m
+
+(1) Changed: Added option to add jitter to categorical variables in 
+             cat_plot_scatter.m.
+(2) Changed: Added more functionality to handle data arrays in 
+             cat_plot_histogram.m.
+(3) Changed: Added option to add jittered data points with probability density
+             as shape (similar to beeswwarm plot).
+
+
+------------------------------------------------------------------------
+r1996 | gaser | 2022-06-08 17:50:23 +0200 (Wed, 08 Jun 2022) | 11 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_plot_histogram.m
+M       cat_plot_scatter.m
+M       cat_vol_qa.m
+
+(1) Changed: Added new flags to cat_plot_scatter.m.
+(2) Fixed:   Corrected order of labels in cat_plot_histogram.m.
+(3) Fixed:   Added missing paramter 'red' to cat_vol_qa.m.
+
+
+------------------------------------------------------------------------
+r1995 | gaser | 2022-05-24 17:22:04 +0200 (Tue, 24 May 2022) | 11 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_plot_histogram.m
+A       cat_plot_scatter.m
+
+(1) Added:   New function cat_plot_scatter to draw scatter plots coloured by
+             density and to fit polynomial curves and add confidence interval.
+(2) Changed: Replaced old 2d histogram function by scatter plot coloured by 
+             density using cat_plot_scatter.m.
+
+
+------------------------------------------------------------------------
+r1994 | gaser | 2022-05-23 16:57:46 +0200 (Mon, 23 May 2022) | 13 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_long_main.m
+M       cat_surf_results.m
+M       cat_vol_img2mip.m
+
+(1) Changed: Added colorbar to single MIP in cat_vol_img2mip.m.
+(2) Fixed:   Multiple volume files were not correctly recognized in 
+             cat_surf_results.m.        
+(3) Fixed:   Dartel export images of average image were always removed even
+             if the Dartel save option was used.
+
+
+------------------------------------------------------------------------
+r1993 | gaser | 2022-05-19 11:23:00 +0200 (Thu, 19 May 2022) | 25 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat_conf_stools.m
+M       cat_io_checkinopt.m
+M       cat_stat_TIV.m
+M       cat_surf_calc.m
+M       cat_surf_results.m
+M       cat_vol_img2mip.m
+M       html/cat.html
+M       html/cat_methods_SBM.html
+M       html/cat_starting.html
+M       standalone/cat_standalone.sh
+
+(1) Changed: Extended cat_vol_img2mip.m to allow structure as input with many
+             additional options such as colormap, range, func to mirror a bit
+             the parameters of cat_vol_slice_overlay.m.
+(2) Changed: Added visualization of MIP for volume data in cat_surf_results.m.             
+(3) Changed: Changed volume-to-surface mapping to equi-volume model as default
+             and moved equi-distamce model to developer mode.             
+(4) Fixed:   Corrected handling of additional arguments in cat_standalone.sh.
+(5) Fixed:   Corrected estimation of filename and path in cat_stat_TIV.m.
+(6) Fixed:   Corrected handling of surfaces without faces/vertices in
+             cat_surf_calc.m
+
+------------------------------------------------------------------------
+r1992 | dahnke | 2022-05-13 10:05:20 +0200 (Fri, 13 May 2022) | 22 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_main_reportfig.m
+M       cat_run_job.m
+M       cat_run_job1639.m
+M       cat_stat_marks.m
+M       cat_vol_pbt.m
+M       cat_vol_qa.m
+
+(1) Fixed:     Corrected filter setting in cat_long_main. 
+(2) Fixed:     Switch GM and WM volume in cat_main_reportfig.
+               Modified plot scales and added TSA and thickness.
+(3) Changed:   Changed SPM preprocessing iteration parameter in 
+               cat_run_job[1639] to force higher minimum iteration
+               number only in longitudinal processing.
+(4) Changed:   Updated unused boundary box quality measure in 
+               cat_vol_qa and cat_stat_marks. 
+(5) Fixed:     Corrected typo in cat_vol_pbt.       
+(6) Fixed:     Set new IQR rating (under test) only for developers
+               in cat_stat_marks.                     
+
+
+------------------------------------------------------------------------
+r1991 | gaser | 2022-05-11 16:16:31 +0200 (Wed, 11 May 2022) | 12 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_surf_results.m
+M       cat_vol_slice_overlay.m
+
+(1) Changed: Extended cat_surf_results.m to show interactive slice overlay if
+             volume data are used as result. 
+(2) Changed: Added pos-flag to cat_vol_slice_overlay.m to define location of 
+             overlay window.             
+(3) Fixed:   Corrected some typos in cat_conf_tools.m
+
+------------------------------------------------------------------------
+r1990 | gaser | 2022-05-06 15:36:53 +0200 (Fri, 06 May 2022) | 8 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_stat_TIV.m
+
+(1) Fixed:   Corrected bug in cat_stat_TIV.m if no filedata field was found in 
+             xml-file.
+             
+
+------------------------------------------------------------------------
+r1989 | gaser | 2022-05-06 11:16:31 +0200 (Fri, 06 May 2022) | 13 lines
+
+Changed paths:
+M       CHANGES.txt
+M       cat_conf_tools.m
+M       cat_io_data2mat.m
+M       standalone/cat_standalone.sh
+M       templates_MNI152NLin2009cAsym/cobra.txt
+
+(1) Changed: Updated help text and references for atlases used in CAT12.
+(2) Changed: Updated some general help text. 
+(3) Fixed:   Corrected bug for saving surface data as mat file in 
+             cat_io_data2mat.m.
+             
+
+------------------------------------------------------------------------
+r1988 | gaser | 2022-05-02 12:30:43 +0200 (Mon, 02 May 2022) | 27 lines
+
+Changed paths:
+M       CHANGES.txt
+M       Contents.m
+M       cat12.m
+M       cat_conf_stools.m
+M       cat_conf_tools.m
+M       cat_stat_TIV.m
+M       cat_vol_qa.m
+M       html/cat.html
+M       html/cat_licences.html
+M       spm_cat12.m
+M       standalone/cat_standalone.sh
+M       standalone/cat_standalone_get_TIV.m
+
+(1) Changed: Extended cat_stat_TIV to also optionally add filename and folder 
+             to 1st column of output file.
+(2) Changed: Extended cat_standalone.sh to allow 3rd parameter. 
+(3) Changed: Added 3rd parameter to cat_standalone_get_TIV.m to to also 
+             optionally add filename and folder to output file.
+(4) Changed: Updated references in cat_licences.html. 
+(5) Changed: Enabled extraction of surface ratio as new folding measure in
+             cat_conf_stools.m.
+(6) Changed: Updated GUI names for standard CAT12 mode in cat12.m. 
+(7) Fixed:   Corrected typo in spm_cat12.m that called not existing command.
+(8) Fixed:   Added check for variable Pp0 to cat_vol_qa.m.
+             
+
+------------------------------------------------------------------------
+r1987 | gaser | 2022-04-25 14:28:37 +0200 (Mon, 25 Apr 2022) | 8 lines
 
 Changed paths:
 M       CHANGES.txt
@@ -8,6 +236,7 @@ M       spm_cat12.m
 
 (1) Changed: Added check to spm_cat12.m to check whether mex-files on MAC OS
              are blocked.
+
 ------------------------------------------------------------------------
 r1986 | gaser | 2022-04-25 13:45:39 +0200 (Mon, 25 Apr 2022) | 8 lines
 

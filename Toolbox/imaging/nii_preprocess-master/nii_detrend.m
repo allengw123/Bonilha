@@ -154,7 +154,7 @@ masked_img = masked_img - repmat (brain_mean, [1 n_vols]);
 img_detr = masked_img - Beta(:, 2:n_pred) * G(2:n_pred, :) + repmat (brain_mean, [1 n_vols]);
 % put the detrended data into 4D image and save to disk
 new_hdr = nii_hdr(1);%spm_vol([fnm ',1' ]); %load 4D dataset only once!
-new_hdr.fname   = fullfile(pth,[prefix nam ext]);
+new_hdr.fname  = fullfile(pth,[prefix nam ext]);
 if smoothFWHMmm > 0
 	fprintf('Smoothing %d images with a %.1fmm FWHM Gaussian kernel\n',n_vols,smoothFWHMmm);
     smoothFWHMmm = [smoothFWHMmm smoothFWHMmm smoothFWHMmm];

@@ -2,8 +2,9 @@ clear all
 clc
 
 % Gen path
-%gitpath='C:\Users\allen\Google Drive\GitHub\Bonilha';
-gitpath = '/home/allenchang/Documents/GitHub/Bonilha';
+% gitpath='C:\Users\allen\Google Drive\GitHub\Bonilha';
+% gitpath = '/home/allenchang/Documents/GitHub/Bonilha';
+gitpath = '/home/bonilha/Documents/GitHub/Bonilha';
 cd(gitpath)
 allengit_genpath(gitpath,'imaging')
 
@@ -21,31 +22,60 @@ dsipath=fullfile(gitpath,'Toolbox','imaging','dsi_studio_64');
 brainage_path = fullfile(gitpath,'Toolbox','imaging','brainage');
 
 %%
-input_database = '/home/allenchang/Downloads/Sample_Participants';
-cd(input_database)
-database_dir = dir(input_database);
+raw = '/media/bonilha/AllenProj/MasterSet/raw/controls';
+database_dir = dir(raw);
 
-output_database = '/home/allenchang/Downloads/TestSub';
-mkdir(output_database)
+nii_preproc_database = '/media/bonilha/AllenProj/MasterSet/nii_proc_format/controls';
+mkdir(nii_preproc_database)
 
+harvest_output = '/media/bonilha/AllenProj/MasterSet/harvestOutput/controls';
+mkdir(harvest_output)
+cd(harvest_output)
+
+error_sbj = [];
+error_msg = [];
 % Modify folder to niistat structure
-for s = 1:numel(database_dir)
+for s = 3%1:numel(database_dir)
     if strcmp(database_dir(s).name,'.') || strcmp(database_dir(s).name,'..') || strcmp(database_dir(s).name,'.DS_Store')
         continue
     end
+
+    formated_sbj_name = strrep(database_dir(s).name,'_','');
+    % Detect if "New" or "Complete/Incomplete"
+    if any(exist(fullfile(nii_preproc_database,formated_sbj_name,'PipelineStatus.txt'),'file'))
+        fileID = fopen(fullfile(nii_preproc_database,formated_sbj_name,'PipelineStatus.txt'),'r');
+        lines = textscan(fileID,'%s', 'Delimiter', '\n');
+        fclose(fileID);
+        if strcmp(lines{:}{end},'COMPLETE')
+            continue
+        else
+            incomplete_dir = fullfile(harvest_output,'incomplete');
+            mkdir(incomplete_dir)
+            id = strrep(strrep(strrep(char(datetime),'-','_'),':','_'),' ','');
+            try
+                movefile(fullfile(harvest_output,formated_sbj_name),fullfile(incomplete_dir,[formated_sbj_name,'_',id]))
+                warning(['Moving INCOMPLETE HARVEST OUTPUT to ',incomplete_dir])
+            catch
+            end
+        end
+    end
     
-    % Move files
-    subject_name = prep_niiharvest(database_dir(s).folder,database_dir(s).name,'pre',output_database);
-    subject_name = prep_niiharvest(database_dir(s).folder,database_dir(s).name,'post',output_database);
+    try
+
+        % Prepare file and run nii_harvest
+        start_niiharvest(database_dir(s).folder, ...
+            database_dir(s).name, ...
+            nii_preproc_database, ...
+            harvest_output);
+    catch e
+        warning(['Error in subject ',database_dir(s).name,' Please check error_msg variable'])
+        error_msg = [error_msg {e}];
+        error_sbj = [error_sbj {database_dir(s).name}];
+    end
 end
-%%
-cd(output_database)
 
-harvest_output = '/home/allenchang/Downloads/harvestOutput';;
-mkdir(harvest_output)
-cd(harvest_output)
-nii_harvest(output_database,harvest_output)
-
+%% nii_preprocess_subfolders 
+nii_preprocess_subfolders(harvest_output)
 
 
 %% Brain Age
@@ -80,39 +110,161 @@ for a = 1%:numel(t1_acq)
     system(cmd)
     
 end
+%%
 
+% Modify folder to niistat structure
+parfor s = 1:numel(database_dir)
+    if strcmp(database_dir(s).name,'.') || strcmp(database_dir(s).name,'..') || strcmp(database_dir(s).name,'.DS_Store')
+        continue
+    end
+    
+    s_dir = dir(fullfile(database_dir(s).folder,database_dir(s).name));
+    s_dir(strcmp({s_dir.name},'.')) = [];
+    s_dir(strcmp({s_dir.name},'..')) = [];
+
+    if any(contains({s_dir.name},'Processed'))
+        idx = strcmp({s_dir.name},'Processed');
+        rmdir(fullfile(s_dir(idx).folder,s_dir(idx).name),"s");
+    end
+    
+    if  any(contains({s_dir.name},'Raw'))
+        idx = strcmp({s_dir.name},'Raw');
+        r_dir = dir(fullfile(s_dir(idx).folder,s_dir(idx).name));
+        r_dir(strcmp({r_dir.name},'.')) = [];
+        r_dir(strcmp({r_dir.name},'..')) = [];
+        for i = 1:numel(r_dir)
+            [path,name,~] = fileparts(r_dir(i).folder);
+            movefile(fullfile(r_dir(i).folder,r_dir(i).name),fullfile(path,r_dir(i).name))
+        end
+        rmdir(fullfile(path,name),"s")
+    end
+end
+            
 %% Functions
 
-function new_subject_name = prep_niiharvest(database_path,subject_name,aq_type,output_database)
+function new_subject_name = start_niiharvest(database_path,subject_name,output_database,harvest_output)
 
 new_subject_name = strrep(subject_name,'_','');
+statusFile = fullfile(output_database,new_subject_name,'PipelineStatus.txt');
 
-% Transfer T1
-T1 = dir(fullfile(database_path,subject_name,['*',aq_type,'*T1*']));
-T1(contains({T1.name},'_b.')) = [];
-if isempty(T1)
-    return
-else
-    subject_folder = fullfile(output_database,new_subject_name,aq_type);
-    mkdir(subject_folder)
+s_dir = dir(fullfile(database_path,subject_name,'*T1*'));
+t1_names = {s_dir.name};
+aq = [];
+if any(contains(t1_names,'pre'))
+    aq = [aq,{'pre'}];
 end
-T1 = fullfile(T1.folder,T1.name);
-T1_new = ['T1_',new_subject_name,'.nii'];
-copyfile(T1,fullfile(subject_folder,T1_new))
-
-% Transfer fMRI
-fMRI = strrep(T1,'T1','rs');
-if any(exist(fMRI,'file'))
-    copyfile(fMRI,fullfile(subject_folder,strrep(T1_new,'T1','Rest')))
+if any(contains(t1_names,'post'))
+    aq = [aq,{'post'}];
+end
+if isempty(aq)
+    aq = [aq,{'session'}];
 end
 
-% Transfer DTI
-dti = strrep(T1,'T1','diff');
-if any(exist(dti,'file'))
-    copyfile(dti,fullfile(subject_folder,strrep(T1_new,'T1','DTI')))
-    copyfile(strrep(dti,'nii','bval'),fullfile(subject_folder,strrep(strrep(T1_new,'T1','DTI'),'nii','bval')))
-    copyfile(strrep(dti,'nii','bvec'),fullfile(subject_folder,strrep(strrep(T1_new,'T1','DTI'),'nii','bvec')))
+
+
+modality = [];
+status = [];
+for a = 1:numel(aq)
+
+    aq_type = aq{a};
+
+    % Transfer T1
+    if strcmp(aq_type,'session')
+        T1 = dir(fullfile(database_path,subject_name,'*T1*'));
+        fMRI = dir(fullfile(database_path,subject_name,'*rs*'));
+        dti = dir(fullfile(database_path,subject_name,'*diff.nii*'));
+    else
+        T1 = dir(fullfile(database_path,subject_name,['*',aq_type,'*T1*']));
+        fMRI = dir(fullfile(database_path,subject_name,['*',aq_type,'*rs*']));
+        dti = dir(fullfile(database_path,subject_name,['*',aq_type,'*diff.nii*']));
+    end
+    T1(contains({T1.name},'_b.')) = [];
+    if isempty(T1)
+        modality = [modality;{'T1'}];
+        status = [status;{'T1 not found'}];
+        continue
+    else
+        modality = [modality;{'T1'}];
+        status = [status;{fullfile(T1.folder,T1.name)}];
+
+        subject_folder = fullfile(output_database,new_subject_name,aq_type);
+        mkdir(subject_folder)
+        T1_new = ['T1_',new_subject_name,'.nii'];
+    
+        if contains(T1.name,'.gz')
+            filenames = gunzip(fullfile(T1.folder,T1.name));
+            movefile(filenames{:},fullfile(subject_folder,T1_new));
+        else
+            copyfile(fullfile(T1.folder,T1.name),fullfile(subject_folder,T1_new))
+        end
+    end
+    
+    % Transfer fMRI
+    if isempty(fMRI)
+        modality = [modality;{'fMRI'}];
+        status = [status;{'fMRI not found'}];
+    else
+        fMRI_new = ['Rest_',new_subject_name,'.nii'];
+        status = [status;{fullfile(fMRI.folder,fMRI.name)}];
+
+        if contains(fMRI.name,'.gz')
+            filenames = gunzip(fullfile(fMRI.folder,fMRI.name));
+            movefile(filenames{:},fullfile(subject_folder,fMRI_new));
+        else
+            copyfile(fullfile(fMRI.folder,fMRI.name),fullfile(subject_folder,fMRI_new))
+        end
+    end
+    
+    % Transfer DTI
+    if isempty(dti)
+        modality = [modality;{'DTI'}];
+        status = [status;{'DTI not found'}];
+    else
+        % Check bval tables to make sure >12
+        bval = fullfile(dti.folder,[extractBefore(dti.name,'.nii'),'.bval']);
+        bvec = fullfile(dti.folder,[extractBefore(dti.name,'.nii'),'.bvec']);
+    
+        fileID = fopen(bval,'r');
+        [~, n] = fscanf(fileID,'%g');
+        fclose(fileID);
+        if n < 12
+            modality = [modality;{'DTI'}];
+            status = [status;{['bval values less than 12(',num2str(n),')']}];
+        else
+            modality = [modality;{'DTI'}];
+            status = [status;{fullfile(dti.folder,dti.name)}];
+            dti_new = ['DTI_',new_subject_name,'.nii'];
+            if contains(dti.name,'.gz')
+                filenames = gunzip(fullfile(dti.folder,dti.name));
+                movefile(filenames{:},fullfile(subject_folder,dti_new));
+            else
+                copyfile(fullfile(dti.folder,dti.name),fullfile(subject_folder,dti_new))
+            end
+            
+            copyfile(bval,fullfile(subject_folder,['DTI_',new_subject_name,'.bval']))
+            copyfile(bvec,fullfile(subject_folder,['DTI_',new_subject_name,'.bvec']))
+        end
+    end
+        
+    % Create file note
+    fid = fopen(statusFile, 'wt' );
+    fprintf(fid, '%s\n',aq_type);
+    for i = 1:numel(modality)
+        fprintf(fid, '-%s ... %s\n',modality{i}, status{i});
+    end
+    fclose(fid);
+
+    try
+        nii_harvest(output_database,harvest_output)
+        writematrix('COMPLTETE',statusFile,'WriteMode','append')
+    catch e
+        writematrix('INCOMPLETE/FAILURE',statusFile,'WriteMode','append')
+        writematrix(e,statusFile,'WriteMode','append')
+    end
+
 end
+
+
 end
 
 function setup_brainagedir(brainage_path,spm_path)

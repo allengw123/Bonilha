@@ -641,8 +641,8 @@ end
 if isfield(job,'printPID') && job.printPID 
   cat_display_matlab_PID
 end
-
-job = update_job(job);
+temp_job = job;
+job = update_job(temp_job);
 
 varargout{1} = run_job(job);
 if ( isfield(job.extopts,'lazy') && job.extopts.lazy  && ~isfield(job,'process_index')) || ...

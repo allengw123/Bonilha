@@ -1,22 +1,4 @@
-function nii_harvest (baseDir)
-
-%Please note, DTI processing is disabled in nii_harvest_parallel!!!
-
-
-outDir = '/media/chris/ABC_EXPRESS/ABC_ASL_IN';
-baseDir = '/media/chris/ABC_EXPRESS/_ABC_MASTER_DB';
-
-outDir = '/media/chris/ABC_EXPRESS/del_IN';
-baseDir = '/media/chris/ABC_EXPRESS/del_DB';
-
-% if the correct environment variables are set in the environment, override
-% the above
-if ~isempty(getenv('nii_harvest_baseDir'))
-    baseDir = getenv('nii_harvest_baseDir')
-end
-if ~isempty(getenv('nii_harvest_outDir'))
-    outDir = getenv('nii_harvest_outDir')
-end
+function nii_harvest_parallel (baseDir,outDir)
 
 setOrigin = true; %attempt to crop and set anterior commissure for images
 isExitAfterTable = false; % <- if true, only generates table, does not process data
@@ -64,35 +46,39 @@ if ~exist('baseDir','var') || isempty(baseDir)
     baseDir = uigetdir('','Pick folder that contains all subjects');
 end
 
-%ROGER Added
-%check for folder /ASL_DUMMY_FILES which contains dummy files for BASIL,
-%FYI the referenced 'dummy files' are .json files that are created when you convert the
-%DICOMs to .nii files using the newer versions of MRICROGL
-%and make sure in path, otherwise throw a warning and continue
-[FILEPATH,NAME,EXT] = fileparts(which('nii_preprocess.m'));
-if ~exist(fullfile(FILEPATH,'ASL_DUMMY_FILES'),'dir')
-    warning('Did not find path to ASL_DUMMY_FILES on your machine, please add /ASL_DUMMY_FILES folder, which contains json files for your ASL files you want to go through nii_basil to %s to ensure BASIL works properly',FILEPATH)
-else
-    addpath(fullfile(FILEPATH,'ASL_DUMMY_FILES'));
-    fprintf('Added %s to path',fullfile(FILEPATH,'ASL_DUMMY_FILES'));
-end
+
 
 %***Ignores directories containing '_' symbol
 subjDirs = subFolderSub(baseDir);
 subjDirs = sort(subjDirs);
 
 if ~isempty(getenv('nii_harvest_subjDirs'))
-    subjDirs = {getenv('nii_harvest_subjDirs')}
+    subjDirs = {getenv('nii_harvest_subjDirs')};
 end
 
 
 %set up parallel loop variables
-numLoops = 10;
-subjDirsSize = length(subjDirs)
-div = floor(subjDirsSize/numLoops)
-modRemainder = mod(subjDirsSize,numLoops)
+core_info = evalc('feature(''numcores'')');
+l_cores = regexp(core_info,'MATLAB was assigned: ','split');
+l_cores = str2double(extractBefore(l_cores{2},' logical cores'));
+if isempty(gcp('nocreate'))
+%     disp('WARNING....')
+%     disp('HYPER THREADING ENABLE (1.2x total imaginary cores ')
+%     disp('MAY CAUSE OVERHEATING')
+%     disp('WARNING....')
+% 
+%     c = parcluster;
+%     c.NumWorkers = floor(l_cores*.5);% Hyperthread CPUs to 1.5x log+real cores)
+%     pool = c.parpool(floor(l_cores*.5));
+    pool = parpool(8);
+else
+    pool = gcp('nocreate');
+end
+numLoops = pool.NumWorkers;
+subjDirsSize = length(subjDirs);
+div = floor(subjDirsSize/numLoops);
+modRemainder = mod(subjDirsSize,numLoops);
 
-%parfor i = 1:numLoops
 parfor i = 1:numLoops
    if(numLoops <= subjDirsSize)
        %subjDirsX = subjDirs(1+(i-1)*div:1+i*div)
@@ -114,7 +100,7 @@ modalityKeysVerbose = {'Lesion','T1','T2','ASL','ASLrev','Rest_','fMRI','fme1','
 modalityDependency =  [0,       1,   1,   0,    6,       0,      0,     0,     0,     0,     0           0         ]; %e.g. T1 and T2 must be from same study as lesion
 
 modalityKeys = strrep(modalityKeysVerbose,'_',''); 
-xperimentKeys = {'CNABC','ABC','LARC','POLAR','SE','LIME','CT','R01','CAT'}; %order specifies priority: 1st item checked first!
+xperimentKeys = {'pre','post','session'}; %order specifies priority: 1st item checked first!
 %create empty structure
 blank = [];
 blank.subjName = [];
@@ -248,7 +234,7 @@ for s =  1: nSubj
         anyNewImg = true;
     end
     
-    %if imgs(s).nii.DTI.newImg, ForceDTI = true; end;
+    %if imgs(s).nii.DTI.function nii_harvest_parallel (baseDir,outDir)newImg, ForceDTI = true; end;
     
     %fprintf('%s %d\n', f{i}, imgs.nii.(f{i}).newImg);
     if exist(subjDir,'file') == 0, mkdir(subjDir); end;
@@ -298,7 +284,12 @@ for s =  1: nSubj
             %if imgs(s).nii.DTI.newImg, setAcpcSubDTI (matNameGUI); end;
         end
         %process the data
-        nii_preprocess(mat,[],process1st);
+        try
+            nii_preprocess(mat,[],process1st,true,true);
+        catch
+            disp(['ERROR IN ',subj])
+        end
+
       
         matName = fullfile(subjDir, sprintf('T1_%s_%s_lime.mat', subj, imgs(s).nii.T1.x));
         if isPreprocess
@@ -327,7 +318,7 @@ for s = 1: nSubj
             hdr = readNiftiHdrSub(fnm);
             tr = 0; 
             if isfield (hdr(1).private, 'timing')
-               tr =hdr(1).private.timing.tspace 
+               tr =hdr(1).private.timing.tspace;
             end
             fprintf('%s\t%s\t%s\t%d\t%d\t%d\t%d\t%g\n', subj, f{i}, imgs(s).nii.(f{i}).x, hdr(1).dim(1),hdr(1).dim(2),hdr(1).dim(3),numel(hdr),tr  );
         end
@@ -452,6 +443,13 @@ ibval = fullfile(ipth, [inam, '.bval']);
 if exist(ibval, 'file'),
     obval = fullfile(opth, [onam, '.bval']);
     copyfile(ibval, obval);
+end;
+
+%copy .json
+ijson = fullfile(ipth, [inam, '.json']);
+if exist(ijson, 'file'),
+    ojson = fullfile(opth, [onam, '.json']);
+    copyfile(ijson, ojson);
 end;
 %end moveImgUnGz()
 

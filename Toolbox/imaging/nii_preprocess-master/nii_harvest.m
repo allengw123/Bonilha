@@ -91,7 +91,7 @@ modalityKeysVerbose = {'Lesion','T1','T2','DTI_','DTIrev','ASL','ASLrev','Rest_'
 modalityDependency =  [0,       1,   1,   0,     4,       0,    6,       0,      0,     0,     0,     0,     0           0         ]; %e.g. T1 and T2 must be from same study as lesion
 
 modalityKeys = strrep(modalityKeysVerbose,'_',''); 
-xperimentKeys = {'pre','post'}; %order specifies priority: 1st item checked first!
+xperimentKeys = {'pre','post','session'}; %order specifies priority: 1st item checked first!
 %create empty structure
 blank = [];
 blank.subjName = [];
@@ -331,7 +331,7 @@ for s = 1: nSubj
             hdr = readNiftiHdrSub(fnm);
             tr = 0; 
             if isfield (hdr(1).private, 'timing')
-               tr =hdr(1).private.timing.tspace 
+               tr =hdr(1).private.timing.tspace;
             end
             fprintf('%s\t%s\t%s\t%d\t%d\t%d\t%d\t%g\n', subj, f{i}, imgs(s).nii.(f{i}).x, hdr(1).dim(1),hdr(1).dim(2),hdr(1).dim(3),numel(hdr),tr  );
         end
@@ -433,20 +433,20 @@ if strcmpi(iext,'.gz') %unzip compressed data
 	inname = gunzip(inname);
     inname = deblank(char(inname));
     [ipth, inam,iext] = fileparts(inname);
-end;
+end
 copyfile(inname, outname);
 if strcmpi(iext,'.gz') %fsl can not abide with coexisting img.nii and img.nii.gz
 	delete(filename);
-end;
+end
 %copy bvec
 ibvec = fullfile(ipth, [inam, '.bvec']);
-if exist(ibvec, 'file'),
+if exist(ibvec, 'file')
     obvec = fullfile(opth, [onam, '.bvec']);
     copyfile(ibvec, obvec);
 end;
 %copy bval
 ibval = fullfile(ipth, [inam, '.bval']);
-if exist(ibval, 'file'),
+if exist(ibval, 'file')
     obval = fullfile(opth, [onam, '.bval']);
     copyfile(ibval, obval);
 end;

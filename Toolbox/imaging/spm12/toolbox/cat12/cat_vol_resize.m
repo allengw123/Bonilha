@@ -32,7 +32,7 @@ function varargout=cat_vol_resize(T,operation,varargin)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_vol_resize.m 1982 2022-04-12 11:09:13Z dahnke $ 
+% $Id: cat_vol_resize.m 1998 2022-06-17 09:57:40Z dahnke $ 
   
   if nargin==0, help cat_vol_resize; return; end
   if isempty(T), varargout{1} = T; return; end
@@ -98,7 +98,7 @@ function varargout=cat_vol_resize(T,operation,varargin)
         fnameres = fullfile(pp,[ff ee]); 
         varargout{1}.res{fi,1} = fnameres; 
         
-        if job.lazy && ~cat_io_rerun(fnameres,job.data{fi} ) 
+        if job.lazy && ~cat_io_rerun(job.data{fi},fnameres) 
           if job.verb, fprintf('  Exist %s\n',fnameres); end
         else
           V  = spm_vol(job.data{fi});

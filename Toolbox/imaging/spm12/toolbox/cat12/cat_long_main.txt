@@ -38,7 +38,7 @@
 %
 %
 % Christian Gaser
-% $Id: cat_long_main.m 1984 2022-04-19 07:59:02Z gaser $
+% $Id: cat_long_main.m 1994 2022-05-23 14:57:46Z gaser $
 % ______________________________________________________________________
 %
 % Christian Gaser, Robert Dahnke
@@ -46,7 +46,7 @@
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_long_main.m 1984 2022-04-19 07:59:02Z gaser $ 
+% $Id: cat_long_main.m 1994 2022-05-23 14:57:46Z gaser $ 
 
 
 % =======================================================================
@@ -1028,9 +1028,9 @@ if delete_temp
     end
     
     
-    % remove affine registered segmentations of average data (class 4-6)
+    % remove remaining affine registered segmentations of average data (class 4-6)
     if longTPM
-      for ci = 1:6
+      for ci = 4:6
         matlabbatch{mbi}.cfg_basicio.file_dir.file_ops.file_move.files(c) = cfg_dep(sprintf('CAT12: Segmentation (current release): rp%d affine Image',ci),...
           substruct('.','val', '{}',{mb_catavg}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}),...
           substruct('.','tiss', '()',{ci}, '.','rpa', '()',{':'})); c = c+1;

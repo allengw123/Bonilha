@@ -634,7 +634,7 @@ nSessions = numel(fmriCell);
 nVol = sum(cellfun('prodofsize',fmriCell));
 fprintf('fMRI has %d sessions for a total of %d volumes\n',nSessions, nVol);
 if (nVol < 12)
-    error('Too few volumes: this script expects 4D fMRI images');
+    error(['Too few volumes: this script expects 4D fMRI images (current is ',num2str(nVol),')']);
 end
 if (nSessions > 5)
     error('Too many sessions: provide the FIRST volume from each 4D image');

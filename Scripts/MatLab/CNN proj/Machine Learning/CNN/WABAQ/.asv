@@ -1,0 +1,77 @@
+%% CNN MODEL
+
+% githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
+githubpath='/home/bonilha/Documents/GitHub/Bonilha';
+cd(githubpath)
+allengit_genpath(githubpath,'imaging')
+
+% Inputs:
+input_dir = '/media/bonilha/AllenProj/PatientData/WABAQ'
+
+info_sheet = readtable(fullfile(input_dir,'POLAR_Data_forAllenNoControls.xlsx'));
+
+%% Setup for CNN model
+
+% Load lesion maps
+sbjs = {dir(fullfile(input_dir,'M*')).name}';
+WABAQ_score = [];
+lesions = [];
+cd(input_dir)
+for s = 1:numel(sbjs)
+    temp_lesion = load(sbjs{s},'lesion');
+    lesions = cat(4,lesions,temp_lesion.lesion.dat);
+    WABAQ_score = [WABAQ_score; info_sheet.WAB_AQ(info_sheet.ID == str2num(cell2mat(extractBetween(sbjs{s},'M','.mat'))))];
+end
+
+
+[trainIdx,testIdx,valIdx] = dividerand(numel(sbjs),0.6,0.25,0.15);        
+    
+% Seperate datasets
+trainDataset = lesions(:,:,:,trainIdx);
+trainLabels = WABAQ_score(trainIdx);
+
+testDataset = lesions(:,:,:,testIdx);
+testLabels = WABAQ_score(testIdx);
+
+valDataset = lesions(:,:,:,valIdx);
+valLabels = WABAQ_score(valIdx);
+
+
+% Parameters for the network
+imageSize = size(lesions,[1 2 3]);
+
+layers = [
+    imageInputLayer(imageSize)
+
+    convolution3dLayer(3,8,'Padding','same')
+    batchNormalizationLayer
+    reluLayer
+
+    maxPooling3dLayer(2,'Stride',2)
+
+    convolution3dLayer(3,16,'Padding','same')
+    batchNormalizationLayer
+    reluLayer
+    
+    maxPooling3dLayer(2,'Stride',2)
+
+    convolution3dLayer(3,32,'Padding','same')
+    batchNormalizationLayer
+    reluLayer
+
+    fullyConnectedLayer(1)
+    regressionLayer];
+
+options = trainingOptions('sgdm', ...  %stochastic gradient descent with momentum(SGDM) optimizer
+    'InitialLearnRate',0.01, ...
+    'MaxEpochs',30, ...  % Default is 30
+    'Shuffle','every-epoch', ...
+    'ValidationData',{valDataset,valLabels}, ...
+    'Verbose',false, ... %Indicator to display training progress information in the command window
+    'Plots','training-progress',...
+    'ExecutionEnvironment','multi-gpu');
+
+
+%%%%%%%%%%%% Train the network
+net = trainNetwork(trainDataset,trainLabels,layers,options);
+

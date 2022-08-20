@@ -8,7 +8,7 @@ function stools = cat_conf_stools(expert)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_conf_stools.m 1979 2022-03-30 14:12:01Z gaser $
+% $Id: cat_conf_stools.m 1993 2022-05-19 09:23:00Z gaser $
 
 %#ok<*NOCOM>
 
@@ -951,7 +951,7 @@ rel_mapping.val   = {
   rel_endpoint ...
 };
 rel_mapping.help    = {
-  'Map volumetric data from relative grid positions within a tissue class using equi-distance approach. Here, the grid lines have equal distances in between the tissue.'
+  'Map volumetric data from relative grid positions within a tissue class using equi-distance approach. Here, the grid lines have equal distances between the tissues.'
 };
 
 %% relative mapping with equi-volume approach
@@ -968,7 +968,6 @@ rel_equivol_mapping.help    = {
   'Map volumetric data from relative positions within a tissue class using equi-volume approach. '
   'This option is using the approach by Bok (Z. Gesamte Neurol. Psychiatr. 12, 682-750, 1929). '
   'Here, the volume between the grids is constant. The correction is based on Waehnert et al. (NeuroImage, 93: 210-220, 2014).'
-  'Please note that this option is intended for high-resolution (f)MRI data only.'
   '' 
 };
 
@@ -979,38 +978,33 @@ mapping.tag     = 'mapping';
 mapping.name    = 'Mapping Function';
 mapping.values  = {
   abs_mapping ...
-  rel_mapping ...
+  rel_equivol_mapping ...
 }; 
-mapping.val = {rel_mapping};
+mapping.val = {rel_equivol_mapping};
 mapping.help    = {
   'Volume extraction type. '
   '  Absolute Grid Position From a Surface (or Tissue Boundary):'
   '    Extract values around a surface or tissue boundary with a specified absolute sample '
   '    distance and either combine these values or save values separately.'
-  '  Relative Grid Position Within a Tissue Class (Equi-distance approach):' 
-  '    Extract values within a tissue class with a specified relative sample distance'
-  '    with equally distributed distances and either combine these values or save values separately.'
-  '' 
-};
-
-mapping_native = mapping;
-mapping_native.values{3} = rel_equivol_mapping;
-mapping_native.help    = {
-  'Volume extraction type. '
-  '  Absolute Grid Position From a Surface (or Tissue Boundary):'
-  '    Extract values around a surface or tissue boundary with a specified absolute sample '
-  '    distance and either combine these values or save values separately.'
-  '  Relative Grid Position Within a Tissue Class (Equi-distance approach):' 
-  '    Extract values within a tissue class with a specified relative sample distance'
-  '    with equally distributed distances and either combine these values or save values separately.'
   '  Relative Grid Position Within a Tissue Class (Equi-volume approach):' 
   '    Extract values within a tissue class with a specified relative sample distance'
   '    that is corrected for constant volume between the grids and either combine these values or save values separetely.'
   '' 
 };
 
+if expert > 1
+  mapping.values{3} = rel_mapping;
+  mapping.help    = [ mapping.help; {
+  '  Relative Grid Position Within a Tissue Class (Equi-distance approach):' 
+  '    Extract values within a tissue class with a specified relative sample distance'
+  '    with equally distributed distances and either combine these values or save values separately.'
+  '' 
+  }];
+end
 
+mapping_native = mapping;
 
+  
 % extract volumetric data in individual space 
 %-----------------------------------------------------------------------  
 
@@ -1158,7 +1152,7 @@ dataname.tag        = 'dataname';
 dataname.name       = 'Output Filename';
 dataname.strtype    = 's';
 dataname.num        = [1 Inf];
-dataname.val        = {'output'};
+dataname.val        = {'mesh.output'};
 dataname.help       = {'The output surface data file is written to current working directory unless a valid full pathname is given.  If a path name is given here, the output directory setting will be ignored.'};
 
 datahandling         = cfg_menu;
@@ -1468,18 +1462,18 @@ data_surf_extract.help    = {'Select left surfaces to extract values.'};
 % absolute mean curvature
 GI        = cfg_menu;
 if expert>1
-  GI.name   = 'Gyrification index (absolute mean curvature)';
+  GI.name   = 'Gyrification (absolute mean curvature)';
   GI.labels = {'No','Yes (MNI approach)','Yes (Dong approach)'};
   GI.values = {0,1,2};
 else
-  GI.name = 'Gyrification index';
+  GI.name = 'Gyrification';
   GI.labels = {'No','Yes'};
   GI.values = {0,1};
 end
 GI.tag    = 'GI';
 GI.val    = {1};
 GI.help   = {
-  'Extract gyrification index (GI) based on absolute mean curvature. The method is described in Luders et al. NeuroImage, 29: 1224-1230, 2006.'
+  'Extract gyrification based on absolute mean curvature. The method is described in Luders et al. NeuroImage, 29: 1224-1230, 2006.'
 };
 if expert>1
   GI.help = [ GI.help; 
@@ -1769,25 +1763,24 @@ SD.values = {0,1,2};
 % affine normalized measures
 if expert>1
   tGI           = cfg_entry;
-  tGI.name      = 'Toro''s gyrification index';
+  tGI.name      = 'Surface ratio (Toro''s gyrification index)';
   tGI.tag       = 'tGI';
   tGI.strtype   = 'r';
   tGI.num       = [1 inf];
   tGI.val       = {0};
   tGI.hidden    = expert<1; 
   tGI.help      = {
-    'Toro''s gyrification index (#toroGI) with definable radii.  The original method is described in Toro et al., 2008.'
+    'Toro''s gyrification index (#toroGI) based on local degree of folding through the surface ratio with definable radii.  The original method is described in Toro et al., 2008.'
   };
 else
   tGI        = cfg_menu;
-  tGI.name   = 'Toro''s gyrification index';
+  tGI.name   = 'Toro''s gyrification index (surface ratio)';
   tGI.tag    = 'tGI';
   tGI.labels = {'No','Yes'};
   tGI.values = {0,1};
   tGI.val    = {0};
-  tGI.hidden = expert<1; 
   tGI.help   = {
-    'Different versions of Toro''s gyrification index (#toroGI). The original method is described in Toro et al., 2008.'
+    'Toro''s gyrification index (#toroGI) based on local degree of folding through the surface ratio. The original method is described in Toro et al., 2008.'
   };
 end
 
@@ -1918,7 +1911,7 @@ surfextract.name = 'Extract additional surface parameters';
 surfextract.val  = {data_surf_extract, ...
   area,gmv, ... developer
   GI, SD, FD, ...
-  tGI, ... expert
+  tGI, ...
   lGI, GIL, ... developer
   surfaces, norm, ... expert
   FS_HOME, ...

@@ -24,7 +24,7 @@ function cat_run_job(job,tpm,subj)
 % Departments of Neurology and Psychiatry
 % Jena University Hospital
 % ______________________________________________________________________
-% $Id: cat_run_job.m 1980 2022-03-30 14:40:08Z gaser $
+% $Id: cat_run_job.m 1992 2022-05-13 08:05:20Z dahnke $
 
 %#ok<*WNOFF,*WNON>
 
@@ -139,7 +139,7 @@ function cat_run_job(job,tpm,subj)
       obj.biasreg  = cat(1,job.opts.biasreg);
       obj.biasfwhm = cat(1,job.opts.biasfwhm);
       obj.tol      = job.opts.tol;
-      obj.newtol   = 2; % stopping criteria for outer (=tol) and inner loop:
+      obj.newtol   = 1 + ( isfield(job,'useprior') && ~isempty(job.useprior) ); 
                         %  -1-old SPM (>9 iters, inner=tol), 
                         %   0-old CAT more outer iterations (>19 iter, inner=tol),  
                         %   1-new optimal/faster with additional AUC criteria to have SPM minimum iterations (>9 iters, inner=1e-2)
