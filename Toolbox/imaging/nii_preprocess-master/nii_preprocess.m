@@ -69,12 +69,8 @@ if true
     imgs = doI3MSub(imgs, matName);
     tStart = timeSub(tStart,'T1');
     
-    try
-        imgs = doVBMSub(imgs, matName);
-        tStart = timeSub(tStart,'VBM');
-    catch e
-        warning('Cat12-based VBM failed, see logfile for details');
-    end
+    imgs = doVBMSub(imgs, matName);
+    tStart = timeSub(tStart,'VBM');
     
     imgs = doRestSub(imgs, matName); %TR= 1.850 sec, descending; %doRestSub(imgs, matName, 2.05, 5); %Souvik study
     tStart = timeSub(tStart,'REST');
@@ -110,10 +106,10 @@ if true
             dtiDir = fileparts(imgs.DTI);
             doDtiSub(imgs);
             doFaMdSub(imgs, matName);
-            %-->(un)comment next line for JHU tractography
-            doDtiTractSub(imgs, matName, dtiDir, 'jhu');
-            %-->(un)comment next line for AICHA tractography
-            doDtiTractSub(imgs, matName, dtiDir, 'AICHA'); 
+%             %-->(un)comment next line for JHU tractography
+%             doDtiTractSub(imgs, matName, dtiDir, 'jhu');
+%             %-->(un)comment next line for AICHA tractography
+%             doDtiTractSub(imgs, matName, dtiDir, 'AICHA'); 
             %-->(un)comment next line for aal tractography
             doDtiTractSub(imgs, matName, dtiDir, 'aal'); 
             
@@ -326,7 +322,7 @@ catbatch{1}.spm.tools.cat.estwrite.extopts.APP = 1070;
 catbatch{1}.spm.tools.cat.estwrite.extopts.segmentation.WMHC = 3;
 catbatch{1}.spm.tools.cat.estwrite.extopts.LASstr = 0.5;
 catbatch{1}.spm.tools.cat.estwrite.extopts.gcutstr = 2;
-catbatch{1}.spm.tools.cat.estwrite.extopts.registration.dartel.darteltpm = dartelTPM_arg{1:length(dartelTPM_arg)}%'/home/chris/neuro/spm12/toolbox/cat12/templates_MNI152NLin2009cAsym/Template_0_GS.nii';
+catbatch{1}.spm.tools.cat.estwrite.extopts.registration.dartel.darteltpm = dartelTPM_arg{1:length(dartelTPM_arg)};%'/home/chris/neuro/spm12/toolbox/cat12/templates_MNI152NLin2009cAsym/Template_0_GS.nii';
 catbatch{1}.spm.tools.cat.estwrite.extopts.vox = 1.5;
 catbatch{1}.spm.tools.cat.estwrite.extopts.restypes.fixed = [1 0.1];
 

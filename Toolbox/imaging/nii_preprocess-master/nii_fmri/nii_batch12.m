@@ -656,9 +656,18 @@ else
     end
 end
 %determine slice order
-if ~exist('slice_order','var')  || isempty(slice_order) || (slice_order == 0)
+slice_options = {[1 2 3 4],[4 3 2 1],[1 3 2 4],[4 2 3 1],[2 4 1 3],[3 1 4 2]};
+jsonfile = strrep(p.fmriname,'.nii','.json');
+if exist(jsonfile,'file')
+    [~,so] = sort(jsondecode(fileread(jsonfile)).SliceTiming(1:4));
+    slice_order = find(cellfun(@(x) all(so' == x),slice_options));
+    if isempty(slice_order)
+        slice_order = getSliceOrderSub(deblank (fmriname(1,:)));
+    end
+elseif ~exist('slice_order','var')  || isempty(slice_order) || (slice_order == 0)
     slice_order = getSliceOrderSub(deblank (fmriname(1,:)));
 end
+
 if (slice_order ==0)
     answer = inputdlg('slice order (1=[1234],2=[4321],3=[1324],4=[4231], 5=[2413],6=[3142])', 'Input required',1,{'1'});
     slice_order = str2double(answer{1});

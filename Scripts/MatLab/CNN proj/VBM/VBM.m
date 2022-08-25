@@ -17,13 +17,12 @@
 clear
 clc
 
-githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
-% githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
+githubpath='/home/bonilha/Documents/GitHub/Bonilha';
 cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
 % Inputs:
-PatientData='F:\PatientData\smallSet';
+PatientData='/media/bonilha/AllenProj/CNN_project/PatientData/smallSet';
 cd(PatientData)
 
 
@@ -32,21 +31,22 @@ addpath(genpath(SmoothThres));
 
 matter='GM';
 
-save_path='F:\VBM ouput';
+save_path='/media/bonilha/AllenProj/CNN_project/VBM ouput';
 mkdir(save_path)
 
 %% Find Nii files
 
 % look for Alz nifti files
-Alzfiles={dir(fullfile(SmoothThres,'Alz\ADNI_Alz_nifti','*',['*',matter,'*.nii'])).name};
+Alzfiles={dir(fullfile(SmoothThres,'Alz','**',['*',matter,'*.nii'])).name};
 
 % look for TLE nifti files
-tledir = dir(fullfile(SmoothThres,'TLE','*','*',['*',matter,'*.nii']));
+tledir = dir(fullfile(SmoothThres,'TLE','**',['*',matter,'*.nii']));
 tlefiles={tledir.name};
 tleFolder = {tledir.folder};
 flipIdx = cellfun(@(x) contains(x,'LTLE'),tleFolder);
+
 % look for control nifti files
-controlfiles={dir(fullfile(SmoothThres,'Control','*','*',['*',matter,'*.nii'])).name}';
+controlfiles={dir(fullfile(SmoothThres,'Control','**',['*',matter,'*.nii'])).name}';
 
 % Read excel files
 ep_tle_info=readtable(fullfile(PatientData,'ep_TLE_info.xlsx'));
@@ -65,13 +65,13 @@ ttest_savepath=fullfile(save_path,'ttest');
 mkdir(ttest_savepath);
 
 [P, T] = compare_volumes(Alz_GM, TLE_GM,...
-    controlfiles{1},ttest_savepath,'Alz vs TLE');
+    controlfiles{1},ttest_savepath,'Alz','TLE');
 
 [P, T] = compare_volumes(Alz_GM, Control_GM,...
-    controlfiles{1},ttest_savepath,'Alz vs Control');
+    controlfiles{1},ttest_savepath,'Alz','Control');
 
 [P, T] = compare_volumes(TLE_GM, Control_GM,...
-    controlfiles{1},ttest_savepath,'TLE vs Control');
+    controlfiles{1},ttest_savepath,'TLE','Control');
 
 cd(ttest_savepath)
 

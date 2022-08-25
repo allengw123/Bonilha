@@ -1620,7 +1620,7 @@ job.cj = subsasgn(job.cj, [rcjsubs substruct('.', 'id')], rcjsubs);
 job.cj = subsasgn(job.cj, [rcjsubs substruct('.', 'sdeps')], []);
 job.cj = subsasgn(job.cj, [rcjsubs substruct('.', 'tdeps')], []);
 % re-harvest to update tdeps and outputs
-[u1, u2, u3, u4, u5, job.cj] = harvest(subsref(job.cj, rcjsubs), job.cj, false, false);
+[~, u2, u3, u4, u5, job.cj] = harvest(subsref(job.cj, rcjsubs), job.cj, false, false);
 job.cjid2subs{id} = rcjsubs;
 % clear run configuration
 job.cjrun = [];

@@ -11,6 +11,9 @@ addpath(genpath(fullfile(gitpath,'Functions')));
 
 if strcmp(type,'imaging')
     addpath(genpath(fullfile(gitpath,'Toolbox','imaging')))
+
+    % Remove brainageR spm
+    rmpath(genpath(fullfile(fullfile(gitpath,'Toolbox','imaging','brainageR_SPM'))))
     
     % Don't add all spm subfloders
     spm_rmpath
@@ -18,6 +21,7 @@ if strcmp(type,'imaging')
     spm
     close all
     clc
+    
 elseif strcmp(type,'EEG')
     disp('Adding EEG Toolboxes')
     addpath(genpath(fullfile(gitpath,'Toolbox','EEG')))   

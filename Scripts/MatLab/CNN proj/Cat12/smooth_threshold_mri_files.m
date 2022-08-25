@@ -22,15 +22,20 @@ cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
 % Inputs: 
-PatientData_folder = '/media/bonilha/AllenProj/PatientData/disease_dur/Cat12';
-Smooth_folder='/media/bonilha/AllenProj/PatientData/disease_dur/smooth';mkdir(Smooth_folder)
-Thres_folder='/media/bonilha/AllenProj/PatientData/disease_dur/thres_smooth';mkdir(Thres_folder)
-
+PatientData_folder = '/media/bonilha/AllenProj/CNN_project/PatientData/smallSet';
+disease = 'EP_RTLE_nifti';
 Threshold=0.2;
 %--------------------------------------------------------------------------
 
 %% Detect folder
-subfolder_path = dir(PatientData_folder).folder;
+
+Cat12_folder = fullfile(PatientData_folder,'Cat12_segmented/');
+Smooth_folder=fullfile(PatientData_folder,'smooth');mkdir(Smooth_folder)
+Thres_folder=fullfile(PatientData_folder,'thres');mkdir(Thres_folder)
+
+disease_folder = fullfile(Cat12_folder,disease);
+
+
 sub_list={dir(PatientData_folder).name};
 sub_list=sub_list(~startsWith(sub_list,'.'));
 for m=1:2

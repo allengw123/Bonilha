@@ -346,13 +346,26 @@ b_T = T;
 
 b_P(P > 0.05/numel(find(~isnan(STATS.tstat)))) = NaN;
 b_T(P > 0.05/numel(find(~isnan(STATS.tstat)))) = NaN;
+
+b_T(isinf(b_T)) = NaN;
+b_T = abs(b_T);
+
 figure;
-imagesc(b_T)
-title('t-values FA (bonf)')
-colorbar
-%% t-test structure non-resp vs resp coherence
+imagesc(b_T,[0,50])
+set(gca,'xtick',[],'xticklabel',[],'ytick',[],'yticklabel',[])
+set(gcf,'color',[1 1 1]);
+cb=colorbar;
+set(cb,'Ticks',[0 25 50],'FontSize',24,'Location','southoutside')
+ylabel(cb,'Absolute T-Value','FontSize',24)
+axis('square')
+struc_ccm=customcolormap([0 1],{'#123abc','#a0b0e4'});
+colormap(struc_ccm)
+title('Responder vs Nonresponder Fractional Anisotropy (t-test Bonferonni corrected)','FontSize',24)
+%% t-test non-resp vs resp coherence
 
 phase = {'Basline','Early','Mid','Late'};
+figure;
+
 for t = 1:4
     resp_coh = cat(4,beta_coh.P001(:,:,t,:), ...
         beta_coh.P002(:,:,t,:), ...
@@ -374,14 +387,26 @@ for t = 1:4
     
     b_P(P > 0.05/numel(find(~isnan(STATS.tstat)))) = NaN;
     b_T(P > 0.05/numel(find(~isnan(STATS.tstat)))) = NaN;
-    figure;
-    imagesc(b_T)
-    title('t-values Coherence (bonf)')
-    subtitle(phase{t})
-    colorbar
-end
+    
+    b_T(isinf(b_T)) = NaN;
+    b_T = abs(b_T);
 
-fn = fieldnames(beta_coh);
-for i = 1:9
-    size(beta_coh.(fn{i}),4)
+    nexttile
+    imagesc(b_T,[0,10])
+    set(gca,'xtick',[],'xticklabel',[],'ytick',[],'yticklabel',[])
+    set(gcf,'color',[1 1 1]);
+    cb=colorbar;
+    set(cb,'Ticks',[0 5 10],'FontSize',24,'Location','southoutside')
+    ylabel(cb,'Absolute T-Value','FontSize',24)
+    axis('square')
+    struc_ccm=customcolormap([0 1],{'#721d1d','#f19d9d'});
+    colormap(struc_ccm)
+    subtitle(phase{t},'FontSize',24)
 end
+sgtitle('Responder vs Nonresponder Beta Coherence (t-test Bonferonni corrected)','FontSize',24)
+
+% 
+% fn = fieldnames(beta_coh);
+% for i = 1:9
+%     size(beta_coh.(fn{i}),4)
+% end
