@@ -54,7 +54,7 @@ ttest_savepath=fullfile(save_path,'ttest');
 mkdir(ttest_savepath);
 
 [P, T] = compare_volumes(Patient_GM, Control_GM,...
-    controls{1},ttest_savepath,'Paitnets','Controls');
+    controls{1},ttest_savepath,'Patients','Controls');
 
 cd(ttest_savepath)
 
@@ -323,9 +323,7 @@ function [P, T] = compare_volumes(Cont, Pat, mask, save_place, v1_savename, v2_s
     crit_p = 0.05/numel(find(mean(Cont,4)>0));
     PP = P; PP(P>crit_p) = NaN;
     TT = T; TT(P>crit_p) = NaN;
-    
-    TT=TT.*-1;
-    
+        
     if size(P,3) == 58
         PM.img(:,:,28:85) = PP;
         TM.img(:,:,28:85) = TT;
