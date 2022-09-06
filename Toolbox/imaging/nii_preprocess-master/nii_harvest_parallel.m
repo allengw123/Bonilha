@@ -59,42 +59,6 @@ if ~isempty(getenv('nii_harvest_subjDirs'))
     subjDirs = {getenv('nii_harvest_subjDirs')};
 end
 
-
-%set up parallel loop variables
-
-if HYPER_THREAD
-    % Enable Hyperthreading if true
-    core_info = evalc('feature(''numcores'')');
-    l_cores = regexp(core_info,'MATLAB was assigned: ','split');
-    l_cores = str2double(extractBefore(l_cores{2},' logical cores'));
-    disp('WARNING....')
-    disp('HYPER THREADING ENABLE (.75x total imaginary cores ')
-    disp('MAY CAUSE OVERHEATING')
-    disp('WARNING....')
-    if ~isempty(gcp('nocreate'))
-        pool = gcp('nocreate');
-        delete(pool)
-    end
-    c = parcluster;
-    c.NumWorkers = floor(l_cores*.75);% Hyperthread CPUs to 1.5x log+real cores)
-    pool = c.parpool(floor(l_cores*.75));
-else
-    if ~isempty(gcp('nocreate'))
-        pool = gcp('nocreate');
-        delete(pool)
-    end
-    pool = parpool;
-end
-numLoops = pool.NumWorkers;
-subjDirsSize = length(subjDirs);
-div = floor(subjDirsSize/numLoops);
-modRemainder = mod(subjDirsSize,numLoops);
-
-idex = cell(numLoops,1);
-for i = 1:numLoops
-    idex{i} = i:numLoops:subjDirsSize;
-end
-
 % Sync with format database
 if sync_with_formated
     [input_sbj,~] = subFolderSub(baseDir);
@@ -113,6 +77,40 @@ end
 
 
 if nargin<4
+
+    %set up parallel loop variables
+    if HYPER_THREAD
+        % Enable Hyperthreading if true
+        core_info = evalc('feature(''numcores'')');
+        l_cores = regexp(core_info,'MATLAB was assigned: ','split');
+        l_cores = str2double(extractBefore(l_cores{2},' logical cores'));
+        disp('WARNING....')
+        disp('HYPER THREADING ENABLE (.75x total imaginary cores ')
+        disp('MAY CAUSE OVERHEATING')
+        disp('WARNING....')
+        if ~isempty(gcp('nocreate'))
+            pool = gcp('nocreate');
+            delete(pool)
+        end
+        c = parcluster;
+        c.NumWorkers = floor(l_cores*.75);% Hyperthread CPUs to 1.5x log+real cores)
+        pool = c.parpool(floor(l_cores*.75));
+    else
+        if ~isempty(gcp('nocreate'))
+            pool = gcp('nocreate');
+            delete(pool)
+        end
+        pool = parpool;
+    end
+    numLoops = pool.NumWorkers;
+    subjDirsSize = length(subjDirs);
+    div = floor(subjDirsSize/numLoops);
+    modRemainder = mod(subjDirsSize,numLoops);
+
+    idex = cell(numLoops,1);
+    for i = 1:numLoops
+        idex{i} = i:numLoops:subjDirsSize;
+    end
     parfor i = 1:numLoops
         if(numLoops <= subjDirsSize)
             %subjDirsX = subjDirs(1+(i-1)*div:1+i*div)
@@ -241,11 +239,13 @@ for xper = 1: numel(xperimentKeys)
         global ForceASL;
         global ForceDTI;
         global ForceVBM;
+        global GPU;
         ForcefMRI=[];
         ForceRest=[];
         ForceASL=[];
         ForceDTI =[];
         ForceVBM = [];
+        GPU = [];
         %666x -
         %imgs(s).nii.fMRI.newImg = false;
         %imgs(s).nii.Rest.newImg = false;
@@ -256,7 +256,7 @@ for xper = 1: numel(xperimentKeys)
         %if imgs(s).nii.ASL.newImg, ForceASL = true; end;
         %666 if imgs(s).nii.DTI.newImg, ForceDTI = true; end;
         %to reprocess one modality for EVERYONE....
-        
+
         if reprocessRest && isfield(imgs(s).nii.Rest,'img')
             ForceRest = true;
             anyNewImg = true;
@@ -316,7 +316,7 @@ for xper = 1: numel(xperimentKeys)
         end
 
         if anyNewImg
-            if nargin<13
+            if nargin<4
                 try
                     matNameGUI = fullfile(subjDir,xperimentKeys{xper}, [subj,'_',xperimentKeys{xper}, '_limegui.mat']);
                     fprintf('Creating %s\n',matNameGUI);

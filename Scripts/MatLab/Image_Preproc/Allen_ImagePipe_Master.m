@@ -110,13 +110,15 @@ errors_parallel_sbjs = cellfun(@(x) x{1},errors_parallel,'UniformOutput',false);
 % Display Step 2 completion
 display_complete(2,'Harvest Parallel',errors_parallel_sbjs)
 
-%% Preprocess DTI
+%% Preprocess Parallel DTI
 
 % Create Harvest Output Folder
 mkdir(harvest_output)
 
 % Run nii_harvest (DTI)
-DTI_errors = nii_harvest_DTI(nii_preproc_database,harvest_output,opt);
+DTI_errors = nii_harvest_parallel_DTI(nii_preproc_database,harvest_output,opt);
+%DTI_errors = nii_harvest_parallel_DTI(nii_preproc_database,harvest_output,opt,{'EMOPL0018'});
+
 
 % Display Step 3 completion
 display_complete(3,'DTI processing',DTI_errors)

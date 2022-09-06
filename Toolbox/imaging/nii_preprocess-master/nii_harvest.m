@@ -178,11 +178,13 @@ for xper = 1: numel(xperimentKeys)
         global ForceASL;
         global ForceDTI;
         global ForceVBM;
+        global GPU;
         ForcefMRI=[];
         ForceRest=[];
         ForceASL=[];
         ForceDTI =[];
         ForceVBM = [];
+        GPU = [];
         %666x -
         %imgs(s).nii.fMRI.newImg = false;
         %imgs(s).nii.Rest.newImg = false;

@@ -198,7 +198,7 @@ if exist(matName,'file')
     stat = nii_mergestruct(stat,old); %#ok<NASGU>
 end
 save(matName,'-struct', 'stat');
-%end addLimeVersionSub()
+%end addLimeVersionSub()    
 
 function checkForUpdate(repoPath)
 prevPath = pwd;
@@ -597,6 +597,10 @@ end
 PathTrakExe = findExeSub(TrakExe);
 if isempty(PathTrakExe), fprintf('Tractography skipped: unable to find %s', TrakExe); return; end;
 cmd = sprintf('%s -o "%s" "%s"',TrakExe, vtkname, basename);
+global GPU;
+if ~isempty(GPU)
+    cmd = sprintf('export CUDA_VISIBLE_DEVICES=%d; %s',GPU,cmd);
+end
 [status, fullnam]  = system(cmd,'-echo');
 %end doTractographySub()
 
@@ -1455,12 +1459,16 @@ cmd=sprintf('sh -c ". %s/etc/fslconf/fsl.sh; %s ',fsldir, opts);
 command = [cmd command '"'];
 %fslCmdSub
 
-function [status,cmdout]  = doFslCmd (command, verbose)
-if ~exist('verbose', 'var'),
+function [status,cmdout]  = doFslCmd (command,verbose)
+if ~exist('verbose', 'var')||isempty(verbose)
     verbose = true;
 end;
 fslEnvSub;
 cmd = fslCmdSub(command);
+global GPU;
+if ~isempty(GPU)
+    cmd = sprintf('export CUDA_VISIBLE_DEVICES=%d; %s',GPU,cmd);
+end
 if verbose
     fprintf('Running \n %s\n', cmd);
     [status,cmdout]  = system(cmd,'-echo');

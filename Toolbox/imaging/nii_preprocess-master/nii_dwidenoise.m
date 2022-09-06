@@ -149,6 +149,10 @@ function status  = systemSub (cmd)
 MatlabPath = getenv('LD_LIBRARY_PATH');
 % Make Matlab use system libraries
 setenv('LD_LIBRARY_PATH',getenv('PATH'));
+global GPU;
+if ~isempty(GPU)
+    cmd = sprintf('export CUDA_VISIBLE_DEVICES=%d; %s',GPU,cmd);
+end
 fprintf('%s\n',cmd);
 status = system(cmd);
 % Reassign old library paths
