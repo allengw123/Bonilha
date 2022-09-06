@@ -45,7 +45,7 @@ opt.isReportDims = true; %if true, report dimensions of raw data
 opt.reprocessRest = false;
 opt.reprocessfMRI = false;
 opt.reprocessASL = false;
-opt.reprocessDTI = true;
+opt.reprocessDTI = false;
 opt.reprocessVBM = false;
 opt.explicitProcess = false; % <- if true, will only process if the reprocess flag is true
 opt.interweave = true; % Subjects will get dedicated to which parallel worker in an interweave fashion (helps efficiently process new subjects to database)
@@ -116,7 +116,7 @@ display_complete(2,'Harvest Parallel',errors_parallel_sbjs)
 mkdir(harvest_output)
 
 % Run nii_harvest (DTI)
-DTI_errors = nii_harvest(nii_preproc_database,harvest_output,opt);
+DTI_errors = nii_harvest_DTI(nii_preproc_database,harvest_output,opt);
 
 % Display Step 3 completion
 display_complete(3,'DTI processing',DTI_errors)
@@ -759,12 +759,15 @@ function setup_brainagedir(brainage_path,spm_path)
 pca_rotation = fullfile(brainage_path,'pca_rotation.rds');
 
 if ~exist(pca_rotation,"file")
-    cmd = 'cd ~/Downloads; wget https://github.com/james-cole/brainageR/releases/download/2.1/pca_rotation.rds';
+    disp('brainageR setup file missing... attempting to auto-download missing file... may take awhile')
+    cmd = 'cd ~/Downloads; wget -nv https://github.com/james-cole/brainageR/releases/download/2.1/pca_rotation.rds';
     status = system(cmd);
     if status ~=0
-        error('Attempted to download pca_rotation.rds file from https://github.com/james-cole/brainageR/releases/download/2.1/pca_rotation.rds')
+        error('FAILED attempt to download pca_rotation.rds file from https://github.com/james-cole/brainageR/releases/download/2.1/pca_rotation.rds to Downloads Folder');
+    else
+        system(['mv ~/Downloads/pca_rotation.rds ',brainage_path]);
+    end
 end
-
 
 % Detect brainage SH file
 brainage_file_path = fullfile(brainage_path,'brainageR');
