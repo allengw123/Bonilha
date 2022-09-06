@@ -256,10 +256,7 @@ for xper = 1: numel(xperimentKeys)
         %if imgs(s).nii.ASL.newImg, ForceASL = true; end;
         %666 if imgs(s).nii.DTI.newImg, ForceDTI = true; end;
         %to reprocess one modality for EVERYONE....
-        if reprocessDTI && isfield(imgs(s).nii.DTI,'img')
-            ForceDTI = true;
-            anyNewImg = true;
-        end
+        
         if reprocessRest && isfield(imgs(s).nii.Rest,'img')
             ForceRest = true;
             anyNewImg = true;

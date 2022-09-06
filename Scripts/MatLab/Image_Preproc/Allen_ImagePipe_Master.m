@@ -25,7 +25,7 @@ clc
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
 INPUT_PATH = '/media/bonilha/Elements/Master_Epilepsy_Database_SYNC';
 OUTPUT_PATH = '/media/bonilha/Elements/MasterSet';
-DISEASE_TAG = 'Controls';
+DISEASE_TAG = 'Patients';
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%% ADVANCE OPTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -34,7 +34,7 @@ DISEASE_TAG = 'Controls';
 opt.SKIP_PROBLEM_TAG = true; %true = don't preprocess subjects with a "problem" string attached at the end
 opt.PROBLEM_TAGS = {'problem','MissingT1','MissingLesion','IncorrectLesion'}; % ends with tags that SKIP_PROBLEM_TAG will look for
 opt.RECHECK_ALREADY_FORMATED = false; % Rechecks formated subjects
-opt.HYPER_THREAD = false; % MAY CAUSE OVERHEATING. Since moving a lot of files, CPUs will benefit from hyperthreading
+opt.HYPER_THREAD = true; % MAY CAUSE OVERHEATING. Since moving a lot of files, CPUs will benefit from hyperthreading
 opt.MATCH_INPUT = true;
 
 % Preprocess Options
@@ -92,7 +92,7 @@ cd(nii_preproc_database)
 [format_errors] = prep_niiharvest(raw_database,nii_preproc_database,opt);
 
 % Display Step 1 completion
-display_complete(1,'Preprocess Format',size(format_errors,1))
+display_complete(1,'Preprocess Format',format_errors)
 
 
 %% Harvest Paralllel
@@ -105,10 +105,10 @@ errors_parallel = errors_parallel(~cellfun(@isempty,errors_parallel));
 errors_parallel_sbjs = cellfun(@(x) x{1},errors_parallel,'UniformOutput',false);
 
 % % DEBUG
-% nii_harvest_parallel(nii_preproc_database,harvest_output,opt,errors_parallel_sbjs);
+% nii_harvest_parallel(nii_preproc_database,harvest_output,opt,{'BONPL0103'});
 
 % Display Step 2 completion
-display_complete(2,'Harvest Parallel',numel(errors_parallel_sbjs))
+display_complete(2,'Harvest Parallel',errors_parallel_sbjs)
 
 %% Preprocess DTI
 
@@ -116,10 +116,10 @@ display_complete(2,'Harvest Parallel',numel(errors_parallel_sbjs))
 mkdir(harvest_output)
 
 % Run nii_harvest (DTI)
-DTI_errors = nii_harvest(nii_preproc_database,harvest_output,opt);
+DTI_errors = nii_harvest_DTI(nii_preproc_database,harvest_output,opt);
 
 % Display Step 3 completion
-display_complete(3,'DTI processing',size(DTI_errors,1))
+display_complete(3,'DTI processing',DTI_errors)
 %% Organize Preprocessed Data
 
 % Create Processed Output Folder
@@ -250,11 +250,6 @@ parfor sbj = 1:numel(sbj_dir)
 
     % Define New Subject name (no '_' allowed)
     new_subject_name = strrep(subject_name,'_','');
-
-    
-
-
-    
 
     % Define removal output folder if any errors occur
     removal_dir = fullfile(output_database,new_subject_name);
@@ -760,6 +755,20 @@ end
 
 function setup_brainagedir(brainage_path,spm_path)
 
+% Check to see if any large files missing that cant be cloned via github
+pca_rotation = fullfile(brainage_path,'pca_rotation.rds');
+
+if ~exist(pca_rotation,"file")
+    disp('brainageR setup file missing... attempting to auto-download missing file... may take awhile')
+    cmd = 'cd ~/Downloads; wget -nv https://github.com/james-cole/brainageR/releases/download/2.1/pca_rotation.rds';
+    status = system(cmd);
+    if status ~=0
+        error('FAILED attempt to download pca_rotation.rds file from https://github.com/james-cole/brainageR/releases/download/2.1/pca_rotation.rds to Downloads Folder');
+    else
+        system(['mv ~/Downloads/pca_rotation.rds ',brainage_path]);
+    end
+end
+
 % Detect brainage SH file
 brainage_file_path = fullfile(brainage_path,'brainageR');
 
@@ -1004,6 +1013,12 @@ save(outname,opt1,'save_mfile')
 end
 
 function display_complete(stepnum,step,error_num)
+
+if isempty(error_num)
+    error_num = 0;
+else
+    error_num = size(error_num,1);
+end
 
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')

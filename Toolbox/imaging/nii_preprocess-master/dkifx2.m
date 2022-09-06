@@ -1,4 +1,4 @@
-function MK_nam = dkifx2 (DWI_nam, bval_nam, Mask_nam, Smooth)
+function MK_nam = dkifx2 (DWI_nam, bval_nam, Mask_nam, Smooth, param)
 % DWI_nam  : name of DWI file, either (img.nii or img.nii.gz)
 % bval_nam : b-value name (img.bval)
 % Mask_nam : (optional) name of masking image (mask.nii or mask.nii.gz)

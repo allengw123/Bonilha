@@ -708,6 +708,11 @@ end
 respdat=cell2mat(tempdat(1:7));
 nonrespdat=cell2mat(tempdat(8:9));
 
+
+% Assume each clip independent (LiTT)
+% respdat=cell2mat(tempdat([4 7]));
+% nonrespdat=cell2mat(tempdat(8:9));
+
 % Normalize to baseline
 respnorm = [];
 for r=1:size(respdat,1)
@@ -725,8 +730,12 @@ for r=1:size(nonrespdat,1)
     end
 end
 
-x=respnorm(:,[1 3 4 5])
-y=nonrespnorm(:,[1 3 4 5])
+x=respdat(:,[1 3 4 5]);
+y=nonrespdat(:,[1 3 4 5]);
+
+x=respnorm(:,[1 3 4 5]);
+y=nonrespnorm(:,[1 3 4 5]);
+
 
 % Calculate phase difference
 respdatdiff=[];

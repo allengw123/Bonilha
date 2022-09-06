@@ -45,13 +45,13 @@ for i = 1:numel(mat_files)
         for m = 1:2
             save_nifti =[];
             wk_save_name = fullfile(wk_save_folder,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m}));
-            wk_save_name_cus = fullfile(wk_save_folder,sprintf('%s_%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m},'custom'));
+            %wk_save_name_cus = fullfile(wk_save_folder,sprintf('%s_%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m},'custom'));
 
             wk_nifti = wk_ses.(['vbm_',matter{m}]);
             hdr = wk_nifti.hdr;
             hdr.fname = wk_save_name;
             spm_write_vol(hdr,wk_nifti.dat);
-            save_nii(create_nifti_template(wk_nifti),wk_save_name_cus)
+            %save_nii(create_nifti_template(wk_nifti),wk_save_name_cus)
         end
     end
 end
