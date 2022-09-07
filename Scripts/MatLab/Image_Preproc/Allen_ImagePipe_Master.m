@@ -23,9 +23,9 @@ clc
 
 
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
-INPUT_PATH = '/media/bonilha/Elements/Master_Epilepsy_Database_SYNC';
-OUTPUT_PATH = '/media/bonilha/Elements/MasterSet';
-DISEASE_TAG = 'Patients';
+INPUT_PATH = '/media/bonilha/Elements/UCSD_database/raw';
+OUTPUT_PATH = '/media/bonilha/Elements/UCSD_database';
+DISEASE_TAG = 'Controls';
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%% ADVANCE OPTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

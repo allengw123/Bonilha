@@ -133,12 +133,12 @@ if true
     %matName
     %addLimeVersionSub(matName); %update versioning
 end
-%print output
-pth = '~/Desktop';
-if ~exist(pth,'file'), pth = ''; end;
-%printDTISub(imgs, fullfile(pth,'MasterDTI')); %show results - DTI
-nii_mat2ortho(matName, fullfile(pth,'MasterNormalized')); %do after printDTI (spm_clf) show results - except DTI
-diary off
+% %print output
+% pth = '~/Desktop';
+% if ~exist(pth,'file'), pth = ''; end;
+% %printDTISub(imgs, fullfile(pth,'MasterDTI')); %show results - DTI
+% nii_mat2ortho(matName, fullfile(pth,'MasterNormalized')); %do after printDTI (spm_clf) show results - except DTI
+% diary off
 %nii_preprocess()
 
 function doDkiTractSub(imgs,matName,dtiDir,atlas)
