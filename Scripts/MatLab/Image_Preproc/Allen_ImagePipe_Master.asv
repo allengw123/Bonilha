@@ -130,7 +130,7 @@ display_complete(3,'DTI processing',DTI_errors)
 mkdir(processed_output)
 
 nii_preprocess_subfolders(harvest_output,processed_output)
-
+%%
 % Display Step 4 completion
 display_complete(4,'Matfile Extraction')
 %% Brain Age
@@ -757,10 +757,10 @@ end
 end
 
 function setup_brainagedir(brainage_path,spm_path)
-disp('Preping brainageR')
 
 % Check to see if any large files missing that cant be cloned via github
 pca_rotation = fullfile(brainage_path,'pca_rotation.rds');
+
 if ~exist(pca_rotation,"file")
     disp('brainageR setup file missing... attempting to auto-download missing file... may take awhile')
     cmd = 'cd ~/Downloads; wget -nv https://github.com/james-cole/brainageR/releases/download/2.1/pca_rotation.rds';
@@ -811,13 +811,9 @@ fileContents{idx(1)} = matlab_path_line;
 brainage_file = fopen(brainage_file_path,'w');
 fprintf(brainage_file,'%s\n',string(fileContents));
 fclose(brainage_file);
-
-disp('brainageR prep steps complete')
 end
 
 function run_brainage_parallel(processed_output,nii_preproc_database,tempbrain_folder,brainage_path,brainage_folder)
-
-disp('Running brainageR')
 
 % Detect Nii_Harvested Subjects
 processed_matfiles = dir(fullfile(processed_output,'**','*.mat'));
@@ -859,7 +855,7 @@ parfor a = 1:numel(processed_matfiles)
 
         % Run brainageR
         cmd = sprintf('%s -f %s -o %s',fullfile(brainage_path,'brainageR'),s_input,brainage_output);
-        system(cmd,'-echo')
+        system(cmd)
 
         % Save brainageR output
         brain_age_pred = readtable(brainage_output);
@@ -895,7 +891,6 @@ CHECK_BRAINAGER = opt.CHECK_BRAINAGER;
 subjects = dir(fullfile(processed_matfolder,'*.mat'));
 subject_folder = subjects.folder;
 subjects = {subjects.name};
-
 parfor s = 1:numel(subjects)
     fn = [];
 
@@ -1023,21 +1018,32 @@ end
 function display_complete(stepnum,step,error_num)
 
 if ~exist('error_num','var')
+    
 elseif isempty(error_num)
     error_num = 0;
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    disp(' ')
+    disp(['Step ',num2str(stepnum),'---',step,' Complete'])
+    if nargin>2
+        disp([num2str(error_num),' Errors Detected'])
+    end
+    disp(' ')
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 else
     error_num = size(error_num,1);
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    disp(' ')
+    disp(['Step ',num2str(stepnum),'---',step,' Complete'])
+    if nargin>2
+        disp([num2str(error_num),' Errors Detected'])
+    end
+    disp(' ')
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 end
 
-disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-disp(' ')
-disp(['Step ',num2str(stepnum),'---',step,' Complete'])
-if nargin>2
-    disp([num2str(error_num),' Errors Detected'])
-end
-disp(' ')
-disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 
 end

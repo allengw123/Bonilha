@@ -78,6 +78,10 @@ if nargin<4
             c.NumWorkers = numOfGPU;
             pool = c.parpool(numOfGPU);
         end
+    else
+        c = parcluster;
+        c.NumWorkers = numOfGPU;
+        pool = c.parpool(numOfGPU);
     end
     
 
@@ -122,7 +126,7 @@ else
     startParallelHarvest(debug_sbj,baseDir,outDir,opt,3,true)
 end
 
-function      error_sbjs = startParallelHarvest(subjDirs,baseDir,outDir,opt,gpu_idx,DEBUG)
+function error_sbjs = startParallelHarvest(subjDirs,baseDir,outDir,opt,gpu_idx,DEBUG)
 
 setOrigin = opt.setOrigin ; %attempt to crop and set anterior commissure for images
 isExitAfterTable = opt.isExitAfterTable; % <- if true, only generates table, does not process data
@@ -243,7 +247,6 @@ for xper = 1: numel(xperimentKeys)
         ForceDTI =[];
         ForceVBM = [];
         GPU = gpu_idx-1;
-        disp(['GPU allocation activated...#',num2str(GPU)])
         %666x -
         %imgs(s).nii.fMRI.newImg = false;
         %imgs(s).nii.Rest.newImg = false;
@@ -318,6 +321,7 @@ for xper = 1: numel(xperimentKeys)
         end
 
         if anyNewImg
+            disp(['GPU allocation activated...#',num2str(GPU)])
             if ~exist('DEBUG','var')
                 try
                     matNameGUI = fullfile(subjDir,xperimentKeys{xper}, [subj,'_',xperimentKeys{xper}, '_limegui.mat']);
@@ -336,13 +340,6 @@ for xper = 1: numel(xperimentKeys)
                     nii_preprocess(mat,[],process1st,true,false);
 
                     matName = fullfile(subjDir,xperimentKeys{xper}, sprintf('T1_%s_%s_lime.mat', subj, imgs(s).nii.T1.x));
-                    if isPreprocess
-                        nii_preprocess(mat,matName,process1st)
-
-                    else
-                        fprintf('Cropped but did not preprocess %s\n',matName);
-                    end
-                    process1st = false; %only check for updates for first person
                 catch e
                     disp(['ERROR IN ',subj])
                     error_sbjs = [error_sbjs;{subj,xperimentKeys{xper},{e}}];
@@ -361,6 +358,7 @@ for xper = 1: numel(xperimentKeys)
                 end
                 %process the data
                 nii_preprocess(mat,[],process1st,true,false);
+                error_sbjs=[];
             end
         end
     end
@@ -433,16 +431,17 @@ if isfield(m,'cbf') && isfield(imgs.nii.ASL, 'x')
 
     imgs.nii.ASL.newImg = ~endsWithSub(m.cbf.hdr.fname, ['_',imgs.nii.ASL.x,'M0CSF.nii']);
 end
-% if isfield(m,'fa') && isfield(imgs.nii.DTI, 'x')
-%     imgs.nii.DTI.newImg = ~endsWithSub(m.fa.hdr.fname, ['_',imgs.nii.DTI.x,'d_FA.nii']);
-%     imgs.nii.DTIrev.newImg = imgs.nii.DTI.newImg;
-% end
+if isfield(m,'fa') && isfield(imgs.nii.DTI, 'x')
+    imgs.nii.DTI.newImg = ~endsWithSub(m.fa.hdr.fname, ['_',imgs.nii.DTI.x,'d_FA.nii']);
+    imgs.nii.DTIrev.newImg = imgs.nii.DTI.newImg;
+end
 if isfield(m,'RestAve') && isfield(imgs.nii.Rest, 'x')
     imgs.nii.Rest.newImg = ~endsWithSub(m.RestAve.hdr.fname, ['_',imgs.nii.Rest.x,'.nii']);
 end
 if isfield(m,'fMRIave') && isfield(imgs.nii.fMRI, 'x')
     imgs.nii.fMRI.newImg = ~endsWithSub(m.fMRIave.hdr.fname, ['_',imgs.nii.fMRI.x,'.nii']);
 end
+
 
 %for i = 1: numel(f)
 %    fprintf('%s %d\n', f{i}, imgs.nii.(f{i}).newImg);

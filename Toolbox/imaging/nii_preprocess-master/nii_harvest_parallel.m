@@ -316,7 +316,7 @@ for xper = 1: numel(xperimentKeys)
         end
 
         if anyNewImg
-            if nargin<4
+            if nargin<14
                 try
                     matNameGUI = fullfile(subjDir,xperimentKeys{xper}, [subj,'_',xperimentKeys{xper}, '_limegui.mat']);
                     fprintf('Creating %s\n',matNameGUI);

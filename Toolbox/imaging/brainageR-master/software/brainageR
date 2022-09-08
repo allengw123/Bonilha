@@ -65,7 +65,7 @@ done
 ## set software directories for your local system
 brainageR_dir=/home/bonilha/Documents/GitHub/Bonilha/Toolbox/imaging/brainageR-master/
 spm_dir=/home/bonilha/Documents/GitHub/Bonilha/Toolbox/imaging/brainageR_SPM/
-matlab_path=/home/bonilha/MATLAB/R2022a/bin/matlab
+matlab_path=/usr/local/MATLAB/R2022a/bin/matlab
 FSLDIR=/usr/local/fsl/
 ## run brainageR analysis
 ### SPM12 segmentation and normalisation
