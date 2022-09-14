@@ -1,5 +1,7 @@
 function error_sbjs = nii_harvest_parallel (baseDir,outDir,opt,debug_sbj)
 
+
+% Define options
 HYPER_THREAD = opt.HYPER_THREAD; % MAY CAUSE OVERHEATING. Since moving a lot of files, CPUs will benefit from hyperthreading
 setOrigin = opt.setOrigin ; %attempt to crop and set anterior commissure for images
 isExitAfterTable = opt.isExitAfterTable; % <- if true, only generates table, does not process data
@@ -50,6 +52,8 @@ if ~exist('baseDir','var') || isempty(baseDir)
 end
 
 
+% Create Harvest Output Folder
+mkdir(opt.paths.harvest_output)
 
 %***Ignores directories containing '_' symbol
 subjDirs = subFolderSub(baseDir);
@@ -79,29 +83,13 @@ end
 if nargin<4
 
     %set up parallel loop variables
-    if HYPER_THREAD
-        % Enable Hyperthreading if true
-        core_info = evalc('feature(''numcores'')');
-        l_cores = regexp(core_info,'MATLAB was assigned: ','split');
-        l_cores = str2double(extractBefore(l_cores{2},' logical cores'));
-        disp('WARNING....')
-        disp('HYPER THREADING ENABLE (.75x total imaginary cores ')
-        disp('MAY CAUSE OVERHEATING')
-        disp('WARNING....')
-        if ~isempty(gcp('nocreate'))
-            pool = gcp('nocreate');
-            delete(pool)
-        end
-        c = parcluster;
-        c.NumWorkers = floor(l_cores*.75);% Hyperthread CPUs to 1.5x log+real cores)
-        pool = c.parpool(floor(l_cores*.75));
+    if opt.HYPER_THREAD
+        pool = setpool(3);
     else
-        if ~isempty(gcp('nocreate'))
-            pool = gcp('nocreate');
-            delete(pool)
-        end
-        pool = parpool;
+        pool = setpool(2);
     end
+
+
     numLoops = pool.NumWorkers;
     subjDirsSize = length(subjDirs);
     div = floor(subjDirsSize/numLoops);
@@ -136,7 +124,12 @@ else
     startParallelHarvest(debug_sbj,baseDir,outDir,setOrigin,isExitAfterTable,isPreprocess,isReportDims,reprocessfMRI,reprocessRest,reprocessASL,reprocessDTI,reprocessVBM,true);
 end
 
-function      error_sbjs = startParallelHarvest(subjDirs,baseDir,outDir,setOrigin,isExitAfterTable,isPreprocess,isReportDims,reprocessfMRI,reprocessRest,reprocessASL,reprocessDTI,reprocessVBM,DEBUG)
+if exist('error_sbjs')
+    error_sbjs = error_sbjs(~cellfun(@isempty,error_sbjs));
+    error_sbjs = cat(1,error_sbjs{:});
+end
+
+function error_sbjs = startParallelHarvest(subjDirs,baseDir,outDir,setOrigin,isExitAfterTable,isPreprocess,isReportDims,reprocessfMRI,reprocessRest,reprocessASL,reprocessDTI,reprocessVBM,DEBUG)
 
 modalityKeysVerbose = {'Lesion','T1','T2','ASL','ASLrev','Rest_','fMRI','fme1','fme2','fmph','fMRI_pass','fMRI_fam'}; %DTIREV before DTI!!! both "DTIREV.nii" and "DTI.nii" have prefix "DTI"
 modalityDependency =  [0,       1,   1,   0,    6,       0,      0,     0,     0,     0,     0           0         ]; %e.g. T1 and T2 must be from same study as lesion
@@ -218,7 +211,7 @@ for xper = 1: numel(xperimentKeys)
     end
     if exist(outDir, 'file') ~= 7, error('Unable to find folder %s', outDir); end;
     %find images we have already processed
-    if isempty(spm_figure('FindWin','Graphics')), spm fmri; end; %launch SPM if it is not running
+%     if isempty(spm_figure('FindWin','Graphics')), spm fmri; end; %launch SPM if it is not running
     process1st = false; % do not check for updates on the cluster!  DPR 20200205
 
 
@@ -316,7 +309,7 @@ for xper = 1: numel(xperimentKeys)
         end
 
         if anyNewImg
-            if nargin<14
+            if nargin<13
                 try
                     matNameGUI = fullfile(subjDir,xperimentKeys{xper}, [subj,'_',xperimentKeys{xper}, '_limegui.mat']);
                     fprintf('Creating %s\n',matNameGUI);
@@ -358,23 +351,14 @@ for xper = 1: numel(xperimentKeys)
                     %if imgs(s).nii.DTI.newImg, setAcpcSubDTI (matNameGUI); end;
                 end
                 %process the data
-
                 nii_preprocess(mat,[],process1st,true,true);
 
-                matName = fullfile(subjDir,xperimentKeys{xper}, sprintf('T1_%s_%s_lime.mat', subj, imgs(s).nii.T1.x));
-                if isPreprocess
-                    nii_preprocess(mat,matName,process1st)
-
-                else
-                    fprintf('Cropped but did not preprocess %s\n',matName);
-                end
-                process1st = false; %only check for updates for first person
             end
         end
     end
 end
 fprintf('All done\n');
-fprintf ('nii_harvest required %f seconds to run.\n', toc(t_start) );
+fprintf ('nii_harvest required %f seconds to run.\n', toc(t_start));
 %end nii_harvest
 
 function reportDimsSub(imgs,nSubj)
@@ -431,7 +415,7 @@ matname = dir(fullfile(subjDir,xper,'T1_*_lime.mat'));
 if isempty(matname), return; end
 matname = fullfile(matname(1).folder,matname(1).name);
 m = load(matname);
-if isfield(m,'T1')
+if isfield(m,'T1') && isfield(m,'VBM_volume_Total')
     imgs.nii.T1.newImg = ~endsWithSub(m.T1.hdr.fname, ['_',imgs.nii.T1.x,'.nii']);
     imgs.nii.T2.newImg = imgs.nii.T1.newImg;
     imgs.nii.Lesion.newImg = imgs.nii.T1.newImg;
@@ -655,3 +639,4 @@ nameFolds = nameFolds(cellfun(@(s)isempty(regexp(s,'\.')),nameFolds)); %remove f
 nameFolds = nameFolds(cellfun(@(s)isempty(regexp(s,' ')),nameFolds)); %remove folders with spaces
 nameFolds(ismember(nameFolds,{'.','..'})) = [];
 %end subFolderSub()
+

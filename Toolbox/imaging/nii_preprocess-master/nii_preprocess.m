@@ -403,8 +403,12 @@ end
 targetDir = fullfile(p,'surf');
 lhSURF = dir(fullfile(targetDir,'lh.cent*.gii'));
 rhSURF = dir(fullfile(targetDir,'rh.cent*.gii'));
-nii_nii2mat(fullfile(normGM(1).folder, normGM(1).name), 'vbm_gm' , matName);
-nii_nii2mat(fullfile(normWM(1).folder, normWM(1).name), 'vbm_wm' , matName);
+try
+    nii_nii2mat(fullfile(normGM(1).folder, normGM(1).name), 'vbm_gm' , matName);
+    nii_nii2mat(fullfile(normWM(1).folder, normWM(1).name), 'vbm_wm' , matName);
+catch e
+    error('Failed to write VBM results to matfile')
+end
 %nii_nii2mat(fullfile(lhSURF.folder, lhSURF.name), 'surf_lh' , matName);
 %nii_nii2mat(fullfile(rhSURF.folder, rhSURF.name), 'surf_rh' , matName);
 

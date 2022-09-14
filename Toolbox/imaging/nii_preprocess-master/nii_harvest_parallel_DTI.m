@@ -1,5 +1,9 @@
 function error_sbjs = nii_harvest_parallel_DTI (baseDir,outDir,opt,debug_sbj)
 
+
+% Create Harvest Output Folder
+mkdir(opt.paths.harvest_output)
+
 sync_with_formated = opt.sync_with_formated;
 interweave = opt.interweave;
 
@@ -72,7 +76,7 @@ if nargin<4
     %set up parallel loop variables
     if ~isempty(gcp('nocreate'))
         pool = gcp('nocreate');
-        if ~pool.NumWorkers == numOfGPU
+        if ~(pool.NumWorkers == numOfGPU)
             delete(pool)
             c = parcluster;
             c.NumWorkers = numOfGPU;
@@ -125,6 +129,8 @@ if nargin<4
 else
     startParallelHarvest(debug_sbj,baseDir,outDir,opt,3,true)
 end
+
+error_sbjs = cat(1,error_sbjs{:});
 
 function error_sbjs = startParallelHarvest(subjDirs,baseDir,outDir,opt,gpu_idx,DEBUG)
 

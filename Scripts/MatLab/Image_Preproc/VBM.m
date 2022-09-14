@@ -22,23 +22,25 @@ cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
 % Inputs:
-PatientData='/media/bonilha/Elements/mat2nii_savefolder';
-cd(PatientData)
+PatientData='/media/bonilha/Elements/MasterSet_old/mat2nii_savefolder';
+save_path = '/media/bonilha/Elements/MasterSet_old/VBM';
+matter = 'gm';
+demo_sheet_path = '/media/bonilha/Elements/MasterSet_old/Roth_Master Epilepsy Database_Anonymized.xlsx';
 
-save_path = '/media/bonilha/Elements';
 %% Find Nii files
 
-% look for Controls nifti files
-controlfiles = dir(fullfile(PatientData,"Controls","**",'*_gm.nii'));
-% look for Patients nifti files
-patientfiles = dir(fullfile(PatientData,"Patients","**",'*_gm.nii'));
+mkdir(save_path)
+cd(PatientData)
 
+% look for Controls nifti files
+controlfiles = dir(fullfile(PatientData,"Controls","**",['*_',matter,'.nii']));
 controls = [];
 for i = 1:length(controlfiles)
     controls = [controls;{fullfile(controlfiles(i).folder,controlfiles(i).name)}];
 end
 
-
+% look for Patients nifti files
+patientfiles = dir(fullfile(PatientData,"Patients","**",['*_',matter,'.nii']));
 patients = [];
 for i = 1:length(patientfiles)
     patients = [patients;{fullfile(patientfiles(i).folder,patientfiles(i).name)}];
@@ -48,21 +50,29 @@ end
 
 [Patient_GM, Patient_GM_names] = get_volume_data(patients);
 [Control_GM, Control_GM_names] = get_volume_data(controls);
+
+% Load xlsx
+demo_sheet = readtable(demo_sheet_path);
  
 %% compare volumes (t-test/bonferroni)
-ttest_savepath=fullfile(save_path,'ttest');
-mkdir(ttest_savepath);
 
-[P, T] = compare_volumes(Patient_GM, Control_GM,...
-    controls{1},ttest_savepath,'Patients','Controls');
+[P, T] = compare_volumes(Control_GM,Patient_GM,...
+    controls{1},save_path,'Controls','Patients');
 
-cd(ttest_savepath)
+[P, T] = compare_volumes(Control_GM,Patient_GM(:,:,:,strcmp(cellfun(@(x) {x(5)},Patient_GM_names),'L')),...
+    controls{1},save_path,'Controls','L_Patients');
+
+[P, T] = compare_volumes(Control_GM,Patient_GM(:,:,:,strcmp(cellfun(@(x) {x(5)},Patient_GM_names),'R')),...
+    controls{1},save_path,'Controls','R_Patients');
+
+
+cd(save_path)
 
 %% Load AgeRegress
 save_path = 'F:\VBM ouput\Age_Regress';
-ttest_savepath=fullfile(save_path,'flip_ttest');
-mkdir(ttest_savepath);
-cd(ttest_savepath)
+save_path=fullfile(save_path,'flip_ttest');
+mkdir(save_path);
+cd(save_path)
 
 imgs = load('F:\CNN output\2D_CNN\MATLAB\AgeRegress\residual_imgs.mat');
 imgs = imgs.reshaped_residuals;
@@ -104,7 +114,7 @@ for n = 1:length(p_comps)
 
    
     
-    [P, T] = compare_volumes(v1, v2, 'F:\VBM ouput\Age_Regress\Example.nii', ttest_savepath,comps{p_comps(n,1)},comps{p_comps(n,2)});
+    [P, T] = compare_volumes(v1, v2, 'F:\VBM ouput\Age_Regress\Example.nii', save_path,comps{p_comps(n,1)},comps{p_comps(n,2)});
 end
 %% Fitlm
 
@@ -291,7 +301,8 @@ function [X, X_names,N] = get_volume_data(ff)
     for i = 1:numel(ff)
         N = load_nii(ff{i});
         X(:,:,:,count) = N.img;
-        X_names{count,1} =ff{i}; 
+        [~,name,~] = fileparts(ff{i});
+        X_names{count,1} =name; 
         count = count + 1;
     end
 end
@@ -308,13 +319,13 @@ function [P, T] = compare_volumes(Cont, Pat, mask, save_place, v1_savename, v2_s
     PM = M;
     TM = M;
 
-    if size(P,3) == 58
-        PM.img(:,:,28:85) = P;
-        TM.img(:,:,28:85) = T;
-    else
-        PM.img = P;
-        TM.img = T;
-    end
+%     if size(P,3) == 58
+%         PM.img(:,:,28:85) = P;
+%         TM.img(:,:,28:85) = T;
+%     else
+    PM.img = P;
+    TM.img = T;
+%     end
     save_nii(PM, fullfile(save_place,[savefile_name '_P.nii']));
     save_nii(TM, fullfile(save_place,[savefile_name '_T.nii'])); 
 
