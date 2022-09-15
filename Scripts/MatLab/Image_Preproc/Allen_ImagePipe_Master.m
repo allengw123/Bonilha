@@ -23,16 +23,16 @@ clc
 
 
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
-%INPUT_PATH = '/media/bonilha/Elements/Image_database/MasterSet/raw_Box_SYNC';
-%OUTPUT_PATH = '/media/bonilha/Elements/Image_database/MasterSet';
-INPUT_PATH = '/media/bonilha/Elements/Image_database/UCSD_database/raw';
-OUTPUT_PATH = '/media/bonilha/Elements/Image_database/UCSD_database';
+INPUT_PATH = '/media/bonilha/Elements/Image_database/MasterSet/raw_Box_SYNC';
+OUTPUT_PATH = '/media/bonilha/Elements/Image_database/MasterSet';
+% INPUT_PATH = '/media/bonilha/Elements/Image_database/UCSD_database/raw';
+% OUTPUT_PATH = '/media/bonilha/Elements/Image_database/UCSD_database';
 DISEASE_TAG = 'Patients';
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%% ADVANCE OPTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Format Options
+% Format Options/
 opt.SKIP_PROBLEM_TAG = true; %true = don't preprocess subjects with a "problem" string attached at the end
 opt.PROBLEM_TAGS = {'problem','MissingT1','MissingLesion','IncorrectLesion'}; % ends with tags that SKIP_PROBLEM_TAG will look for
 opt.RECHECK_ALREADY_FORMATED = false; % Rechecks formated subjects
@@ -114,7 +114,7 @@ display_complete(2,'Harvest Parallel',errors_parallel)
 
 % Run nii_harvest (DTI)
 DTI_errors = nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt);
-% nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'PENP0022'});
+% nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'NORC0004'});
 
 % Display Step 3 completion
 display_complete(3,'DTI processing',DTI_errors)
@@ -725,27 +725,6 @@ errors(cellfun(@isempty,errors)) = [];
 sbj_error(cellfun(@isempty,sbj_error)) = [];
 if ~isempty(errors)
     errors =[sbj_error' errors'];
-
-    incorrect_input = true;
-    while incorrect_input
-        disp([num2str(size(errors,1)),' Error(s) detected'])
-        disp('  Errors included the following tags. Please fix by checking errors variable or continue')
-        unique_errors = unique(errors(:,2));
-        for u = 1:numel(unique_errors)
-            disp(['     ',unique_errors{u}])
-        end
-        cont = input('Do you still want to continue? (y/n)','s');
-        if cont == 'y'
-            incorrect_input = false;
-        elseif cont == 'n'
-            disp('Exiting out of pipeline. Check errors variable in workspace')
-            return
-        else
-            clc
-            disp(['You entered ... ',cont])
-            disp('Input unknown. Please answer by entering y for yes or n for no')
-        end
-    end
 end
 
 
@@ -831,7 +810,7 @@ mkdir(opt.paths.brainage_folder)
 processed_matfiles = dir(fullfile(opt.paths.processed_output,'**','*.mat'));
 
 % Reset parallel pool
-setpool(2,true)
+setpool(2,true);
 
 brainageR_errors = cell(size(processed_matfiles));
 parfor a = 1:numel(processed_matfiles)
@@ -917,8 +896,8 @@ CHECK_BRAINAGER = opt.CHECK_BRAINAGER;
 DELETEBRAINAGEIFFAIL = opt.DELETEBRAINAGEIFFAIL;
 
 % Set pool
-if opt.HYPER_THREAD;
-    setpool(3)
+if opt.HYPER_THREAD
+    setpool(3);
 else
     setpool(2);
 end

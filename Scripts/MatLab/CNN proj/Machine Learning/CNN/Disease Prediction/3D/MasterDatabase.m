@@ -29,8 +29,8 @@ for i = 1:length(patientfiles)
 end
 
 % Load volume
-[Patient_GM, Patient_GM_names] = get_volume_data(patients);
-[Control_GM, Control_GM_names] = get_volume_data(controls);
+[Patient_GM, Patient_GM_names] = get_volume_data(patients,true);
+[Control_GM, Control_GM_names] = get_volume_data(controls,true);
 
 L_idx = strcmp(cellfun(@(x) x(5),Patient_GM_names),"L");
 R_idx =  strcmp(cellfun(@(x) x(5),Patient_GM_names),"R");
@@ -84,22 +84,10 @@ for i = 1
     % param.DO = 0.4;
     % param.EP = 20;
 
-
-    % Parameters [0.746835443037975	0.781645569620253	0.708860759493671 0.737341772151899	0.822784810126582	0.794303797468354	0.838607594936709	0.810126582278481	0.775316455696203]
-    % param.GLR = 0.001;
-    % param.BS = 10;
-    % param.DO = 0.4;
-    % param.EP = 20;
-
-    % Parameters
-    param.GLR = 0.0001;
-    param.BS = 50;
-    param.DO = 0.3;
-    param.EP = 20;
-
     % Train the network
     [net{i},acc{i},confmat{i}] = runcnnFC_new(trainDataset,trainLabels,testDataset,testLabels,valDataset,valLabels,param);
     acc{i}
+    confmat{i}
 end
 
 %% Disease laterality setup (Only patient)
@@ -188,11 +176,15 @@ acc = sum(YPred_test == YTest)/numel(YTest);
 [con.C, con.order]= confusionmat(YTest,YPred_test);
 end
 
-function [X, X_names,N] = get_volume_data(ff)
+function [X, X_names,N] = get_volume_data(ff,mid_extract)
 count = 1;
 for i = 1:numel(ff)
     N = load_nii(ff{i});
-    X(:,:,:,count) = N.img;
+    if mid_extract
+        X(:,:,:,count) = N.img(:,:,28:85);
+    else
+        X(:,:,:,count) = N.img();
+    end
     [~,name,~] = fileparts(ff{i});
     X_names{count,1} =name;
     count = count + 1;

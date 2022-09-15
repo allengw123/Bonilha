@@ -69,7 +69,7 @@ matlab_path=/usr/local/MATLAB/R2022a/bin/matlab
 FSLDIR=/usr/local/fsl/
 ## run brainageR analysis
 ### SPM12 segmentation and normalisation
-cmd="$matlab_path -nosplash -nodesktop -r \"addpath(['$brainageR_dir','/software/']);spm_preprocess_brainageR('$full_path_file',['$brainageR_dir','/software/templates/'], '$spm_dir');exit\""
+cmd="$matlab_path -nosplash -r \"addpath(['$brainageR_dir','/software/']);spm_preprocess_brainageR('$full_path_file',['$brainageR_dir','/software/templates/'], '$spm_dir');exit\""
 echo $cmd
 eval ${cmd}
 ### check that the pre-processing has completed

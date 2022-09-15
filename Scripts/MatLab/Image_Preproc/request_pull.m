@@ -1,6 +1,11 @@
-request_xlsx_pth = '/home/bonilha/Downloads/Data_forAnees_9.7.22.xlsx';
+close all
+clear all
+clc
+
+% Input
+request_xlsx_pth = '/media/bonilha/Elements/Image_Requests/Anees_9.7.22/Data_forAnees_9.7.22.xlsx';
 image_database = '/media/bonilha/Elements/Image_database';
-save_dir = '~/Downloads';
+save_dir = '/media/bonilha/Elements/Image_Requests';
 
 %%
 
