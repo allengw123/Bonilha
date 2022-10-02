@@ -26,7 +26,7 @@ spm_jobman('initcfg');
 pattern = '.nii';
 replacement = '';
 fname = regexprep(t1,pattern,replacement);
-    
+   
 % Segment
 matlabbatch{1}.spm.spatial.preproc.channel.vols = {[t1, ',1']};
 matlabbatch{1}.spm.spatial.preproc.channel.biasreg = 0.001;
@@ -108,6 +108,7 @@ matlabbatch{3}.spm.tools.dartel.mni_norm.bb = [NaN NaN NaN
                                                NaN NaN NaN];
 matlabbatch{3}.spm.tools.dartel.mni_norm.preserve = 1;
 matlabbatch{3}.spm.tools.dartel.mni_norm.fwhm = [4 4 4];
+
 % Calculate tissue volumes
 matlabbatch{4}.spm.util.tvol.matfiles(1) = cfg_dep('Segment: Seg Params', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','param', '()',{':'}));
 matlabbatch{4}.spm.util.tvol.tmax = 3;
@@ -115,11 +116,11 @@ matlabbatch{4}.spm.util.tvol.mask = {[spm_dir,'tpm/mask_ICV.nii,1']};
 matlabbatch{4}.spm.util.tvol.outf = [fname,'_tissue_volumes.csv'];
 
 spm('defaults', 'PET');
+
 try
     spm_jobman('run', matlabbatch);
 catch
     %keyboard
-    error('err')
 end
 
 exit;

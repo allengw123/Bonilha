@@ -1,7 +1,8 @@
 
 function pool = setpool(input,hardreset)
 
-% Input level
+% Input input
+%%% 0 = turn off parpool
 %%% 1 = 25% capacity
 %%% 2 = 50% capacity
 %%% 3 = 75% capacity
@@ -15,11 +16,10 @@ end
 core_info = evalc('feature(''numcores'')');
 l_cores = regexp(core_info,'MATLAB was assigned: ','split');
 l_cores = str2double(extractBefore(l_cores{2},' logical cores'));
-l_cores = l_cores*(0.25:0.25:1);
+l_cores = l_cores*(0:0.25:1);
 
 c = parcluster;
-c.NumWorkers = l_cores(input);
-
+c.NumWorkers = l_cores(input+1);
 
 if input == 3
     disp('WARNING....')
@@ -36,11 +36,15 @@ end
 
 if ~isempty(gcp('nocreate'))
     pool = gcp('nocreate');
-    if pool.NumWorkers ~= l_cores(input) || hardreset
+    if pool.NumWorkers ~= c.NumWorkers || hardreset || input == 0
         delete(pool)
-        pool = parpool(c.NumWorkers);
+        if input ~= 0
+            pool = parpool(c.NumWorkers);
+        end
     end
-else
+
+elseif input ~= 0
     pool = parpool(c.NumWorkers);
+else
 end
 end

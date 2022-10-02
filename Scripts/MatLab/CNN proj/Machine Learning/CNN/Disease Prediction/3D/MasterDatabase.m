@@ -53,6 +53,16 @@ valDataset = cat(4,patient_val,control_val);
 valLabels = [ones(size(patient_val,4),1); ones(size(control_val,4),1)*2];
 valDataset = permute(valDataset,[1 2 3 5 4]);
 
+param.GLR = 0.0001;
+param.BS = 10;
+param.DO = 0.6;
+param.EP = 20;
+param.showgraph = 'training-progress';
+
+% Train the network
+[net,acc,confmat] = runcnnFC_new(trainDataset,trainLabels,testDataset,testLabels,valDataset,valLabels,param);
+acc
+confmat.C
 
 %% Disease laterality setup
 net = [];
@@ -79,15 +89,16 @@ for i = 1
     valDataset = permute(valDataset,[1 2 3 5 4]);
 
     % Parameters [0.816455696202532	0.835443037974684	0.740506329113924 0.800632911392405	0.762658227848101	0.746835443037975	0.822784810126582 0.803797468354430	0.784810126582278	0.746835443037975]
-    % param.GLR = 0.0001;
-    % param.BS = 10;
-    % param.DO = 0.4;
-    % param.EP = 20;
+    param.GLR = 0.000001;
+    param.BS = 20;
+    param.DO = 0.4;
+    param.EP = 20;
+    param.showgraph = 'training-progress';
 
     % Train the network
     [net{i},acc{i},confmat{i}] = runcnnFC_new(trainDataset,trainLabels,testDataset,testLabels,valDataset,valLabels,param);
     acc{i}
-    confmat{i}
+    confmat{i}.C
 end
 
 %% Disease laterality setup (Only patient)
@@ -119,6 +130,7 @@ for i = 1:10
     param.DO = 0.6;
     param.EP = 20;
     param.showgraph = 'none';
+    param.verbose = true;
 
     % Train the network
     [net{i},acc{i},confmat{i}] = runcnnFC_new(trainDataset,trainLabels,testDataset,testLabels,valDataset,valLabels,param);
@@ -126,13 +138,17 @@ for i = 1:10
     confmat{i}.C
 end
 
+temp  =cellfun(@(x) x.C,confmat,'UniformOutput',false);
+sum(cat(3,temp{:}),3)
 %% Function
 
 
 function [net,acc,con]=runcnnFC_new(trainData,trainRes,testData,testRes,valData,valRes,param)
 
+input_dim = size(trainData);
+
 layers = [
-    image3dInputLayer([113,137,113])
+    image3dInputLayer(input_dim(1:3))
     convolution3dLayer(3,8,'Padding','same')
     batchNormalizationLayer()
     reluLayer
@@ -156,8 +172,8 @@ options = trainingOptions('adam', ...  %stochastic gradient descent with momentu
     'LearnRateSchedule','piecewise', ...
     'MaxEpochs',param.EP, ...  % Default is 30
     'ValidationData',{valData,categorical(valRes)}, ...
-    'Verbose',false, ... %Indicator to display training progress information in the command window
-    'Plots','param.showgraph',...
+    'Verbose',param.verbose, ... %Indicator to display training progress information in the command window
+    'Plots',param.showgraph,...
     'Shuffle','every-epoch', ...
     'ExecutionEnvironment','multi-gpu', ...
     'MiniBatchSize',param.BS);

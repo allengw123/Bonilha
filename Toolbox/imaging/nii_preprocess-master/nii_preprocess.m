@@ -106,10 +106,10 @@ if true
             dtiDir = fileparts(imgs.DTI);
             doDtiSub(imgs);
             doFaMdSub(imgs, matName);
-            %             %-->(un)comment next line for JHU tractography
-            %             doDtiTractSub(imgs, matName, dtiDir, 'jhu');
-            %             %-->(un)comment next line for AICHA tractography
-            %             doDtiTractSub(imgs, matName, dtiDir, 'AICHA');
+            %-->(un)comment next line for JHU tractography
+            %doDtiTractSub(imgs, matName, dtiDir, 'jhu');
+            %-->(un)comment next line for AICHA tractography
+            %doDtiTractSub(imgs, matName, dtiDir, 'AICHA');
             %-->(un)comment next line for aal tractography
             doDtiTractSub(imgs, matName, dtiDir, 'aal');
 
@@ -1328,7 +1328,7 @@ FA = prepostfixSub('', '_FA', imgname);
 MD = prepostfixSub('', '_MD', imgname);
 deleteImg(FA);
 deleteImg(MD);
-[p, n, x] = fileparts(imgname);
+[p, ~, x] = fileparts(imgname);
 bDir = fullfile(p,'bedpost.bedpostX');
 if exist(bDir, 'file'), rmdir(bDir, 's'); end;
 bDir = fullfile(p,'bedpost');

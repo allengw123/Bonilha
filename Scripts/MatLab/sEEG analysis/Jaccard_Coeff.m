@@ -730,8 +730,8 @@ for r=1:size(nonrespdat,1)
     end
 end
 
-x=respdat(:,[1 3 4 5]);
-y=nonrespdat(:,[1 3 4 5]);
+x=respnorm(:,[3 4 5]);
+y=nonrespnorm(:,[3 4 5]);
 
 x=respnorm(:,[1 3 4 5]);
 y=nonrespnorm(:,[1 3 4 5]);

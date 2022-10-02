@@ -1,12 +1,5 @@
 function error_sbjs = nii_harvest_parallel_DTI (baseDir,outDir,opt,debug_sbj)
 
-
-% Create Harvest Output Folder
-mkdir(opt.paths.harvest_output)
-
-sync_with_formated = opt.sync_with_formated;
-interweave = opt.interweave;
-
 % if the correct environment variables are set in the environment, override
 % the above
 if ~isempty(getenv('nii_harvest_isExitAfterTable'))
@@ -37,24 +30,24 @@ if ~isempty(getenv('nii_harvest_explicitProcess'))
     explicitProcess = strcmpi(getenv('nii_harvest_explicitProcess'),'true')
 end
 
+% Create Harvest Output Folder
+mkdir(opt.paths.harvest_output)
+
+% Check to see if base directory exists
 if ~exist('baseDir','var') || isempty(baseDir)
     %baseDir = pwd; %
     baseDir = uigetdir('','Pick folder that contains all subjects');
 end
 
-
-
-%***Ignores directories containing '_' symbol
+% Ignores directories containing '_' symbol
 subjDirs = subFolderSub(baseDir);
 subjDirs = sort(subjDirs);
-
 if ~isempty(getenv('nii_harvest_subjDirs'))
     subjDirs = {getenv('nii_harvest_subjDirs')};
 end
 
-
 % Sync with format database
-if sync_with_formated
+if  opt.sync_with_formated
     [input_sbj,~] = subFolderSub(baseDir);
     [output_sbj,output_dir] = subFolderSub(outDir);
 
@@ -71,9 +64,9 @@ end
 
 
 if nargin<4
-
-    numOfGPU = gpuDeviceCount("available");
+    
     %set up parallel loop variables
+    numOfGPU = gpuDeviceCount("available");
     if ~isempty(gcp('nocreate'))
         pool = gcp('nocreate');
         if ~(pool.NumWorkers == numOfGPU)
@@ -88,7 +81,6 @@ if nargin<4
         pool = c.parpool(numOfGPU);
     end
     
-
     numLoops = pool.NumWorkers;
     subjDirsSize = length(subjDirs);
     div = floor(subjDirsSize/numLoops);
@@ -104,52 +96,48 @@ if nargin<4
         worker_num = worker_num.ID;
         disp(['Using GPU number ',num2str(worker_num)])
         if(numLoops <= subjDirsSize)
-            %subjDirsX = subjDirs(1+(i-1)*div:1+i*div)
             start = ((i-1)*div)+1;
             fin = ((i-1)*div)+div;
             if i == numLoops
                 fin = fin+modRemainder;
             end
 
-            if interweave
+            if opt.interweave
                 disp('INTERWEAVE OPTION ACTIVE')
                 
-                error_sbjs{i} =startParallelHarvest(subjDirs(idex{i}),baseDir,outDir,opt,worker_num)
-                %error_sbjs{1} =startParallelHarvest({'EMOPL0018'},baseDir,outDir,setOrigin,isExitAfterTable,isPreprocess,isReportDims,reprocessfMRI,reprocessRest,reprocessASL,reprocessDTI,reprocessVBM);
-
+                error_sbjs{i} =startParallelHarvest_DTI(subjDirs(idex{i}),baseDir,outDir,opt,worker_num)
             else
                 fprintf("Process #%d uses subjDirs--> %d:%d \n", i, start, fin);
 
-                error_sbjs{i} = startParallelHarvest(subjDirs(start:fin),baseDir,outDir,opt,worker_num)
+                error_sbjs{i} = startParallelHarvest_DTI(subjDirs(start:fin),baseDir,outDir,opt,worker_num)
             end
         else
             fprintf("Can't have more parallel loops than subjects to process...");
         end
     end
+    error_sbjs = cat(1,error_sbjs{:});
 else
-    startParallelHarvest(debug_sbj,baseDir,outDir,opt,3,true)
+    error_sbjs = [];
+    startParallelHarvest_DTI(debug_sbj,baseDir,outDir,opt,3,true)
 end
 
-error_sbjs = cat(1,error_sbjs{:});
 
-function error_sbjs = startParallelHarvest(subjDirs,baseDir,outDir,opt,gpu_idx,DEBUG)
+function error_sbjs = startParallelHarvest_DTI(subjDirs,baseDir,outDir,opt,gpu_idx,DEBUG)
 
 setOrigin = opt.setOrigin ; %attempt to crop and set anterior commissure for images
 isExitAfterTable = opt.isExitAfterTable; % <- if true, only generates table, does not process data
-isPreprocess = opt.isPreprocess; % <- if true full processing, otherwise just cropping
 isReportDims = opt.isReportDims; %if true, report dimensions of raw data
 reprocessRest = opt.reprocessRest;
 reprocessfMRI = opt.reprocessfMRI;
 reprocessASL = opt.reprocessASL;
 reprocessDTI = opt.reprocessDTI;
 reprocessVBM = opt.reprocessVBM ;
-explicitProcess = opt.explicitProcess; % <- if true, will only process if the reprocess flag is true
 
 modalityKeysVerbose = {'Lesion','T1','T2','DTI_','DTIrev','ASL','ASLrev','Rest_','fMRI','fme1','fme2','fmph','fMRI_PASS','fMRI_FAM'}; %DTIREV before DTI!!! both "DTIREV.nii" and "DTI.nii" have prefix "DTI"
 modalityDependency =  [0,       1,   1,   0,     4,       0,    6,       0,      0,     0,     0,     0,     0           0         ]; %e.g. T1 and T2 must be from same study as lesion
 
 modalityKeys = strrep(modalityKeysVerbose,'_','');
-xperimentKeys = {'pre','pos','session'}; %order specifies priority: 1st item checked first!
+xperimentKeys = opt.SESSION_TAG;
 error_sbjs = [];
 for xper = 1: numel(xperimentKeys)
 
@@ -158,17 +146,15 @@ for xper = 1: numel(xperimentKeys)
     blank.subjName = [];
     for i = 1: numel(modalityKeys)
         blank.nii.(modalityKeys{i}) =[];
-    end;
+    end
 
-    %1st: acquire data
+    % Look for subject images
     nSubj = 0;
     for s = 1: size(subjDirs,1)%1:nSubjDir2 %(nSubjDir2+1):nSubjDir
         subjName = deblank(subjDirs{s});
-        if subjName(1) == '.', continue; end;
-        %if (numel(subjName) > 1) && (subjName(2) == '4'), fprintf('SKIPPING %s\n', subjName); continue; end; %ignore folders with underscore, "M2015_needsmatfile"
-        if isStringInKeySub (subjName,'_'), continue; end; %ignore folders with underscore, "M2015_needsmatfile"
-        subjDir = [baseDir,filesep, subjName]; %no filesep
-        %fprintf('%s\n', subjDir);
+        if subjName(1) == '.', continue; end
+        if isStringInKeySub (subjName,'_'), continue; end %ignore folders with underscore, "M2015_needsmatfile"
+        subjDir = fullfile(baseDir,subjName); %no filesep
         nSubj = nSubj + 1;
         imgs(nSubj) = blank;
         imgs(nSubj).subjName = subjName;
@@ -177,29 +163,26 @@ for xper = 1: numel(xperimentKeys)
             xLabel = deblank(xperimentKeys{xper}); %e.g. "R01"
             xDir = [subjDir,filesep, xLabel]; %no filesep
             if ~exist(xDir, 'file'), continue; end
-            %check the following line which CHris says is pseudocode - DPR
-            if strcmpi(xLabel,'ABC') && (strcmpi(modality,'fMRI') || strcmpi(modality,'fMRI_fam')), continue; end;
-            %fprintf('%s\n', xDir);
+            if strcmpi(xLabel,'ABC') && (strcmpi(modality,'fMRI') || strcmpi(modality,'fMRI_fam')), continue; end
             imgs(nSubj) = findImgsSub(imgs(nSubj), xDir, xLabel, modality, m, modalityDependency(m));
-            %imgs(nSubj) = findImgsSub(imgs(nSubj), xDir, xLabel, modalityKeysVerbose, modalityDependency);
-            %imgs(nSubj) = findImgsSub(imgs(nSubj), xDir, xLabel)
+
         end
     end
     fprintf('Found %d subjects in %s\n', nSubj, baseDir);
-    if nSubj < 1, return; end;
+    if nSubj < 1, return; end
     if isReportDims
         reportDimsSub(imgs, nSubj);
-    end;
-    %report results
+    end
+
+
+    % Report Image Folder Finding Results
     startTime = tic;
-    % 1st row: describe values
     f = fieldnames(imgs(1).nii);
     str = 'n,subj';
     for i = 1: numel(f)
         str = sprintf('%s\t%s',str, f{i} );
     end
     fprintf('%s\n', str);
-    % subsequent rows: source of images
     for s = 1: nSubj
         subj = deblank(imgs(s).subjName);
         subjDir = fullfile(outDir, subj);
@@ -210,28 +193,24 @@ for xper = 1: numel(xperimentKeys)
             x = '-';
             if ~isempty(imgs(s).nii.(f{i})) && isfield(imgs(s).nii.(f{i}), 'x')
                 x = imgs(s).nii.(f{i}).x;
-                if ~imgs(s).nii.(f{i}).newImg, x = ['~', x]; end;
+                if ~imgs(s).nii.(f{i}).newImg, x = ['~', x]; end
             end
             str = sprintf('%s\t%s',str, x );
         end
         fprintf('%s\n', str);
     end
-
     fprintf('Table required %g seconds\n', toc(startTime));
-    %copy core files to new folder
     if isExitAfterTable
         fprintf('Disable isExitAfterTable for full analyses\n', str);
         return; %return when we are done
     end
-    if exist(outDir, 'file') ~= 7, error('Unable to find folder %s', outDir); end;
-    %find images we have already processed
-    if isempty(spm_figure('FindWin','Graphics')), spm fmri; end; %launch SPM if it is not running
+    if exist(outDir, 'file') ~= 7, error('Unable to find folder %s', outDir); end
+
     process1st = false; % do not check for updates on the cluster!  DPR 20200205
 
 
-
+    
     t_start=tic;
-
     for s =  1: nSubj
         anyNewImg = false;
         subj = deblank(imgs(s).subjName);
@@ -240,7 +219,6 @@ for xper = 1: numel(xperimentKeys)
             fprintf('Skipping %s: no T1!\n', subj);
             continue;
         end
-        %imgs(s) = findNovelImgs(subjDir, imgs(s), modalityKeysVerbose);
         global ForcefMRI;
         global ForceRest;
         global ForceASL;
@@ -253,16 +231,6 @@ for xper = 1: numel(xperimentKeys)
         ForceDTI =[];
         ForceVBM = [];
         GPU = gpu_idx-1;
-        %666x -
-        %imgs(s).nii.fMRI.newImg = false;
-        %imgs(s).nii.Rest.newImg = false;
-        %666x <-
-        %following lines always force reprocessing...
-        %if imgs(s).nii.fMRI.newImg, ForcefMRI = true; end;
-        %if imgs(s).nii.Rest.newImg, ForceRest = true; end;
-        %if imgs(s).nii.ASL.newImg, ForceASL = true; end;
-        %666 if imgs(s).nii.DTI.newImg, ForceDTI = true; end;
-        %to reprocess one modality for EVERYONE....
 
         if reprocessRest && isfield(imgs(s).nii.Rest,'img')
             ForceRest = true;
@@ -271,7 +239,6 @@ for xper = 1: numel(xperimentKeys)
         if reprocessfMRI && isfield(imgs(s).nii.fMRI,'img')
             ForcefMRI = true;
             error('xx');
-            anyNewImg = true;
         end
         if reprocessASL && isfield(imgs(s).nii.ASL,'img')
             ForceASL = true;
@@ -287,16 +254,14 @@ for xper = 1: numel(xperimentKeys)
             anyNewImg = true;
         end
 
-        %if imgs(s).nii.DTI.function nii_harvest_parallel (baseDir,outDir)newImg, ForceDTI = true; end;
 
-        %fprintf('%s %d\n', f{i}, imgs.nii.(f{i}).newImg);
-        if exist(subjDir,'file') == 0, mkdir(subjDir); end;
+        if exist(subjDir,'file') == 0, mkdir(subjDir); end
         mkdir(fullfile(subjDir,xperimentKeys{xper}))
 
         matName = fullfile(subjDir,xperimentKeys{xper},[subj,'_',xperimentKeys{xper},'_limegui.mat']);
         mat = [];
 
-        if exist(matName,'file'), mat = load(matName); end;
+        if exist(matName,'file'), mat = load(matName); end
 
         for i =  1:numel(f)
             if ~isempty(imgs(s).nii.(f{i})) && (imgs(s).nii.(f{i}).newImg)
@@ -326,23 +291,22 @@ for xper = 1: numel(xperimentKeys)
             end
         end
 
-        if anyNewImg
-            disp(['GPU allocation activated...#',num2str(GPU)])
+        if anyNewImg            
+            matNameGUI = fullfile(subjDir,xperimentKeys{xper}, [subj,'_',xperimentKeys{xper}, '_limegui.mat']);
+            fprintf('Creating %s\n',matNameGUI);
+            save(matNameGUI,'-struct', 'mat');
+
             if ~exist('DEBUG','var')
                 try
-                    matNameGUI = fullfile(subjDir,xperimentKeys{xper}, [subj,'_',xperimentKeys{xper}, '_limegui.mat']);
-                    fprintf('Creating %s\n',matNameGUI);
-                    save(matNameGUI,'-struct', 'mat');
+                    disp(['GPU allocation activated...#',num2str(GPU)])
+
                     if setOrigin
                         %determine T1 name even if output folder renamed...
-                        if imgs(s).nii.T1.newImg || imgs(s).nii.Lesion.newImg, setAcpcSubT1(matNameGUI); end;
-                        %if imgs(s).nii.T1.newImg, setAcpcSubT1(matNameGUI); end;
-                        %if imgs(s).nii.Lesion.newImg, setAcpcSubT1 (matNameGUI); end;
-                        %666 ROGER comments out for parallel version of nii_harvest
-                        %if imgs(s).nii.DTI.newImg, setAcpcSubDTI (matNameGUI); end;
+                        if imgs(s).nii.T1.newImg || imgs(s).nii.Lesion.newImg, setAcpcSubT1(matNameGUI); end
+                        if imgs(s).nii.DTI.newImg, setAcpcSubDTI (matNameGUI); end
                     end
+                    
                     %process the datanargin
-
                     nii_preprocess(mat,[],process1st,true,false);
 
                     matName = fullfile(subjDir,xperimentKeys{xper}, sprintf('T1_%s_%s_lime.mat', subj, imgs(s).nii.T1.x));
@@ -351,17 +315,12 @@ for xper = 1: numel(xperimentKeys)
                     error_sbjs = [error_sbjs;{subj,xperimentKeys{xper},{e}}];
                 end
             else
-                matNameGUI = fullfile(subjDir,xperimentKeys{xper}, [subj,'_',xperimentKeys{xper}, '_limegui.mat']);
-                fprintf('Creating %s\n',matNameGUI);
-                save(matNameGUI,'-struct', 'mat');
                 if setOrigin
                     %determine T1 name even if output folder renamed...
-                    if imgs(s).nii.T1.newImg || imgs(s).nii.Lesion.newImg, setAcpcSubT1(matNameGUI); end;
-                    %if imgs(s).nii.T1.newImg, setAcpcSubT1(matNameGUI); end;
-                    %if imgs(s).nii.Lesion.newImg, setAcpcSubT1 (matNameGUI); end;
-                    %666 ROGER comments out for parallel version of nii_harvest
-                    %if imgs(s).nii.DTI.newImg, setAcpcSubDTI (matNameGUI); end;
+                    if imgs(s).nii.T1.newImg || imgs(s).nii.Lesion.newImg, setAcpcSubT1(matNameGUI); end
+                    if imgs(s).nii.DTI.newImg, setAcpcSubDTI (matNameGUI); end
                 end
+
                 %process the data
                 nii_preprocess(mat,[],process1st,true,false);
                 error_sbjs=[];
@@ -379,7 +338,6 @@ for s = 1: nSubj
     f = fieldnames(imgs(1).nii);
     fprintf('\nID\tMRI\tstudy\tx\ty\tz\tvols\tTR\n');
     for i = 1: numel(f)
-        x = '-';
         if ~isempty(imgs(s).nii.(f{i})) && isfield(imgs(s).nii.(f{i}), 'x') && exist(imgs(s).nii.(f{i}).img,'file')
             fnm = imgs(s).nii.(f{i}).img;
             hdr = readNiftiHdrSub(fnm);
@@ -400,7 +358,7 @@ for s = 1: nSubj
     %         x = '-';
     %         if ~isempty(imgs(s).nii.(f{i})) && isfield(imgs(s).nii.(f{i}), 'x')
     %            x = imgs(s).nii.(f{i}).x;
-    %            if ~imgs(s).nii.(f{i}).newImg, x = ['~', x]; end;
+    %            if ~imgs(s).nii.(f{i}).newImg, x = ['~', x]; end
     %         end
     %         str = sprintf('%s\t%s',str, x );
     %     end
@@ -449,10 +407,6 @@ if isfield(m,'fMRIave') && isfield(imgs.nii.fMRI, 'x')
 end
 
 
-%for i = 1: numel(f)
-%    fprintf('%s %d\n', f{i}, imgs.nii.(f{i}).newImg);
-%end
-%end findNovelImgs()
 
 function setAcpcSubT1 (matname)
 m = load(matname);
@@ -499,19 +453,19 @@ copyfile(inname, outname);
 
 if strcmpi(iext,'.gz') %fsl can not abide with coexisting img.nii and img.nii.gz
     delete(filename);
-end;
+end
 %copy bvec
 ibvec = fullfile(ipth, [inam, '.bvec']);
-if exist(ibvec, 'file'),
+if exist(ibvec, 'file')
     obvec = fullfile(opth, [onam, '.bvec']);
     copyfile(ibvec, obvec);
-end;
+end
 %copy bval
 ibval = fullfile(ipth, [inam, '.bval']);
 if exist(ibval, 'file')
     obval = fullfile(opth, [onam, '.bval']);
     copyfile(ibval, obval);
-end;
+end
 
 %copy .json
 ijson = fullfile(ipth, [inam, '.json']);
@@ -524,12 +478,12 @@ end
 
 function imgs = findImgsSub(imgs, xDir, xLabel, modalityKey, modalityNum, modalityDependency)
 nameFiles = subImgSub(xDir);
-if isempty(nameFiles), return; end;
+if isempty(nameFiles), return; end
 %nameFiles = sort(nameFiles); %take first file for multiimage sequences, e.g. ASL
 %nameFiles
 %nameFiles(1)
 f = fieldnames(imgs.nii);
-if ~isempty(imgs.nii.(f{modalityNum})), return; end;
+if ~isempty(imgs.nii.(f{modalityNum})), return; end
 if exist('modalityDependency','var') && (modalityDependency ~= 0)
     dep = f{modalityDependency}; %e.g. T1 scan may depend on Lesion
     if ~isempty(imgs.nii.(dep))
@@ -537,9 +491,9 @@ if exist('modalityDependency','var') && (modalityDependency ~= 0)
         if ~strncmpi(xLabel,x, numel(xLabel))
             %fprintf('"%s" must be from same experiment as "%s" (%s not %s)\n', modalityKey, dep, x, xLabel);
             return;
-        end;
+        end
         %fprintf('"%s" must be from same experiment as "%s" (%s)\n', modalityKey, dep, x);
-    end;
+    end
 end
 for j = 1: numel(nameFiles)
     if strncmpi(modalityKey,nameFiles(j), numel(modalityKey))
@@ -549,18 +503,18 @@ for j = 1: numel(nameFiles)
         imgs.nii.(f{modalityNum}).img = fname;
         break;
     end
-end;
+end
 
 function nVol = nVolSub(filename)
 %report number of volumes
 nVol = 0;
-[hdr, img] = readNiftiSub(filename);
-if isempty(hdr), return; end;
+[hdr, ~] = readNiftiSub(filename);
+if isempty(hdr), return; end
 nVol = numel(hdr);
 %end nVolSub
 
 function hdr = readNiftiHdrSub(filename)
-[p, n,x] = fileparts(filename);
+[~, ~,x] = fileparts(filename);
 if strcmpi(x,'.gz') %unzip compressed data
     filename = gunzip(filename);
     filename = deblank(char(filename));
@@ -568,7 +522,7 @@ if strcmpi(x,'.gz') %unzip compressed data
     error(fnm);
     delete(fnm);
     return;
-end;
+end
 hdr = spm_vol(filename);
 
 function [hdr, img] = readNiftiSub(filename)
@@ -596,7 +550,7 @@ end
 if strcmpi(fext,'.gz') %unzip compressed data
     filename = gunzip(filename);
     filename = deblank(char(filename));
-end;
+end
 hdr = spm_vol(filename);
 if hdr(1).dt(1) == 128
     fprintf('Skipping RGB image %s\n', filename);
@@ -607,18 +561,18 @@ end
 img = spm_read_vols(hdr);
 if strcmpi(fext,'.gz') %fsl can not abide with coexisting img.nii and img.nii.gz
     delete(filename);
-end;
+end
 %end nii_loadhdrimg()
 
 %end findImgsSub()
 
 function nameFiles=subImgSub(pathFolder)
 nameFiles=subFileSub(pathFolder);
-if isempty(nameFiles), return; end;
+if isempty(nameFiles), return; end
 n = nameFiles; nameFiles = [];
 for i = 1: numel(n)
     [~,~,x] = fileparts(char(deblank(n(i))));
-    if ~strncmpi('.gz',x, 3) && ~strncmpi('.nii',x, 4), continue; end;
+    if ~strncmpi('.gz',x, 3) && ~strncmpi('.nii',x, 4), continue; end
     nameFiles = [nameFiles; n(i)]; %#ok<AGROW>
 end
 %end subFileSub()
@@ -637,7 +591,7 @@ for k = 1 : size(imgKey,1)
     pos = strfind(lower(char(str)),lower(key));
     if ~isempty(pos), isKey = pos(1);
         return;
-    end;
+    end
 end
 isKey = false;
 %isStringInKey()
@@ -647,8 +601,8 @@ d = dir(pathFolder);
 isub = [d(:).isdir];
 nameFolds = {d(isub).name}';
 folder = d(isub).folder;
-nameFolds = nameFolds(cellfun(@(s)isempty(regexp(s,'_')),nameFolds)); %remove folders with underscores
-nameFolds = nameFolds(cellfun(@(s)isempty(regexp(s,'\.')),nameFolds)); %remove folders with periods
-nameFolds = nameFolds(cellfun(@(s)isempty(regexp(s,' ')),nameFolds)); %remove folders with spaces
+nameFolds = nameFolds(cellfun(@(s)isempty(regexp(s,'_', 'once')),nameFolds)); %remove folders with underscores
+nameFolds = nameFolds(cellfun(@(s)isempty(regexp(s,'\.', 'once')),nameFolds)); %remove folders with periods
+nameFolds = nameFolds(cellfun(@(s)isempty(regexp(s,' ', 'once')),nameFolds)); %remove folders with spaces
 nameFolds(ismember(nameFolds,{'.','..'})) = [];
 %end subFolderSub()

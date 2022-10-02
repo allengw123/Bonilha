@@ -23,21 +23,25 @@ clc
 
 
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
-INPUT_PATH = '/media/bonilha/Elements/Image_database/MasterSet/raw_Box_SYNC';
-OUTPUT_PATH = '/media/bonilha/Elements/Image_database/MasterSet';
-% INPUT_PATH = '/media/bonilha/Elements/Image_database/UCSD_database/raw';
-% OUTPUT_PATH = '/media/bonilha/Elements/Image_database/UCSD_database';
-DISEASE_TAG = 'Patients';
-
+IMAGE_DATABASE = '/media/bonilha/Elements/Image_database';
+%DATABASE_NAME = 'MasterSet';
+%DATABASE_NAME = 'UCSD_database';
+DATABASE_NAME = 'ADNI_database';
+DISEASE_TAG = 'CN';
 
 %%%%%%%%%%%%%%%%%%%%%%%%% ADVANCE OPTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Format Options/
+% Database options
+opt.SESSION_TAG = {'pre','pos','session'};
+
+% Format Options
 opt.SKIP_PROBLEM_TAG = true; %true = don't preprocess subjects with a "problem" string attached at the end
 opt.PROBLEM_TAGS = {'problem','MissingT1','MissingLesion','IncorrectLesion'}; % ends with tags that SKIP_PROBLEM_TAG will look for
+opt.SKIP_LESION = true; % Set true to skip Missinglesion and IncorrectLesion based ond PROBLEM_TAGS_LOGIC
+opt.PROBLEM_TAGS_LOGIC = {false,false,true,true}; % Logic for SKIP_LESION option
 opt.RECHECK_ALREADY_FORMATED = false; % Rechecks formated subjects
-opt.HYPER_THREAD = true; % MAY CAUSE OVERHEATING. Since moving a lot of files, CPUs will benefit from hyperthreading
-opt.MATCH_INPUT = true;
+opt.HYPER_THREAD = true; % Enable hyperthreading
+opt.MATCH_INPUT = true; % Remove subjects found in output and not input
 
 % Preprocess Options
 opt.setOrigin = true; %attempt to crop and set anterior commissure for images
@@ -47,16 +51,26 @@ opt.isReportDims = true; %if true, report dimensions of raw data
 opt.reprocessRest = false;
 opt.reprocessfMRI = false;
 opt.reprocessASL = false;
-opt.reprocessDTI = false;
+opt.reprocessDTI = true;
 opt.reprocessVBM = false;
 opt.explicitProcess = false; % <- if true, will only process if the reprocess flag is true
 opt.interweave = true; % Subjects will get dedicated to which parallel worker in an interweave fashion (helps efficiently process new subjects to database)
-opt.sync_with_formated = true;
+opt.clearpsfile = true;
+opt.sync_with_formated = false; % Removes any harvest ouput detected that isn't in the input database
+opt.isMakeModalityTable = false;
+
+
+% Organize Preprocess Data Options
+opt.forcedPull = false;
+
+% BrainageR Options
+opt.deleteBrainageRTemp = false;
 
 % Quality Check Options
+opt.reheckOutput = false;
 opt.CHECK_SESSIONMATCH = true;
 opt.CHECK_AQ = true;
-opt.CHECK_BRAINAGER = true;
+opt.CHECK_BRAINAGER = false;
 opt.DELETEBRAINAGEIFFAIL = true;
 
 % Autoremove options
@@ -70,27 +84,32 @@ opt.AR.brainageR = true;
 %%%%%%% DON'T CHANGE CODE BELOW (unless you know what you are doing) %%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%status%%%%%%%%%%%
 
-% Setup correct toolboxesraw_database
+% Setup correct toolboxes
 cd(GITHUB_PATH)
 allengit_genpath(GITHUB_PATH,'imaging')
 
 % Find Database paths
-opt.paths.raw_database= fullfile(INPUT_PATH,DISEASE_TAG);
-if ~exist(opt.paths.raw_database,'dir')
-    error([DISEASE_TAG,' Folder Not Found. Format is : path_to_master_set_folder/<patients variable name>'])
-end
+opt.paths.database_path = fullfile(IMAGE_DATABASE,DATABASE_NAME);
+cd(opt.paths.database_path)
 
-opt.paths.nii_preproc_database = fullfile(OUTPUT_PATH,'nii_proc_format',DISEASE_TAG);
-opt.paths.harvest_output = fullfile(OUTPUT_PATH,'harvestOutput',DISEASE_TAG);
-opt.paths.processed_output = fullfile(OUTPUT_PATH,'processed',DISEASE_TAG);
-opt.paths.brainage_folder = fullfile(OUTPUT_PATH,'brainageOutput',DISEASE_TAG);
-opt.paths.post_qc = fullfile(OUTPUT_PATH,'post_qc',DISEASE_TAG);
+% Define paths
+opt.paths.image_database = IMAGE_DATABASE;
+opt.paths.raw_database= fullfile(opt.paths.database_path,'raw',DISEASE_TAG);
+opt.paths.nii_preproc_database = fullfile(opt.paths.database_path,'nii_proc_format',DISEASE_TAG);
+opt.paths.harvest_output = fullfile(opt.paths.database_path,'harvestOutput',DISEASE_TAG);
+opt.paths.processed_output = fullfile(opt.paths.database_path,'processed',DISEASE_TAG);
+opt.paths.brainage_folder = fullfile(opt.paths.database_path,'brainageOutput',DISEASE_TAG);
+opt.paths.post_qc = fullfile(opt.paths.database_path,'post_qc',DISEASE_TAG);
 opt.paths.checkdir = fullfile(opt.paths.nii_preproc_database,DISEASE_TAG);
 
 opt.paths.brainage_path = fileparts(which('spm_preprocess_brainageR.m'));
 opt.paths.spm_path = fullfile(GITHUB_PATH,'Toolbox','imaging','brainageR_SPM');
-opt.paths.tempbrain_folder = fullfile(OUTPUT_PATH,'brainageTEMP');
+opt.paths.tempbrain_folder = fullfile(opt.paths.database_path,'brainageTEMP');
 
+% Check if raw database exits
+if ~exist(opt.paths.raw_database,'dir')
+    error([DISEASE_TAG,' Folder Not Found. Format is : path_to_master_set_folder/<patients variable name>'])
+end
 
 %% Prepare Files for nii_harvest_parallel
 
@@ -99,13 +118,11 @@ format_errors = prep_niiharvest(opt);
 
 % Display Step 1 completion
 display_complete(1,'Preprocess Format',format_errors)
-
-
 %% Harvest Paralllel
 
 % Run nii_harvest_parallel
 errors_parallel = nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt);
-% nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'MUSPL0045'});
+% nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'EMOPL0012'});
 
 % Display Step 2 completion
 display_complete(2,'Harvest Parallel',errors_parallel)
@@ -114,7 +131,7 @@ display_complete(2,'Harvest Parallel',errors_parallel)
 
 % Run nii_harvest (DTI)
 DTI_errors = nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt);
-% nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'NORC0004'});
+% nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'EMOPL0012'});
 
 % Display Step 3 completion
 display_complete(3,'DTI processing',DTI_errors)
@@ -132,6 +149,7 @@ setup_brainagedir(opt,GITHUB_PATH)
 
 % Run BrainAge
 brainageR_errors = run_brainage_parallel(opt);
+%brainageR_errors = run_brainage_parallel(opt,'NORC0004');
 
 % Display Step 5 completion
 display_complete(5,'Brain Age Calculation',brainageR_errors)
@@ -152,13 +170,15 @@ display_complete(6,'Quality Check',QC_failed)
 
 %% Auto Remove Failed Subjects
 
-autoremove(QC_failed,opt)
+%autoremove(QC_failed,opt)
+
+
 
 %% Functions
 function [errors] = prep_niiharvest(opt)
 
 % Define paths
-database_path = opt.paths.raw_database;
+opt.paths.database_path = opt.paths.raw_database;
 output_database = opt.paths.nii_preproc_database;
 
 % Define options
@@ -173,7 +193,7 @@ mkdir(opt.paths.nii_preproc_database)
 cd(opt.paths.nii_preproc_database)
 
 % Obtain Directories
-sbj_dir = dir(database_path);
+sbj_dir = dir(opt.paths.raw_database);
 sbj_dir = sbj_dir(~contains({sbj_dir.name},'.') & [sbj_dir.isdir]);
 output_dir = dir(output_database);
 output_dir = output_dir(~contains({output_dir.name},'.') & [output_dir.isdir]);
@@ -218,15 +238,27 @@ problem_tag_count = cell(size(sbj_dir));
 
 % Parallel Processing REQUIRED
 parfor sbj = 1:numel(sbj_dir)
+    removal_dir = [];
 
     % Turn off unnessary warnings
     warning('off','all')
 
     % Skip subject if has a 'problem' tag
+    skip_post = false;
     if SKIP_PROBLEM_TAG
-        if any(cellfun(@(x) endsWith(sbj_dir(sbj).name,x),PROBLEM_TAGS))
-            problem_tag_count{sbj} = 1;
-            continue
+        skip_tag = cellfun(@(x) endsWith(sbj_dir(sbj).name,x),PROBLEM_TAGS);
+        if any(skip_tag)
+            if opt.SKIP_LESION
+                if opt.PROBLEM_TAGS_LOGIC{skip_tag}
+                    skip_post = true;
+                else
+                    problem_tag_count{sbj} = 1;
+                    continue
+                end
+            else
+                problem_tag_count{sbj} = 1;
+                continue
+            end
         end
     end
 
@@ -320,23 +352,26 @@ parfor sbj = 1:numel(sbj_dir)
                 fn = [];
                 % Detect T1/RS/LS files
                 if strcmp(aq_type,'session')
-                    T1 = dir(fullfile(database_path,subject_name,t1_names{1}));
-                    T2 = dir(fullfile(database_path,subject_name,'*T2*.nii*'));
-                    RS = dir(fullfile(database_path,subject_name,'*rs*.nii*'));
-                    dti = dir(fullfile(database_path,subject_name,'*diff*.nii*'));
+                    T1 = dir(fullfile(opt.paths.database_path,subject_name,t1_names{1}));
+                    T2 = dir(fullfile(opt.paths.database_path,subject_name,'*T2*.nii*'));
+                    RS = dir(fullfile(opt.paths.database_path,subject_name,'*rs*.nii*'));
+                    dti = dir(fullfile(opt.paths.database_path,subject_name,'*diff*.nii*'));
                     lesion = []; %THERE IS NO LESION FOR SESSION
                 elseif strcmp(aq_type,'pre')
-                    T1 = dir(fullfile(database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
-                    T2 = dir(fullfile(database_path,subject_name,['*',aq_type,'*T2*.nii*']));
-                    RS = dir(fullfile(database_path,subject_name,['*',aq_type,'*rs*.nii*']));
+                    T1 = dir(fullfile(opt.paths.database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
+                    T2 = dir(fullfile(opt.paths.database_path,subject_name,['*',aq_type,'*T2*.nii*']));
+                    RS = dir(fullfile(opt.paths.database_path,subject_name,['*',aq_type,'*rs*.nii*']));
                     lesion = []; %THERE IS NO LESION FOR PRE
-                    dti = dir(fullfile(database_path,subject_name,['*',aq_type,'*diff*.nii*']));
+                    dti = dir(fullfile(opt.paths.database_path,subject_name,['*',aq_type,'*diff*.nii*']));
                 elseif strcmp(aq_type,'pos')
-                    T1 = dir(fullfile(database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
+                    if skip_post
+                        continue
+                    end
+                    T1 = dir(fullfile(opt.paths.database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
                     T2 = []; % Post Surgical Lesions drawn on T1s, don't find T2
-                    RS = dir(fullfile(database_path,subject_name,['*',aq_type,'*rs*.nii*']));
-                    lesion = dir(fullfile(database_path,subject_name,'*les.nii*')); % ONLY LESION FOR POS
-                    dti = dir(fullfile(database_path,subject_name,['*',aq_type,'*diff*.nii*']));
+                    RS = dir(fullfile(opt.paths.database_path,subject_name,['*',aq_type,'*rs*.nii*']));
+                    lesion = dir(fullfile(opt.paths.database_path,subject_name,'*les.nii*')); % ONLY LESION FOR POS
+                    dti = dir(fullfile(opt.paths.database_path,subject_name,['*',aq_type,'*diff*.nii*']));
                     if isempty(lesion)
                         errors{sbj} = 'Post Nifti found but missing LESION';
                         sbj_error{sbj} = sbj_dir(sbj).name;
@@ -707,13 +742,19 @@ parfor sbj = 1:numel(sbj_dir)
             end
 
             % Display Complete Update
-            disp([sbj_dir(sbj).name,' formatting completed'])
+            if exist(removal_dir,'dir')
+                disp([sbj_dir(sbj).name,' formatting completed'])
+            else
+                problem_tag_count{sbj} = 1;
+            end
             cont = false;
         end
     catch e
         errors{sbj} = e.message;
         sbj_error{sbj} = sbj_dir(sbj).name;
-        rmdir(removal_dir,'s');
+        if exist(removal_dir,'dir')
+            rmdir(removal_dir,'s');
+        end
     end
 end
 
@@ -793,12 +834,19 @@ fclose(brainage_file);
 disp('brainageR prep steps complete')
 end
 
-function brainageR_errors = run_brainage_parallel(opt)
+function brainageR_errors = run_brainage_parallel(opt,debug_sub)
 
 disp('Running brainageR')
 
+% Define paths
+brainage_folder = opt.paths.brainage_folder;
+harvest_output = opt.paths.harvest_output;
+nii_preproc_database = opt.paths.nii_preproc_database;
+tempbrain_folder = opt.paths.tempbrain_folder;
+brainage_path = opt.paths.brainage_path;
+
 % Create temp brainage folder
-if exist(opt.paths.tempbrain_folder,'dir')
+if exist(opt.paths.tempbrain_folder,'dir') && opt.deleteBrainageRTemp
     rmdir(opt.paths.tempbrain_folder,'s')
 end
 mkdir(opt.paths.tempbrain_folder)
@@ -806,80 +854,110 @@ mkdir(opt.paths.tempbrain_folder)
 % Create brianage output folder
 mkdir(opt.paths.brainage_folder)
 
-% Detect Nii_Harvested Subjects
-processed_matfiles = dir(fullfile(opt.paths.processed_output,'**','*.mat'));
+% Start brainageR or debug mode
+if exist('debug_sub','var')
+    brainageR_errors = start_brainageR_parallel(brainage_folder, ...
+        nii_preproc_database, ...
+        tempbrain_folder, ...
+        brainage_path, ...
+        harvest_output, ...
+        dir(fullfile(opt.paths.processed_output,'**',[debug_sub,'.mat'])));
+else
 
-% Reset parallel pool
-setpool(2,true);
+    % Reset parallel pool
+    setpool(1,true);
 
-brainageR_errors = cell(size(processed_matfiles));
-parfor a = 1:numel(processed_matfiles)
-
-    % Supress warnings
-    %warning('off','all')
-
-    % Load processed matfile
-    mat_folder = processed_matfiles(a).folder;
-    wk_mat = load(fullfile(mat_folder,processed_matfiles(a).name));
-
-    % Define brainageR output matfile
-    wk_mat_output = fullfile(opt.paths.brainage_folder,processed_matfiles(a).name);
-
-    % Skip if brainageR completed
-    if exist(wk_mat_output,'file')
-        continue
+    % Detect Nii_Harvested Subjects
+    processed_matfiles = dir(fullfile(opt.paths.processed_output,'**','*.mat'));
+    
+    % Run brainageR
+    brainageR_errors = cell(size(processed_matfiles));
+    parfor a = 1:numel(processed_matfiles)
+        brainageR_errors{a} = start_brainageR_parallel(brainage_folder, ...
+            nii_preproc_database, ...
+            tempbrain_folder, ...
+            brainage_path, ...
+            harvest_output, ...
+            processed_matfiles(a));
     end
-
-    % Find T1 scans/sessions
-    sbj_name = extractBefore(processed_matfiles(a).name,'.mat');
-    input = dir(fullfile(opt.paths.nii_preproc_database,sbj_name,'**','T1*'));
-
-    for s = 1:numel(input)
-
-        % Define session name
-        [~,ses] = fileparts(input(s).folder);
-
-        % Make subject folder
-        wk_sbj = extractBefore(input(s).name,'.nii');
-        wk_sbj_folder = fullfile(opt.paths.tempbrain_folder,wk_sbj);
-        mkdir(wk_sbj_folder);
-
-        % Copy T1 into brainage temp folder
-        s_input = fullfile(wk_sbj_folder,input(s).name);
-        copyfile(fullfile(input(s).folder,input(s).name),s_input);
-
-        % Define output
-        brainage_output = fullfile(wk_sbj_folder,[wk_sbj,'_brainage.csv']);
-        if ~exist(brainage_output,'file')
-            % Run brainageR
-            cmd = sprintf('%s -f %s -o %s',fullfile(opt.paths.brainage_path,'brainageR'),s_input,brainage_output);
-            system(cmd,'-echo');
-        end
-
-        
-        if exist(brainage_output,'file')
-            % Save brainageR output
-            brain_age_pred = readtable(brainage_output);
-            brain_age_pred_tissue_vols = readtable(fullfile(wk_sbj_folder,[brain_age_pred.File{:},'_tissue_volumes.csv']));
-            wk_mat.(ses).brainage.agePred = brain_age_pred;
-            wk_mat.(ses).brainage.TissueVol = brain_age_pred_tissue_vols;
-
-            slice_dir = dir(fullfile(wk_sbj_folder,['slicesdir_T1_',extractBefore(processed_matfiles(a).name,'.mat'),'.nii'],'*.png'));
-            for p = 1:numel(slice_dir)
-                png = imread(fullfile(slice_dir(p).folder,slice_dir(p).name));
-                t_name = extractBetween(slice_dir(p).name,'__','.png');
-                wk_mat.(ses).brainage.slicedir.(t_name{:}) = png;
-            end
-        else
-            brainageR_errors{a}{s} = {processed_matfiles(a).name};
-        end
-    end
-
-    % Save completed matfile with brainageR field
-    saveparfor(wk_mat_output,'-struct',wk_mat)
+end
+brainageR_errors(cellfun(@isempty,brainageR_errors)) = [];
 end
 
-brainageR_errors = brainageR_errors(~cellfun(@isempty,brainageR_errors));
+function brainageR_error = start_brainageR_parallel(brainage_folder,nii_preproc_database,tempbrain_folder,brainage_path,harvest_output,matfile)
+brainageR_error = [];
+
+% Supress warnings
+warning('off','all')
+
+% Define brainageR output matfile
+wk_mat_output = fullfile(brainage_folder,matfile.name);
+
+% Mat sure inputs are not empty
+if isempty(matfile)
+    error('Subjects cannot be found')
+end
+
+% Skip if brainageR completed
+if exist(wk_mat_output,'file')
+    return
+end
+
+% Find T1 scans/sessions
+sbj_name = extractBefore(matfile.name,'.mat');
+input = dir(fullfile(nii_preproc_database,sbj_name,'**','T1*'));
+
+for s = 1:numel(input)
+
+    % Define session name
+    [~,ses] = fileparts(input(s).folder);
+
+    % Make subject folder
+    wk_sbj = extractBefore(input(s).name,'.nii');
+    wk_sbj_folder = fullfile(tempbrain_folder,wk_sbj);
+    mkdir(wk_sbj_folder);
+
+    % Copy origin corrected T1 into brainage temp folder
+    oc_T1 = dir(fullfile(harvest_output,sbj_name,ses,'T1*.nii'));
+    if numel(oc_T1) ~= 1; error('more or no oc_T1 found');end
+    s_input = fullfile(wk_sbj_folder,input(s).name);
+    copyfile(fullfile(oc_T1.folder,oc_T1.name),s_input);
+
+    % Define output
+    brainage_output = fullfile(wk_sbj_folder,[wk_sbj,'_brainage.csv']);
+    if ~exist(brainage_output,'file')
+        % Run brainageR
+        cmd = sprintf('%s -f %s -o %s ',fullfile(brainage_path,'brainageR'),s_input,brainage_output);
+        system(cmd,'-echo');
+    end
+
+    if exist(brainage_output,'file')
+
+        % Load processed matfile
+        mat_folder = matfile.folder;
+        wk_mat = load(fullfile(mat_folder,matfile.name));
+
+        % Save brainageR output
+        brain_age_pred = readtable(brainage_output);
+        brain_age_pred_tissue_vols = readtable(fullfile(wk_sbj_folder,[brain_age_pred.File{:},'_tissue_volumes.csv']));
+        wk_mat.(ses).brainage.agePred = brain_age_pred;
+        wk_mat.(ses).brainage.TissueVol = brain_age_pred_tissue_vols;
+
+        slice_dir = dir(fullfile(wk_sbj_folder,['slicesdir_T1_',extractBefore(matfile.name,'.mat'),'.nii'],'*.png'));
+        for p = 1:numel(slice_dir)
+            png = imread(fullfile(slice_dir(p).folder,slice_dir(p).name));
+            t_name = extractBetween(slice_dir(p).name,'__','.png');
+            wk_mat.(ses).brainage.slicedir.(t_name{:}) = png;
+        end
+
+        % Save completed matfile with brainageR field
+        saveparfor(wk_mat_output,'-struct',wk_mat)
+
+    else
+        brainageR_error = matfile.name;
+    end
+end
+
 
 end
 
@@ -895,12 +973,8 @@ CHECK_AQ = opt.CHECK_AQ;
 CHECK_BRAINAGER = opt.CHECK_BRAINAGER;
 DELETEBRAINAGEIFFAIL = opt.DELETEBRAINAGEIFFAIL;
 
-% Set pool
-if opt.HYPER_THREAD
-    setpool(3);
-else
-    setpool(2);
-end
+% Delete pool
+setpool(0)
 
 % Find processed matfiles
 subjects = dir(fullfile(opt.paths.brainage_folder,'*.mat'));
@@ -908,8 +982,15 @@ subject_folder = subjects.folder;
 subjects = {subjects.name};
 
 errors = cell(size(subjects));
-parfor s = 1:numel(subjects)
+textprogressbar(0,'Running Quality Check');
+for s = 1:numel(subjects)
     fn = [];
+
+    % Define Save_mat
+    save_mat = fullfile(opt.paths.post_qc,subjects{s});
+    if exist(save_mat,'file') && ~opt.reheckOutput
+        continue
+    end
 
     % Define subject name
     wk_sbj = extractBefore(subjects{s},'.mat');
@@ -930,7 +1011,8 @@ parfor s = 1:numel(subjects)
             qc.ses_match = 'pass';
         else
             qc.ses_match = 'fail';
-            disp([wk_sbj,' SESSION MATCH FAIL'])
+            msg = [wk_sbj,' SESSION MATCH FAIL'];
+            textprogressbar(1,s/numel(subjects)*100,msg)
             continue
         end
     end
@@ -964,7 +1046,8 @@ parfor s = 1:numel(subjects)
                             qc.lesion = 'pass';
                         else
                             qc.lesions = 'fail';
-                            disp([wk_sbj,' ',wk_ses.name,' Lesion FAIL'])
+                            msg = [wk_sbj,' ',wk_ses.name,' Lesion FAIL'];
+                            textprogressbar(1,s/numel(subjects)*100,msg)
                             cont = false;
                         end
                     case 'T1'
@@ -972,7 +1055,8 @@ parfor s = 1:numel(subjects)
                             qc.T1 = 'pass';
                         else
                             qc.T1 = 'fail';
-                            disp([wk_sbj,' ',wk_ses.name,' T1 FAIL'])
+                            msg = [wk_sbj,' ',wk_ses.name,' T1 FAIL'];
+                            textprogressbar(1,s/numel(subjects)*100,msg)
                             cont = false;
                         end
                     case 'T2'
@@ -982,7 +1066,8 @@ parfor s = 1:numel(subjects)
                             qc.Rest = 'pass';
                         else
                             qc.Rest = 'fail';
-                            disp([wk_sbj,' ',wk_ses.name,' Rest FAIL'])
+                            msg = [wk_sbj,' ',wk_ses.name,' Rest FAIL'];
+                            textprogressbar(1,s/numel(subjects)*100,msg)
                             cont = false;
                         end
                     case 'DTI'
@@ -990,7 +1075,8 @@ parfor s = 1:numel(subjects)
                             qc.DTI = 'pass';
                         else
                             qc.DTI = 'fail';
-                            disp([wk_sbj,' ',wk_ses.name,' DTI FAIL'])
+                            msg = [wk_sbj,' ',wk_ses.name,' DTI FAIL'];
+                            textprogressbar(1,s/numel(subjects)*100,msg)
                             cont = false;
                         end
                 end
@@ -1005,12 +1091,14 @@ parfor s = 1:numel(subjects)
                     qc.brainageR = 'pass';
                 else
                     qc.brainageR = 'fail';
-                    disp([wk_sbj,' ',wk_ses.name,' brainage FAIL'])
+                    msg = [wk_sbj,' ',wk_ses.name,' brainage FAIL'];
+                    textprogressbar(1,s/numel(subjects)*100,msg)
                     cont = false;
                 end
             else
                 qc.brainageR = 'fail';
-                disp([wk_sbj,' ',wk_ses.name,' brainage FAIL'])
+                msg = [wk_sbj,' ',wk_ses.name,' brainage FAIL'];
+                textprogressbar(1,s/numel(subjects)*100,msg)
                 cont = false;
                 if DELETEBRAINAGEIFFAIL
                     delete(processed_matfile)
@@ -1027,14 +1115,16 @@ parfor s = 1:numel(subjects)
     if cont
         % Add pipeline info
         wk_mat.pipelineinfo = pipelineinfo;
-        disp([wk_sbj,' passed QC']);
-        saveparfor(fullfile(opt.paths.post_qc,subjects{s}),'-struct',wk_mat)
+        saveparfor(save_mat,'-struct',wk_mat)
+        textprogressbar(1,s/numel(subjects)*100,[wk_sbj,' passed QC'])
     else
-        errors{s} = [{wk_sbj} {wk_mat}];
+        errors{s} = [{wk_sbj} {wk_mat} {extractAfter(msg,[wk_sbj,' '])}];
     end
 end
 errors = errors(~cellfun(@isempty,errors));
 errors = cat(1,errors{:});
+textprogressbar(2,'QC Complete')
+
 
 end
 
@@ -1069,7 +1159,7 @@ function autoremove(QC_failed,opt)
 
 disp(['Auto-removing ',num2str(length(QC_failed)),' subjects'])
 
-for sbj = 1:length(QC_failed)
+for sbj = 1:size(QC_failed,1)
     wk_sbj = QC_failed{sbj,1};
     wk_mat = QC_failed{sbj,2};
 
