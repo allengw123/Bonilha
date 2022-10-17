@@ -113,8 +113,8 @@ if exist('error_sbjs','var')
 end
 
 if opt.clearpsfile
-    disp('Looking and clearing extra .ps file output')
-    psfile = dir(fullfile(fileparts(opt.paths.raw_database),'**','*.ps'));
+    disp('Looking and clearing extra .ps file output... this may take awhile')
+    psfile = dir(fullfile(opt.paths.database_path,'**','*.ps'));
     
     if ~isempty(psfile)
         for i = 1:length(psfile)
@@ -122,6 +122,7 @@ if opt.clearpsfile
         end
         disp(['Deleting ',fullfile(psfile(i).folder,psfile(i).name)])
     end
+    disp(['.ps files cleared (',num2str(numel(psfile)),' deleted)'])
 end
 
 function error_sbjs = startParallelHarvest(subjDirs,opt,DEBUG)

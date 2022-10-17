@@ -121,6 +121,20 @@ else
     startParallelHarvest_DTI(debug_sbj,baseDir,outDir,opt,3,true)
 end
 
+if opt.clearpsfile
+    disp('Looking and clearing extra .ps file output... this may take awhile')
+    psfile = dir(fullfile(opt.paths.database_path,'**','*.ps'));
+    
+    if ~isempty(psfile)
+        for i = 1:length(psfile)
+            delete(fullfile(psfile(i).folder,psfile(i).name))
+        end
+        disp(['Deleting ',fullfile(psfile(i).folder,psfile(i).name)])
+    end
+    disp(['.ps files cleared (',num2str(numel(psfile)),' deleted)'])
+end
+
+
 
 function error_sbjs = startParallelHarvest_DTI(subjDirs,baseDir,outDir,opt,gpu_idx,DEBUG)
 

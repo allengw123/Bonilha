@@ -24,11 +24,11 @@ clc
 
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
 IMAGE_DATABASE = '/media/bonilha/Elements/Image_database';
-%DATABASE_NAME = 'MasterSet';
+DATABASE_NAME = 'MasterSet_TLE';
 %DATABASE_NAME = 'UCSD_database';
-DATABASE_NAME = 'ADNI_database';
-DISEASE_TAG = 'CN';
-
+%DATABASE_NAME = 'ADNI_AD';
+DISEASE_TAG = 'Patients';
+    
 %%%%%%%%%%%%%%%%%%%%%%%%% ADVANCE OPTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Database options
@@ -51,7 +51,7 @@ opt.isReportDims = true; %if true, report dimensions of raw data
 opt.reprocessRest = false;
 opt.reprocessfMRI = false;
 opt.reprocessASL = false;
-opt.reprocessDTI = true;
+opt.reprocessDTI = false;
 opt.reprocessVBM = false;
 opt.explicitProcess = false; % <- if true, will only process if the reprocess flag is true
 opt.interweave = true; % Subjects will get dedicated to which parallel worker in an interweave fashion (helps efficiently process new subjects to database)
@@ -59,15 +59,14 @@ opt.clearpsfile = true;
 opt.sync_with_formated = false; % Removes any harvest ouput detected that isn't in the input database
 opt.isMakeModalityTable = false;
 
-
 % Organize Preprocess Data Options
 opt.forcedPull = false;
 
 % BrainageR Options
-opt.deleteBrainageRTemp = false;
+opt.deleteBrainageRTemp = true;
 
 % Quality Check Options
-opt.reheckOutput = false;
+opt.recheckOutput = false;
 opt.CHECK_SESSIONMATCH = true;
 opt.CHECK_AQ = true;
 opt.CHECK_BRAINAGER = false;
@@ -94,6 +93,7 @@ cd(opt.paths.database_path)
 
 % Define paths
 opt.paths.image_database = IMAGE_DATABASE;
+opt.paths.github = GITHUB_PATH;
 opt.paths.raw_database= fullfile(opt.paths.database_path,'raw',DISEASE_TAG);
 opt.paths.nii_preproc_database = fullfile(opt.paths.database_path,'nii_proc_format',DISEASE_TAG);
 opt.paths.harvest_output = fullfile(opt.paths.database_path,'harvestOutput',DISEASE_TAG);
@@ -122,7 +122,7 @@ display_complete(1,'Preprocess Format',format_errors)
 
 % Run nii_harvest_parallel
 errors_parallel = nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt);
-% nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'EMOPL0012'});
+% nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'ADNA5275'});
 
 % Display Step 2 completion
 display_complete(2,'Harvest Parallel',errors_parallel)
@@ -145,7 +145,7 @@ display_complete(4,'Matfile Extraction')
 %% Brain Age
 
 % Prep Brain Age Files
-setup_brainagedir(opt,GITHUB_PATH)
+setup_brainagedir(opt)
 
 % Run BrainAge
 brainageR_errors = run_brainage_parallel(opt);
@@ -190,7 +190,6 @@ MATCH_INPUT = opt.MATCH_INPUT;
 
 % Create formated folder
 mkdir(opt.paths.nii_preproc_database)
-cd(opt.paths.nii_preproc_database)
 
 % Obtain Directories
 sbj_dir = dir(opt.paths.raw_database);
@@ -206,6 +205,7 @@ if MATCH_INPUT
         rmdir(fullfile(output_dir(rm_idx(i)).folder,output_dir(rm_idx(i)).name),'s')
     end
 end
+
 
 % Throw Error if No subjects detected
 if isempty(sbj_dir)
@@ -771,10 +771,11 @@ end
 
 end
 
-function setup_brainagedir(opt,GITHUB_PATH)
+function setup_brainagedir(opt)
 disp('Preping brainageR')
 
 % Set up brainageR specific paths
+GITHUB_PATH = opt.paths.github;
 cd(GITHUB_PATH)
 allengit_genpath(GITHUB_PATH,'brainageR')
 
@@ -988,7 +989,7 @@ for s = 1:numel(subjects)
 
     % Define Save_mat
     save_mat = fullfile(opt.paths.post_qc,subjects{s});
-    if exist(save_mat,'file') && ~opt.reheckOutput
+    if exist(save_mat,'file') && ~opt.recheckOutput
         continue
     end
 

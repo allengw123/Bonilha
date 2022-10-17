@@ -440,6 +440,12 @@ else
     warning('Could not find %s ',fullfile(p,'TIV.txt'));
 end
 
+% Allen's smoothing function
+spm_smooth(fullfile(normGM(1).folder, normGM(1).name),fullfile(normGM(1).folder, 'smoothed_gm.nii'),[10 10 10]);
+spm_smooth(fullfile(normWM(1).folder, normWM(1).name),fullfile(normWM(1).folder, 'smoothed_wm.nii'),[10 10 10]);
+nii_nii2mat(fullfile(normGM(1).folder, 'smoothed_gm.nii'), 'smooth_vbm_gm' , matName);
+nii_nii2mat(fullfile(normWM(1).folder, 'smoothed_wm.nii'), 'smooth_vbm_wm' , matName);
+
 %end doVBMSub()
 
 
