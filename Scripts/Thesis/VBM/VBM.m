@@ -26,7 +26,7 @@ allengit_genpath(githubpath,'imaging')
 
 % Inputs:
 PatientData='/media/bonilha/Elements/Image_database';
-save_path = '/media/bonilha/AllenProj/Thesis/VBM/lesion_only';
+save_path = '/media/bonilha/AllenProj/Thesis/VBM';
 matter = 'gm';
 
 
@@ -51,13 +51,12 @@ patient_img_hipp = cell(numel(patients),1);
 patient_img_hipp_ns = cell(numel(patients),1);
 patient_name = cell(numel(patients),1);
 parfor pat=1:numel(patients)
-    try
-    if contains(patients(pat).name,'Lesion')
-            continue
-    end
+%     if contains(patients(pat).name,'Lesion')
+%             continue
+%     end
     matname = fullfile(patients(pat).folder,patients(pat).name);
     vars = whos('-file',matname);
-    if ismember('pre', {vars.name}) && ismember('pos', {vars.name})
+    if ismember('pre', {vars.name}) %&& ismember('pos', {vars.name})
         temp=load(fullfile(patients(pat).folder,patients(pat).name));
 
         patient_name{pat} = patients(pat).name;
@@ -77,10 +76,6 @@ parfor pat=1:numel(patients)
         wk_side = extractAfter(patients(pat).name,'P');
         side{pat} = wk_side(1);
     end
-    catch
-        disp(patient(pat).name)
-    end
-
 end
 patient_name = patient_name(~cellfun(@isempty,patient_name));
 patient_img = cat(4,patient_img{:});
