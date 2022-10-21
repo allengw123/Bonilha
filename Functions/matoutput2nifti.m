@@ -1,4 +1,4 @@
-function matoutput2nifti(input_mat,output_path,non_seg)
+function matoutput2nifti(input_mat,output_path,non_seg,smooth)
 % Converts allen pipeline matfiles to niftis
 %
 % Requires SPM toolbox
@@ -25,6 +25,9 @@ if ~exist(output_path,'dir')
 end
 if ~exist('non_seg','var')
     non_seg = false;
+end
+if ~exist('smooth','var')
+    smooth = false;
 end
 
 % Save segmented files as nifti
@@ -63,6 +66,18 @@ for f = 1:numel(fn)
         hdr = wk_nifti.hdr;
         hdr.fname = wk_save_name;
         spm_write_vol(hdr,wk_nifti.dat);
+    end
+
+    % Save smooth T1
+    if smooth
+        for m = 1:2
+            wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},['smooth_',matter{m}]));
+
+            wk_nifti = wk_ses.(['smooth_vbm_',matter{m}]);
+            hdr = wk_nifti.hdr;
+            hdr.fname = wk_save_name;
+            spm_write_vol(hdr,wk_nifti.dat);
+        end
     end
 end
 end

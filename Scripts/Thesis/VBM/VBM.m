@@ -34,7 +34,7 @@ jhu_path = fullfile(githubpath,'Toolbox','imaging','Atlas','jhu','Resliced Atlas
 mask = jhu_path;
 jhu = load_nii(jhu_path);
 hipp_log = jhu.img~=0;
-thres = 0;
+thres = 0.2;
 %% Load matfiles
 
 mkdir(save_path)
@@ -50,10 +50,11 @@ patient_img_ns = cell(numel(patients),1);
 patient_img_hipp = cell(numel(patients),1);
 patient_img_hipp_ns = cell(numel(patients),1);
 patient_name = cell(numel(patients),1);
+patient_vol = cell(numel(patients),1);
 parfor pat=1:numel(patients)
-%     if contains(patients(pat).name,'Lesion')
-%             continue
-%     end
+    %     if contains(patients(pat).name,'Lesion')
+    %             continue
+    %     end
     matname = fullfile(patients(pat).folder,patients(pat).name);
     vars = whos('-file',matname);
     if ismember('pre', {vars.name}) %&& ismember('pos', {vars.name})
@@ -67,14 +68,16 @@ parfor pat=1:numel(patients)
         patient_img_ns{pat} = temp_img;
         patient_img_hipp_ns{pat} = temp_img(hipp_log);
 
-        % Smoothed
-        temp_img = temp.pre.smooth_vbm_gm.dat;
-        temp_img(temp_img<thres) = 0;
-        patient_img{pat} = temp_img;
-        patient_img_hipp{pat} = temp_img(hipp_log);
-
+        %         % Smoothed
+        %         temp_img = temp.pre.smooth_vbm_gm.dat;
+        %         temp_img(temp_img<thres) = 0;
+        %         patient_img{pat} = temp_img;
+        %         patient_img_hipp{pat} = temp_img(hipp_log);
+        %
         wk_side = extractAfter(patients(pat).name,'P');
         side{pat} = wk_side(1);
+
+        patient_vol{pat} = [temp.pre.VBM_volume_Total temp.pre.VBM_volume_GM temp.pre.VBM_volume_WM temp.pre.VBM_volume_CSF];
     end
 end
 patient_name = patient_name(~cellfun(@isempty,patient_name));
@@ -82,6 +85,7 @@ patient_img = cat(4,patient_img{:});
 patient_img_ns = cat(4,patient_img_ns{:});
 patient_img_hipp = cat(4,patient_img_hipp{:});
 patient_img_hipp_ns = cat(4,patient_img_hipp_ns{:});
+patient_vol = cat(1,patient_vol{:});
 
 side = side(~cellfun(@isempty,side));
 left_log = cellfun(@(x) strcmp(x,'L'),side);
@@ -91,6 +95,7 @@ right_log = cellfun(@(x) strcmp(x,'R'),side);
 control_img = cell(numel(controls),1);
 control_img_ns = cell(numel(controls),1);
 control_img_hipp = cell(numel(controls),1);
+control_vol = cell(numel(controls),1);
 parfor con=1:numel(controls)
     temp=load(fullfile(controls(con).folder,controls(con).name));
     if isfield(temp,'session')
@@ -101,17 +106,28 @@ parfor con=1:numel(controls)
         control_img_ns{con} = temp_img
         control_img_hipp_ns{con} = temp_img(hipp_log);
 
-        % Smoothed
-        temp_img = temp.session.smooth_vbm_gm.dat;
-        temp_img(temp_img<thres) = 0;
-        control_img{con} = temp_img
-        control_img_hipp{con} = temp_img(hipp_log);
+        %         % Smoothed
+        %         temp_img = temp.session.smooth_vbm_gm.dat;
+        %         temp_img(temp_img<thres) = 0;
+        %         control_img{con} = temp_img
+        %         control_img_hipp{con} = temp_img(hipp_log);
+
+        control_vol{con} = [temp.session.VBM_volume_Total temp.session.VBM_volume_GM temp.session.VBM_volume_WM temp.session.VBM_volume_CSF]
+
     end
 end
 control_img = cat(4,control_img{:});
 control_img_ns = cat(4,control_img_ns{:});
 control_img_hipp = cat(4,control_img_hipp{:});
 control_img_hipp_ns = cat(4,control_img_hipp_ns{:});
+control_vol = cat(1,control_vol{:});
+
+%%
+[~,P,~,STAT] = ttest2(control_vol(:,1),patient_vol(:,1));
+[~,P,~,STAT] = ttest2(control_vol(:,2),patient_vol(:,2));
+[~,P,~,STAT] = ttest2(control_vol(:,3),patient_vol(:,3));
+[~,P,~,STAT] = ttest2(control_vol(:,4),patient_vol(:,4));
+
 %% display volume (raw)
 comp_intensity(control_img_ns,patient_img_ns,'NonSmoothed-Cumultive intensity','controls','patients')
 comp_intensity(control_img_hipp_ns,patient_img_hipp_ns(:,:,:,left_log),'NonSmoothed left hippocampal intensity','controls','left-patients')
