@@ -310,7 +310,7 @@ if ~exist(fullfile(p, 'toolbox/cat12/templates_MNI152NLin2009cAsym/Template_0_GS
 end
 
 %do cat12 if not already done
-if ~isFieldSub(matName,'vbm_gm')
+if ~isFieldSub(matName,'vbm_gm') || ~isempty(ForceVBM)
     base = fileparts(which("nii_preprocess"));
     catbatch{1}.spm.tools.cat.estwrite.data = SPM_file_arg;
     catbatch{1}.spm.tools.cat.estwrite.nproc = 4;
@@ -363,7 +363,7 @@ if ~isFieldSub(matName,'vbm_gm')
     catbatch{1}.spm.tools.cat.estwrite.output.WMH.dartel = 0;
     catbatch{1}.spm.tools.cat.estwrite.output.labelnative = 1;
     catbatch{1}.spm.tools.cat.estwrite.output.bias.warped = 1;
-    catbatch{1}.spm.tools.cat.estwrite.output.jacobianwarped = 0;
+    catbatch{1}.spm.tools.cat.estwrite.output.jacobianwarped = 1; % Allen Edit --> added Jacobian warped output
     catbatch{1}.spm.tools.cat.estwrite.output.warps = [1 1];
     catbatch{1}.spm.tools.cat.estwrite.output.rmat = 0;
 

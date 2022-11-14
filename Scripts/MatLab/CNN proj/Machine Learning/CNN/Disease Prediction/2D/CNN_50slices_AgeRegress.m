@@ -12,11 +12,10 @@ save_path='/media/bonilha/AllenProj/PatientData/smallSet';
 %% Setup for CNN model
 
 % Load Residual img
-load '/media/bonilha/AllenProj/CNN output/2D_CNN/MATLAB/AgeRegress/disease_label.mat'
-load '/media/bonilha/AllenProj/CNN output/2D_CNN/MATLAB/AgeRegress/residual_imgs.mat'
-load '/media/bonilha/AllenProj/CNN output/2D_CNN/MATLAB/AgeRegress/side_label.mat'
-load '/media/bonilha/AllenProj/CNN output/2D_CNN/MATLAB/AgeRegress/subjects.mat'
-
+input_folder = '/media/bonilha/AllenProj/CNN_project/CNN output/2D_CNN/MATLAB/disease_pred/AgeRegress';
+load(fullfile(input_folder,'disease_label.mat'));
+load(fullfile(input_folder,'residual_imgs.mat'));
+load(fullfile(input_folder,'side_label.mat'));
 
 net = [];
 acc = [];
@@ -60,14 +59,15 @@ for iter = 1:100
     
 
     %%%%%%%%%%%% Train the network
+    
     [net.reg{iter},acc.reg{iter},confmat.reg{iter}] = runcnnFC(trainDataset,trainLabels,testDataset,testLabels,valDataset,valLabels);
+    
     net.sbjs{iter} = [{trainIdx},{testIdx},{valIdx}];
     
     [net.suff{iter},acc.shuff{iter},confmat.shuff{iter}] = runcnnFC(trainDataset,trainLabels(randperm(numel(trainLabels))),testDataset,testLabels(randperm(numel(testLabels))),valDataset,valLabels(randperm(numel(valLabels))));
 end
 
-save_path = 'F:\CNN output\2D_CNN\MATLAB\AgeRegress';
-save(fullfile(save_path,'AgeRegress_GM_ADTLEHC_CNN.mat'),'net','acc','confmat','-v7.3')
+save(fullfile(input_folder,'AgeRegress_GM_ADTLEHC_CNN_REVISED.mat'),'net','acc','confmat','-v7.3')
 
 
     

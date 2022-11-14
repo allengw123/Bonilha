@@ -9,8 +9,8 @@ function matoutput2nifti(input_mat,output_path,non_seg,smooth)
 %   non_seg = true/false - option to output nonsegmented T1 (default:false)
 %
 % Example:
-%   matoutput2nifit('~/Downloads/BONPL003.nii','~/Documents/NiftiRequest/BONPL003')
-%   matoutput2nifit('~/Downloads/BONPL003.nii','~/Documents/NiftiRequest/BONPL003',true)
+%   matoutput2nifit('/home/bonilha/Downloads/BONPL003.nii','/home/bonilha/Documents/NiftiRequest/BONPL003')
+%   matoutput2nifit('/home/bonilha/Downloads/BONPL003.nii','/home/bonilha/Documents/NiftiRequest/BONPL003',true)
 
 
 % Check Dependencies
@@ -53,6 +53,16 @@ for f = 1:numel(fn)
         wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m}));
 
         wk_nifti = wk_ses.(['vbm_',matter{m}]);
+        hdr = wk_nifti.hdr;
+        hdr.fname = wk_save_name;
+        spm_write_vol(hdr,wk_nifti.dat);
+    end
+
+
+    if isfield(wk_ses,'lesion')
+        wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},'lesion'));
+
+        wk_nifti = wk_ses.lesion;
         hdr = wk_nifti.hdr;
         hdr.fname = wk_save_name;
         spm_write_vol(hdr,wk_nifti.dat);

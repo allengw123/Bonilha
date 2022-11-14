@@ -56,22 +56,31 @@ ADNI_Alz_info=readtable(fullfile(PatientData,'ADNI_Alz_info.csv'));
 
 %% get volume data
 
-[Alz_GM, Alz_GM_names,template_nii] = get_volume_data(Alzfiles);
-[TLE_GM, TLE_GM_names] = get_volume_data(tlefiles);
-[Control_GM, Control_GM_names] = get_volume_data(controlfiles);
- 
+%[Alz_GM, Alz_GM_names,template_nii] = get_volume_data(Alzfiles);
+%[TLE_GM, TLE_GM_names] = get_volume_data(tlefiles);
+%[Control_GM, Control_GM_names] = get_volume_data(controlfiles);
+
+ADNI_log = contains(controlfiles,'ADNI');
+
+[ADNI_Control_GM, ADNI_Control_GM_names] = get_volume_data(controlfiles(ADNI_log));
+[Database_Control_GM, Database_Control_GM_names] = get_volume_data(controlfiles(~ADNI_log));
+
 %% compare volumes (t-test/bonferroni)
 ttest_savepath=fullfile(save_path,'ttest');
 mkdir(ttest_savepath);
 
-[P, T] = compare_volumes(Alz_GM, TLE_GM,...
-    controlfiles{1},ttest_savepath,'Alz','TLE');
+% [P, T] = compare_volumes(Alz_GM, TLE_GM,...
+%     controlfiles{1},ttest_savepath,'Alz','TLE');
+% 
+% [P, T] = compare_volumes(Alz_GM, Control_GM,...
+%     controlfiles{1},ttest_savepath,'Alz','Control');
+% 
+% [P, T] = compare_volumes(TLE_GM, Control_GM,...
+%     controlfiles{1},ttest_savepath,'TLE','Control');
 
-[P, T] = compare_volumes(Alz_GM, Control_GM,...
-    controlfiles{1},ttest_savepath,'Alz','Control');
+[P, T] = compare_volumes(ADNI_Control_GM, Database_Control_GM,...
+    controlfiles{1},ttest_savepath,'ADNI_Control','Database_Control');
 
-[P, T] = compare_volumes(TLE_GM, Control_GM,...
-    controlfiles{1},ttest_savepath,'TLE','Control');
 
 cd(ttest_savepath)
 

@@ -3,15 +3,16 @@ clc
 
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
 nifti_files = '/media/bonilha/AllenProj/Thesis/niftifiles';
+SVM_folder = '/media/bonilha/AllenProj/Thesis/SVM';
 
-HIPP = true;
+FLIP_log = true;
 %% Laod niftis
 
 % Setup correct toolboxes
 cd(GITHUB_PATH)
 allengit_genpath(GITHUB_PATH,'imaging')
 
-
+SVM_output = fullfile(SVM_folder,'ROI_maps');
 patients = dir(fullfile(nifti_files,'Patients','*pre*smooth*gm*'));
 patients_files = [];
 for p = 1:length(patients)
@@ -31,6 +32,13 @@ end
 temp = cell(size(img.TLE_GM,4),1);
 for i = 1:size(img.TLE_GM,4)
     wk_sbj = img.TLE_GM(:,:,:,i);
+    if FLIP_log
+        side = extractAfter(img.TLE_GM_names{i},'P');
+        side = side(1);
+        if side == 'R'
+            wk_sbj = flip(wk_sbj,1);
+        end
+    end
     temp{i} = wk_sbj(:)';
 end
 img.TLE_GM = cat(1,temp{:});
@@ -68,8 +76,8 @@ for r = 1:numel(ROI)
 
         % Select training/testing data
         jhu = load_nii(fullfile(jhu_path,ROI{r}));
-        hipp_log = jhu.img~=0;
-        log = hipp_log;
+        ROI_og = jhu.img~=0;
+        log = ROI_og;
 
 
         control_data_test= img.Control_GM(permcontroltest,log);
@@ -110,17 +118,8 @@ for r = 1:numel(ROI)
 
     betaweights_recon = zeros(113,137,113);
 
-    if HIPP
-        betaweights_recon(hipp_log)=betaweights_reshape_sum;
-    else
-        betaweights_recon=betaweights_reshape_sum;
-    end
-
-    temp_nii = jhu;
-    temp_nii.img = betaweights_recon;
-    temp_nii.hdr.dime.datatype = 16;
-    temp_nii.hdr.dime.bitpix = 16;
-    save_nii(temp_nii,['/home/bonilha/Downloads/',ROI{r},'betaweights.nii'])
+    betaweights_recon(ROI_og)=betaweights_reshape_sum;
+    
 
     % Distribution of accuracy
     figure;
@@ -133,12 +132,57 @@ for r = 1:numel(ROI)
     title(figtitle,'Interpreter','none')
     xlabel('Accuracy')
     ylabel('# of models')
-    save_path = fullfile('/home/bonilha/Downloads');
-    saveas(gcf,fullfile(save_path,figtitle));
-    save(fullfile(save_path,figtitle),'conmat','accuracytraining','accuracytesting');
+    saveas(gcf,fullfile(SVM_output,figtitle));
+    save(fullfile(SVM_output,figtitle),'conmat','accuracytraining','accuracytesting');
+
+    temp_nii = jhu;
+    temp_nii.img = betaweights_recon;
+    save_nii_float(temp_nii,fullfile(SVM_output,[figtitle,'betaweights.nii']))
+
     close all
     clc
 end
+
+%% Analysis
+
+%%%% Accuracy map
+
+% Find files
+ROI_mats = dir(fullfile(SVM_output,'*.mat'));
+ROI_nii = dir(fullfile(SVM_output,'*.nii'));
+
+% Create Mask
+mask = fullfile(ROI_nii(1).folder,ROI_nii(1).name);
+mask = load_nii(mask);
+mask.img = zeros(size(mask.img));
+
+acc_mask = mask;
+beta_mask = mask;
+
+
+
+for r = 1:numel(ROI_mats)
+
+    % Load ROI SVM results
+    ROI = load(fullfile(ROI_mats(r).folder,ROI_mats(r).name));
+    acc = mean(ROI.accuracytesting);
+    
+    % Load ROI beta weights
+    ROI_nii = load_nii(strrep(fullfile(ROI_mats(r).folder,ROI_mats(r).name),'.mat','betaweights.nii'));
+    
+    % Find ROI logic mask
+    ROI_log = ROI_nii.img ~= 0;
+
+    % Save weighted beta mask
+    beta_mask.img = double(beta_mask.img) + double((ROI_nii.img*acc));
+
+    % Save accuracy mask
+    acc_mask.img(ROI_log) = acc;
+end
+save_nii(acc_mask,fullfile(SVM_folder,'ROI_acc.nii'));
+save_nii_float(beta_mask,fullfile(SVM_folder,'ROI_betaweights.nii'));
+
+
 %%
 
 function [X, X_names,N] = get_volume_data(ff)

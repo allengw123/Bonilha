@@ -2,26 +2,18 @@
 clear
 clc
 
-githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
-% githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
+githubpath='/home/bonilha/Documents/GitHub/Bonilha';
 
 cd(githubpath)
 allengit_genpath(githubpath,'imaging')
 
 % Inputs:
-% CNNoutput='F:\CNN output';
-% CNNoutput='F:\CNN output\2D_CNN\MATLAB\AgeRegress';
-% CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\CNN output';
-% CNNoutput = 'C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\CFRedo';
-CNNoutput='C:\Users\allen\Box Sync\Desktop\Bonilha\Projects\ep_imaging_AI\2DCNN\AgeReg';
-
+CNNoutput='/media/bonilha/AllenProj/CNN_project/CNN output/2D_CNN/MATLAB/disease_pred/AgeRegress';
 
 cd(CNNoutput)
 
 savepath=fullfile(CNNoutput,'Figures');mkdir(savepath);
 
-% TCmat=load(fullfile(CNNoutput,'ep_control(1) tle(2) -GM-CNN.mat'));
-% TCAmat=load(fullfile(CNNoutput,'ep_control(1) adni_control(1) tle(2) alz(3) -GM-CNN.mat'));
 TCAmat=load(fullfile(CNNoutput,'AgeRegress_GM_ADTLEHC_CNN.mat'));
 
 %% Disease accuracy
@@ -101,6 +93,28 @@ set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
 legend([h1(1) h2(1)],{'Reg','Shuff'})
 
 
+figure('WindowState','maximized');
+set(gcf,'color','w');
+hold on
+h1 = histfit(mean(cell2mat(conf_stat_reg.F1'),2,'omitnan'),15);
+mean(mean(cell2mat(conf_stat_reg.F1'),2,'omitnan'))
+std(mean(cell2mat(conf_stat_reg.F1'),2,'omitnan'))
+h2 = histfit(mean(cell2mat(conf_stat_shuff.F1'),2,'omitnan'),40);
+mean(mean(cell2mat(conf_stat_shuff.F1'),2,'omitnan'))
+std(mean(cell2mat(conf_stat_shuff.F1'),2,'omitnan'))
+xlim([.10 1.01])
+ylim([0 90])
+xlabel('F1')
+ylabel('# of models')
+xticks([0.10:0.20:1.00])
+yticks(0:20:80)
+axis square
+pbaspect([2 1 1])
+a = get(gca,'XTickLabel');
+set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
+legend([h1(1) h2(1)],{'Reg','Shuff'})
+
+
 %%
 figure('WindowState','maximized');
 set(gcf,'color','w');
@@ -124,7 +138,7 @@ axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-% legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
+legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
 
 
 figure('WindowState','maximized');
@@ -173,7 +187,31 @@ axis square
 pbaspect([2 1 1])
 a = get(gca,'XTickLabel');
 set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
-% legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
+legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
+
+figure('WindowState','maximized');
+set(gcf,'color','w');
+hold on
+h1 = histfit(conf_stat_reg.F1{1});
+mean(conf_stat_reg.F1{1},'omitnan')
+std(conf_stat_reg.F1{1},'omitnan')
+h2 = histfit(conf_stat_reg.F1{2});
+mean(conf_stat_reg.F1{2},'omitnan')
+std(conf_stat_reg.F1{2},'omitnan')
+h3 = histfit(conf_stat_reg.F1{3});
+mean(conf_stat_reg.F1{3},'omitnan')
+std(conf_stat_reg.F1{3},'omitnan')
+xlim([.10 1.01])
+ylim([0 70])
+xlabel('F1')
+ylabel('# of models')
+xticks([0.10:0.20:1.00])
+yticks([0:20:60])
+axis square
+pbaspect([2 1 1])
+a = get(gca,'XTickLabel');
+set(gca,'XTickLabel',a,'FontName','Times','fontsize',30)
+legend([h1(1) h2(1) h3(1)],{'Control','TLE','Alz'})
 
 %% Confounding factor
 

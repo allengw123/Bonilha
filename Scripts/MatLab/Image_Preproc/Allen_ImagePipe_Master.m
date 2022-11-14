@@ -25,7 +25,7 @@ clc
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
 IMAGE_DATABASE = '/media/bonilha/Elements/Image_database';
 DATABASE_NAME = 'MasterSet_TLE';
-%DATABASE_NAME = 'UCSD_database';
+%DATABASE_NAME = 'UCSD_TLE';
 %DATABASE_NAME = 'ADNI_AD';
 DISEASE_TAG = 'Patients';
     
@@ -122,7 +122,7 @@ display_complete(1,'Preprocess Format',format_errors)
 
 % Run nii_harvest_parallel
 errors_parallel = nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt);
-% nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'ADNA5275'});
+% nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'BONPL0137'});
 
 % Display Step 2 completion
 display_complete(2,'Harvest Parallel',errors_parallel)
