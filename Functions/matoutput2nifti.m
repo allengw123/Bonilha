@@ -10,8 +10,8 @@ function matoutput2nifti(input_mat,output_path,non_seg,smooth)
 %   smooth = true/false - option to output smoothed segmented images (default:false)
 %
 % Example:
-%   matoutput2nifit('/home/bonilha/Downloads/BONPL003.nii','/home/bonilha/Documents/NiftiRequest/BONPL003')
-%   matoutput2nifit('/home/bonilha/Downloads/BONPL003.nii','/home/bonilha/Documents/NiftiRequest/BONPL003',true)
+%   matoutput2nifti('/home/bonilha/Downloads/BONPL003.nii','/home/bonilha/Documents/NiftiRequest/BONPL003')
+%   matoutput2nifti('/home/bonilha/Downloads/BONPL003.nii','/home/bonilha/Documents/NiftiRequest/BONPL003',true)
 
 
 % Check Dependencies
