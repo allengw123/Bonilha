@@ -30,10 +30,10 @@ end
 if ~exist('smooth','var')
     smooth = false;
 end
-if ~isboolean(non_seg)
+if ~islogical(non_seg)
     error('3rd argument must be true or false denoting whether you want segmented image output')
 end
-if ~isboolean(smooth)
+if ~islogical(smooth)
     error('4th argument must be true or false denoting whether you want smoothed image output')
 end
 
