@@ -1,18 +1,32 @@
-function matoutput2nifti(input_mat,output_path,non_seg,smooth)
+function matoutput2nifti(input_mat,output_path,opt)
 % Converts allen pipeline matfiles to niftis
 %
 % Requires SPM toolbox
 %
 %
 %   input_mat = path to matfile
-%   output_path = output folde
-%   non_seg = true/false - option to output nonsegmented T1 (default:false)
-%   smooth = true/false - option to output smoothed segmented images (default:false)
+%   output_path = output folder
+%   opt = variable that contains fields for options (see below for more detail)
+%
+%   T1 based options
+%       opt.T1.raw = raw output
+%       opt.T1.seg = segmented output
+%       opt.T1.lesion = lesion output
+%       opt.T1.smoothed = smoothed output
+%   fMRI based options
+%       opt.T1.raw = raw output
+%       opt.T1.seg = segmented output
+%       opt.T1.lesion = lesion output
+%       opt.T1.smoothed = smoothed output
+%   DTI based options
+%       opt.T1.raw = raw output
+%       opt.T1.seg = segmented output
+%       opt.T1.lesion = lesion output
+%       opt.T1.smoothed = smoothed output
+%   
 %
 % Example:
-%   matoutput2nifti('/home/bonilha/Downloads/BONPL003.nii','/home/bonilha/Documents/NiftiRequest/BONPL003')
-%   matoutput2nifti('/home/bonilha/Downloads/BONPL003.nii','/home/bonilha/Documents/NiftiRequest/BONPL003',true)
-
+%   matoutput2nifti('/home/bonilha/Downloads/BONPL003.nii','/home/bonilha/Documents/NiftiRequest/BONPL003',opt)
 
 % Check Dependencies
 if isempty(which('spm_write_vol'))
@@ -23,6 +37,9 @@ if ~exist(input_mat,'file')
 end
 if ~exist(output_path,'dir')
     error('output folder does not exist')
+end
+if ~exist('seg','var')
+    seg = false;
 end
 if ~exist('non_seg','var')
     non_seg = false;
@@ -37,7 +54,7 @@ if ~islogical(smooth)
     error('4th argument must be true or false denoting whether you want smoothed image output')
 end
 
-% Save segmented files as nifti
+
 matter = {'gm','wm'};
 
 wk_mat = load(input_mat);
@@ -54,15 +71,18 @@ for f = 1:numel(fn)
     end
 
     wk_ses = wk_mat.(fn{f});
+    % Save segmented files as nifti
 
-    % Save mat as nifti
-    for m = 1:2
-        wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m}));
-
-        wk_nifti = wk_ses.(['vbm_',matter{m}]);
-        hdr = wk_nifti.hdr;
-        hdr.fname = wk_save_name;
-        spm_write_vol(hdr,wk_nifti.dat);
+    if seg
+        % Save mat as nifti
+        for m = 1:2
+            wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m}));
+    
+            wk_nifti = wk_ses.(['vbm_',matter{m}]);
+            hdr = wk_nifti.hdr;
+            hdr.fname = wk_save_name;
+            spm_write_vol(hdr,wk_nifti.dat);
+        end
     end
 
 
