@@ -14,7 +14,7 @@ function matoutput2nifti(input_mat,output_path,opt)
 %       opt.T1.lesion = lesion output
 %       opt.T1.smoothed = smoothed output
 %   fMRI based options
-%       opt.T1.raw = raw output
+%       opt.fmri.raw = raw output
 %       opt.T1.seg = segmented output
 %       opt.T1.lesion = lesion output
 %       opt.T1.smoothed = smoothed output
@@ -38,22 +38,6 @@ end
 if ~exist(output_path,'dir')
     error('output folder does not exist')
 end
-if ~exist('seg','var')
-    seg = false;
-end
-if ~exist('non_seg','var')
-    non_seg = false;
-end
-if ~exist('smooth','var')
-    smooth = false;
-end
-if ~islogical(non_seg)
-    error('3rd argument must be true or false denoting whether you want segmented image output')
-end
-if ~islogical(smooth)
-    error('4th argument must be true or false denoting whether you want smoothed image output')
-end
-
 
 matter = {'gm','wm'};
 
@@ -71,50 +55,55 @@ for f = 1:numel(fn)
     end
 
     wk_ses = wk_mat.(fn{f});
-    % Save segmented files as nifti
 
-    if seg
-        % Save mat as nifti
-        for m = 1:2
-            wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m}));
+    %% T1 output
+    if isfield(opt,T1)
+        % Save segmented files as nifti
+        if seg
+            % Save mat as nifti
+            for m = 1:2
+                wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m}));
+        
+                wk_nifti = wk_ses.(['vbm_',matter{m}]);
+                hdr = wk_nifti.hdr;
+                hdr.fname = wk_save_name;
+                spm_write_vol(hdr,wk_nifti.dat);
+            end
+        end
     
-            wk_nifti = wk_ses.(['vbm_',matter{m}]);
+    
+        if isfield(wk_ses,'lesion')
+            wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},'lesion'));
+    
+            wk_nifti = wk_ses.lesion;
             hdr = wk_nifti.hdr;
             hdr.fname = wk_save_name;
             spm_write_vol(hdr,wk_nifti.dat);
         end
-    end
-
-
-    if isfield(wk_ses,'lesion')
-        wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},'lesion'));
-
-        wk_nifti = wk_ses.lesion;
-        hdr = wk_nifti.hdr;
-        hdr.fname = wk_save_name;
-        spm_write_vol(hdr,wk_nifti.dat);
-    end
-
-    % Save non-segmented T1
-    if non_seg
-        wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},'T1'));
-
-        wk_nifti = wk_ses.T1;
-        hdr = wk_nifti.hdr;
-        hdr.fname = wk_save_name;
-        spm_write_vol(hdr,wk_nifti.dat);
-    end
-
-    % Save smooth T1
-    if smooth
-        for m = 1:2
-            wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},['smooth_',matter{m}]));
-
-            wk_nifti = wk_ses.(['smooth_vbm_',matter{m}]);
+    
+        % Save non-segmented T1
+        if non_seg
+            wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},'T1'));
+    
+            wk_nifti = wk_ses.T1;
             hdr = wk_nifti.hdr;
             hdr.fname = wk_save_name;
             spm_write_vol(hdr,wk_nifti.dat);
         end
+    
+        % Save smooth T1
+        if smooth
+            for m = 1:2
+                wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},['smooth_',matter{m}]));
+    
+                wk_nifti = wk_ses.(['smooth_vbm_',matter{m}]);
+                hdr = wk_nifti.hdr;
+                hdr.fname = wk_save_name;
+                spm_write_vol(hdr,wk_nifti.dat);
+            end
+        end
     end
+
+
 end
 end
