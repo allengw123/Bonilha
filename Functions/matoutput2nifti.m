@@ -6,28 +6,24 @@ function matoutput2nifti(input_mat,output_path,opt)
 %
 %   input_mat = path to matfile
 %   output_path = output folder
-%   opt = variable that contains fields for options (see below for more detail)
+%   opt = variable that contains fields for options (see below for more
+%       detail) --> if missing field is was just default to false
 %
 %   T1 based options
-%       opt.T1.raw = raw output
+%       opt.T1.img = raw output
 %       opt.T1.seg = segmented output
 %       opt.T1.lesion = lesion output
 %       opt.T1.smoothed = smoothed output
 %   fMRI based options
-%       opt.fmri.raw = raw output
-%       opt.T1.seg = segmented output
-%       opt.T1.lesion = lesion output
-%       opt.T1.smoothed = smoothed output
+%       work in progress
 %   DTI based options
-%       opt.T1.raw = raw output
-%       opt.T1.seg = segmented output
-%       opt.T1.lesion = lesion output
-%       opt.T1.smoothed = smoothed output
+%       work in process
 %   
 %
 % Example:
+%   opt = [];
+%   opt.T1.seg = true;
 %   matoutput2nifti('/home/bonilha/Downloads/BONPL003.nii','/home/bonilha/Documents/NiftiRequest/BONPL003',opt)
-
 % Check Dependencies
 if isempty(which('spm_write_vol'))
     error('Cannot find spm functions. Please make sure spm is in path')
@@ -57,53 +53,64 @@ for f = 1:numel(fn)
     wk_ses = wk_mat.(fn{f});
 
     %% T1 output
-    if isfield(opt,T1)
+    if isfield(opt,'T1')
+
+        % Save T1 image as nifti
+        if output_log(opt.T1,'img')
+            if ~exist(fullfile(output_path,'T1'),'dir');mkdir(fullfile(output_path,'T1'));end
+            wk_save_name = fullfile(output_path,'T1',sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},'T1'));
+            write_field(wk_ses,'T1',wk_save_name)
+        end
+
         % Save segmented files as nifti
-        if seg
-            % Save mat as nifti
+        if output_log(opt.T1,'seg')
             for m = 1:2
-                wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m}));
-        
-                wk_nifti = wk_ses.(['vbm_',matter{m}]);
-                hdr = wk_nifti.hdr;
-                hdr.fname = wk_save_name;
-                spm_write_vol(hdr,wk_nifti.dat);
+                if ~exist(fullfile(output_path,'T1'),'dir');mkdir(fullfile(output_path,'T1'));end
+
+                wk_save_name = fullfile(output_path,'T1',sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m}));
+                write_field(wk_ses,['vbm_',matter{m}],wk_save_name)
             end
         end
-    
-    
-        if isfield(wk_ses,'lesion')
-            wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},'lesion'));
-    
-            wk_nifti = wk_ses.lesion;
-            hdr = wk_nifti.hdr;
-            hdr.fname = wk_save_name;
-            spm_write_vol(hdr,wk_nifti.dat);
+
+        % Save lesion file as nifti
+        if output_log(opt.T1,'lesion')
+            if ~exist(fullfile(output_path,'T1'),'dir');mkdir(fullfile(output_path,'T1'));end
+            wk_save_name = fullfile(output_path,'T1',sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},'lesion'));
+            write_field(wk_ses,'lesion',wk_save_name)
         end
-    
-        % Save non-segmented T1
-        if non_seg
-            wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},'T1'));
-    
-            wk_nifti = wk_ses.T1;
-            hdr = wk_nifti.hdr;
-            hdr.fname = wk_save_name;
-            spm_write_vol(hdr,wk_nifti.dat);
-        end
-    
+
         % Save smooth T1
-        if smooth
+        if output_log(opt.T1,'smooth')
             for m = 1:2
-                wk_save_name = fullfile(output_path,sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},['smooth_',matter{m}]));
-    
-                wk_nifti = wk_ses.(['smooth_vbm_',matter{m}]);
-                hdr = wk_nifti.hdr;
-                hdr.fname = wk_save_name;
-                spm_write_vol(hdr,wk_nifti.dat);
+                if ~exist(fullfile(output_path,'T1'),'dir');mkdir(fullfile(output_path,'T1'));end
+                wk_save_name = fullfile(output_path,'T1',sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},['smooth_',matter{m}]));
+                write_field(wk_ses,['smooth_vbm_',matter{m}],wk_save_name)
             end
         end
     end
 
+end
+end
 
+%% Funcitons
+
+function log = output_log(module,output)
+if isfield(module,output)
+    if module.(output)
+        log = true;
+        return
+    end
+end
+log = false;
+end
+
+function write_field(matfile,field,output_name)
+if isfield(matfile,field)
+    wk_nifti = matfile.(field);
+    hdr = wk_nifti.hdr;
+    hdr.fname = output_name;
+    spm_write_vol(hdr,wk_nifti.dat);
+else
+    disp([field, ' not found in matfile... skipping'])
 end
 end
