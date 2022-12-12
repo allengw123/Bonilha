@@ -16,8 +16,8 @@ allengit_genpath(GITHUB_PATH,'imaging')
 name = extractAfter(request_database,[fileparts(request_database),'/']);
 
 % Load request xlsx
-request_xlsx_pth = fullfile(request_database,[name,'.xlsx']);
-sheets = sheetnames(request_xlsx_pth);
+request_xlsx_pth = dir(fullfile(request_database,'*.xlsx'));
+sheets = sheetnames(fullfile(request_xlsx_pth.folder,request_xlsx_pth.name));
 
 % Create request save folder
 request_save_path = fullfile(request_database,'request');
@@ -46,11 +46,14 @@ for s = 1:numel(sheets)
 
     save_processed_folder = fullfile(wk_request_save_path,'processed');
     mkdir(save_processed_folder)
+    save_processed_folder_dir = dir(save_processed_folder);
+    
 
     save_raw_folder = fullfile(wk_request_save_path,'raw_images');
     mkdir(save_raw_folder)
+    save_raw_folder_dir = dir(save_raw_folder);
 
-    request_xlsx = readtable(request_xlsx_pth,'Sheet',wk_sheet,'ReadVariableNames',false);
+    request_xlsx = readtable(fullfile(request_xlsx_pth.folder,request_xlsx_pth.name),'Sheet',wk_sheet,'ReadVariableNames',false);
 
     % Delete nonrequested subjects
     requested_subjects = cellfun(@(x) strrep(x,'_',''),request_xlsx{:,1},'UniformOutput',false);
@@ -75,6 +78,11 @@ for s = 1:numel(sheets)
 
         % Request subject
         rq_sbj = strrep(request_xlsx{r,1}{:},'_','');
+        
+        if any([contains({save_raw_folder_dir.name},rq_sbj),contains({save_processed_folder_dir.name},rq_sbj)])
+            textprogressbar(1,r/height(request_xlsx)*100,[wk_sheet,' - Subject ',rq_sbj,' pulled']);
+            continue
+        end
 
         % Find processed mat file idx
         p_idx = find(contains(processedmats_name,rq_sbj));
@@ -82,7 +90,7 @@ for s = 1:numel(sheets)
         % Find raw image idx
         r_idx = find(contains(raw_images_name,rq_sbj));
 
-        if ~isempty(p_idx)
+        if numel(p_idx) == 1
 
             % Copy matfile
             rq_mat = processedmats(p_idx);
@@ -99,6 +107,9 @@ for s = 1:numel(sheets)
             else
                 copyfile(fullfile(r_folder.folder,r_folder.name),fullfile(save_raw_folder,r_folder.name))
             end
+        elseif numel(p_idx)>1
+            status = ['multiple copies found ',[processedmats(p_idx).name]];
+            error = [error; [{sheets(s)},{rq_sbj},{status}]];
         else
             % Save errors
             s_idx = find(contains(raw_images_name,rq_sbj));
@@ -112,7 +123,7 @@ for s = 1:numel(sheets)
         end
 
         % Display progress bar
-        textprogressbar(1,r/height(request_xlsx)*100,[wk_sheet,' - Subject ',r_folder.name,' pulled']);
+        textprogressbar(1,r/height(request_xlsx)*100,[wk_sheet,' - Subject ',rq_sbj,' pulled']);
     end
 end
 

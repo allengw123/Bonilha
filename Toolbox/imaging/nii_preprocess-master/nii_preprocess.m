@@ -1545,7 +1545,7 @@ end
 
 function imgs = doRestSub(imgs, matName)
 
-if isempty(imgs.T1) || isempty(imgs.Rest), return; end; %we need these images
+if isempty(imgs.T1) || isempty(imgs.Rest), return; end %we need these images
 imgs.Rest = removeDotSub (imgs.Rest);
 global ForceRest; %e.g. user can call "global ForceRest;  ForceRest = true;"
 if isempty(ForceRest) && isFieldSub(matName, 'alf'), fprintf('Skipping Rest (already computed) %s\n', imgs.Rest); return; end;

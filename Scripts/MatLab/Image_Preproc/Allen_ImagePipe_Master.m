@@ -28,6 +28,8 @@ DATABASE_NAME = 'MasterSet_TLE';
 %DATABASE_NAME = 'UCSD_TLE';
 %DATABASE_NAME = 'ADNI_AD';
 DISEASE_TAG = 'Patients';
+%DISEASE_TAG = 'Controls';
+
     
 %%%%%%%%%%%%%%%%%%%%%%%%% ADVANCE OPTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -56,32 +58,35 @@ opt.reprocessVBM = false;
 opt.explicitProcess = false; % <- if true, will only process if the reprocess flag is true
 opt.interweave = true; % Subjects will get dedicated to which parallel worker in an interweave fashion (helps efficiently process new subjects to database)
 opt.clearpsfile = true;
-opt.sync_with_formated = false; % Removes any harvest ouput detected that isn't in the input database
+opt.sync_with_formated = true; % Removes any harvest ouput detected that isn't in the input database
 opt.isMakeModalityTable = false;
 
 % Organize Preprocess Data Options
 opt.forcedPull = false;
+opt.syncPreprocessed = true;
 
 % BrainageR Options
 opt.deleteBrainageRTemp = true;
+opt.syncBrainageR = true;
 
 % Quality Check Options
-opt.recheckOutput = false;
+opt.recheckOutput = true;
 opt.CHECK_SESSIONMATCH = true;
 opt.CHECK_AQ = true;
 opt.CHECK_BRAINAGER = false;
-opt.DELETEBRAINAGEIFFAIL = true;
+opt.DELETEBRAINAGEIFFAIL = false;
 
 % Autoremove options
 opt.AR.nii_proc = true;
 opt.AR.harvest_output = true;
-opt.AT.matfile = true;
+opt.AT.wk_matfile = true;
 opt.AR.brainageR = true;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% DON'T CHANGE CODE BELOW (unless you know what you are doing) %%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%status%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DISEASE_TAG = 'Patients';
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%status%%%%%%%%%%%
 
 % Setup correct toolboxes
 cd(GITHUB_PATH)
@@ -141,7 +146,7 @@ display_complete(3,'DTI processing',DTI_errors)
 nii_preprocess_subfolders(opt)
 
 % Display Step 4 completion
-display_complete(4,'Matfile Extraction')
+display_complete(4,'wk_matfile Extraction')
 %% Brain Age
 
 % Prep Brain Age Files
@@ -149,7 +154,7 @@ setup_brainagedir(opt)
 
 % Run BrainAge
 brainageR_errors = run_brainage_parallel(opt);
-%brainageR_errors = run_brainage_parallel(opt,'NORC0004');
+%brainageR_errors = run_brainage_parallel(opt,'BONPL0120');
 
 % Display Step 5 completion
 display_complete(5,'Brain Age Calculation',brainageR_errors)
@@ -855,6 +860,21 @@ mkdir(opt.paths.tempbrain_folder)
 % Create brianage output folder
 mkdir(opt.paths.brainage_folder)
 
+% Sync brainage output with processed
+if opt.syncBrainageR
+    processed_brainageR = dir(fullfile(opt.paths.brainage_folder,'*.mat'));
+    processed_matfile = dir(fullfile(opt.paths.processed_output,'*','*.mat'));
+
+    rm_idx = find(~cellfun(@(x) any(contains({processed_matfile.name},x)),{processed_brainageR.name}));
+    if ~isempty(rm_idx)
+        disp(['Removing ',num2str(numel(rm_idx)),' subject found in brainageR but not processed'])
+        for r = 1:numel(rm_idx)
+            disp(['Removed ',processed_brainageR(rm_idx(r)).name])
+            delete(fullfile(processed_brainageR(rm_idx(r)).folder,processed_brainageR(rm_idx(r)).name))
+        end
+    end
+end
+
 % Start brainageR or debug mode
 if exist('debug_sub','var')
     brainageR_errors = start_brainageR_parallel(brainage_folder, ...
@@ -869,43 +889,58 @@ else
     setpool(1,true);
 
     % Detect Nii_Harvested Subjects
-    processed_matfiles = dir(fullfile(opt.paths.processed_output,'**','*.mat'));
+    processed_wk_matfiles = dir(fullfile(opt.paths.processed_output,'**','*.mat'));
     
     % Run brainageR
-    brainageR_errors = cell(size(processed_matfiles));
-    parfor a = 1:numel(processed_matfiles)
+    brainageR_errors = cell(size(processed_wk_matfiles));
+    parfor a = 1:numel(processed_wk_matfiles)
         brainageR_errors{a} = start_brainageR_parallel(brainage_folder, ...
             nii_preproc_database, ...
             tempbrain_folder, ...
             brainage_path, ...
             harvest_output, ...
-            processed_matfiles(a));
+            processed_wk_matfiles(a));
     end
 end
 brainageR_errors(cellfun(@isempty,brainageR_errors)) = [];
 end
 
-function brainageR_error = start_brainageR_parallel(brainage_folder,nii_preproc_database,tempbrain_folder,brainage_path,harvest_output,matfile)
+function brainageR_error = start_brainageR_parallel(brainage_folder,nii_preproc_database,tempbrain_folder,brainage_path,harvest_output,wk_matfile)
 brainageR_error = [];
 
 % Supress warnings
 warning('off','all')
 
-% Define brainageR output matfile
-wk_mat_output = fullfile(brainage_folder,matfile.name);
+% Define brainageR output wk_matfile
+wk_mat_output = fullfile(brainage_folder,wk_matfile.name);
 
 % Mat sure inputs are not empty
-if isempty(matfile)
+if isempty(wk_matfile)
     error('Subjects cannot be found')
 end
 
 % Skip if brainageR completed
 if exist(wk_mat_output,'file')
-    return
+    rerun = false;
+    matObj = matfile(wk_mat_output);
+    fn = fieldnames(matObj);
+    for f = 1:numel(fn)
+        if strcmp(fn{f},'Properties')
+            continue
+        end
+        if any(strcmp(fieldnames(matObj.(fn{f})),'brainage'))
+            continue
+        else
+            rerun = true;
+        end
+    end
+    if ~rerun
+        return
+    end
 end
 
 % Find T1 scans/sessions
-sbj_name = extractBefore(matfile.name,'.mat');
+sbj_name = extractBefore(wk_matfile.name,'.mat');
 input = dir(fullfile(nii_preproc_database,sbj_name,'**','T1*'));
 
 for s = 1:numel(input)
@@ -934,9 +969,9 @@ for s = 1:numel(input)
 
     if exist(brainage_output,'file')
 
-        % Load processed matfile
-        mat_folder = matfile.folder;
-        wk_mat = load(fullfile(mat_folder,matfile.name));
+        % Load processed wk_matfile
+        mat_folder = wk_matfile.folder;
+        wk_mat = load(fullfile(mat_folder,wk_matfile.name));
 
         % Save brainageR output
         brain_age_pred = readtable(brainage_output);
@@ -944,18 +979,18 @@ for s = 1:numel(input)
         wk_mat.(ses).brainage.agePred = brain_age_pred;
         wk_mat.(ses).brainage.TissueVol = brain_age_pred_tissue_vols;
 
-        slice_dir = dir(fullfile(wk_sbj_folder,['slicesdir_T1_',extractBefore(matfile.name,'.mat'),'.nii'],'*.png'));
+        slice_dir = dir(fullfile(wk_sbj_folder,['slicesdir_T1_',extractBefore(wk_matfile.name,'.mat'),'.nii'],'*.png'));
         for p = 1:numel(slice_dir)
             png = imread(fullfile(slice_dir(p).folder,slice_dir(p).name));
             t_name = extractBetween(slice_dir(p).name,'__','.png');
             wk_mat.(ses).brainage.slicedir.(t_name{:}) = png;
         end
 
-        % Save completed matfile with brainageR field
+        % Save completed wk_matfile with brainageR field
         saveparfor(wk_mat_output,'-struct',wk_mat)
 
     else
-        brainageR_error = matfile.name;
+        brainageR_error = wk_matfile.name;
     end
 end
 
@@ -977,7 +1012,7 @@ DELETEBRAINAGEIFFAIL = opt.DELETEBRAINAGEIFFAIL;
 % Delete pool
 setpool(0)
 
-% Find processed matfiles
+% Find processed wk_matfiles
 subjects = dir(fullfile(opt.paths.brainage_folder,'*.mat'));
 subject_folder = subjects.folder;
 subjects = {subjects.name};
@@ -996,9 +1031,9 @@ for s = 1:numel(subjects)
     % Define subject name
     wk_sbj = extractBefore(subjects{s},'.mat');
 
-    % Load processed matfile
-    processed_matfile = fullfile(subject_folder,subjects{s});
-    wk_mat = load(processed_matfile);
+    % Load processed wk_matfile
+    processed_wk_matfile = fullfile(subject_folder,subjects{s});
+    wk_mat = load(processed_wk_matfile);
 
     % Allocated variables
     qc = [];
@@ -1074,6 +1109,8 @@ for s = 1:numel(subjects)
                     case 'DTI'
                         if any(contains(fn,'dti')) && any(contains(fn,'md')) && any(contains(fn,'fa'))
                             qc.DTI = 'pass';
+                        elseif contains(wk_sbj,'DTIProblem')
+                            qc.DTI = 'Skipped Due to problem tag';
                         else
                             qc.DTI = 'fail';
                             msg = [wk_sbj,' ',wk_ses.name,' DTI FAIL'];
@@ -1102,7 +1139,7 @@ for s = 1:numel(subjects)
                 textprogressbar(1,s/numel(subjects)*100,msg)
                 cont = false;
                 if DELETEBRAINAGEIFFAIL
-                    delete(processed_matfile)
+                    delete(processed_wk_matfile)
                 end
             end
         end
@@ -1112,7 +1149,7 @@ for s = 1:numel(subjects)
         qc = [];
     end
 
-    % Save QC structure back to matfile
+    % Save QC structure back to wk_matfile
     if cont
         % Add pipeline info
         wk_mat.pipelineinfo = pipelineinfo;
@@ -1198,7 +1235,7 @@ function np_clear(wk_sbj,opt,o)
 if o
     try
         if opt.AR.brainageR
-            % Delete brainageR .matfile
+            % Delete brainageR .wk_matfile
             mat = dir(fullfile(opt.paths.brainage_folder,['*',wk_sbj,'*.mat']));
             delete(fullfile(mat.folder,mat.name))
             disp(['Removed ',fullfile(mat.folder,mat.name)])
@@ -1222,8 +1259,8 @@ else
     end
 
     try
-        if opt.AT.matfile
-            % Delete extracted .matfile
+        if opt.AT.wk_matfile
+            % Delete extracted .wk_matfile
             mat = dir(fullfile(opt.paths.processed_output,'**',['*',wk_sbj,'*.mat']));
             delete(fullfile(mat.folder,mat.name))
             disp(['Removed ',fullfile(mat.folder,mat.name)])
@@ -1232,7 +1269,7 @@ else
 
     try
         if opt.AR.brainageR
-            % Delete brainageR .matfile
+            % Delete brainageR .wk_matfile
             mat = dir(fullfile(opt.paths.brainage_folder,'**',['*',wk_sbj,'*.mat']));
             delete(fullfile(mat.folder,mat.name))
             disp(['Removed ',fullfile(mat.folder,mat.name)])

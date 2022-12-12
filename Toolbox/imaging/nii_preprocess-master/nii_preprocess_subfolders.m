@@ -13,6 +13,22 @@ if ~exist('pth','var'), pth = pwd; end;
 f = subFolderSub(pth);
 if isempty(f), error('No folders in parent folder %s', pth); end
 
+% Sync processed with harvest_output folder
+if opt.syncPreprocessed 
+
+    harvest_patients = dir(pth);
+    harvest_patients(contains({harvest_patients.name},'.')) = [];
+    processed_mat = dir(fullfile(outpath,'*','*.mat'));
+    rm_idx = find(~cellfun(@(x) any(contains({harvest_patients.name},extractBefore(x,'.mat'))),{processed_mat.name}));
+    if ~isempty(rm_idx)
+        disp(['Removing ',num2str(numel(rm_idx)),' subject found in processed but not harvest'])
+        for r = 1:numel(rm_idx)
+            disp(['Removed ',processed_mat(rm_idx(r)).name])
+            delete(fullfile(processed_mat(rm_idx(r)).folder,processed_mat(rm_idx(r)).name))
+        end
+    end
+end
+
 
 % Create Output Folder
 mkdir(outpath)
