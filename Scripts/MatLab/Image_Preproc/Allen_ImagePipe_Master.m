@@ -439,7 +439,7 @@ parfor sbj = 1:numel(sbj_dir)
                         copyfile(fullfile(lesion.folder,lesion.name),fullfile(subject_output_folder,lesion_new))
                     end
 
-                    % Store lesion dimesnsion
+                    % Store lesion dimension
                     V = spm_vol(fullfile(subject_output_folder,lesion_new));
                     les_dim = V.dim;
                 end

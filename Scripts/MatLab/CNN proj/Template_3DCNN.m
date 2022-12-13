@@ -1,4 +1,4 @@
-%% 3D CNN MODEL
+%3D CNN MODEL
 clear
 clc
 
@@ -7,13 +7,14 @@ GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
 NIFTIFOLDER_PATH='/media/bonilha/Elements/MasterSet_old/mat2nii_savefolder';
 
 
+%% Setup 
+
+% Add toolboxes
 cd(GITHUB_PATH)
 allengit_genpath(GITHUB_PATH,'imaging')
 
-% Inputs:
-cd(NIFTIFOLDER_PATH)
 
-matter = 'gm';
+
 %% get volume data
 
 % look for Controls nifti files

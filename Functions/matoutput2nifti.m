@@ -12,6 +12,7 @@ function matoutput2nifti(input_mat,output_path,opt)
 %   T1 based options
 %       opt.T1.img = raw output
 %       opt.T1.seg = segmented output
+%       opt.T1.matter = matter output ('gm','wm','both'[default])
 %       opt.T1.lesion = lesion output
 %       opt.T1.smoothed = smoothed output
 %   fMRI based options
@@ -35,8 +36,6 @@ if ~exist(output_path,'dir')
     error('output folder does not exist')
 end
 
-matter = {'gm','wm'};
-
 wk_mat = load(input_mat);
 fn = fieldnames(wk_mat);
 
@@ -54,6 +53,17 @@ for f = 1:numel(fn)
 
     %% T1 output
     if isfield(opt,'T1')
+        if output_log(opt.T1,'matter')
+            if strcmp(opt.T1.matter,'both')
+                matter = {'gm','wm'};
+            elseif strcmp(opt.T1.matter,'gm') || strcmp(opt.T1.matter,'wm')
+                matter = {opt.T1.matter};
+            else
+                error('opt.T1.matter input not recognized [',opt.T1.matter,']')
+            end
+        else
+            matter = {'gm','wm'};
+        end
 
         % Save T1 image as nifti
         if output_log(opt.T1,'img')
@@ -64,7 +74,7 @@ for f = 1:numel(fn)
 
         % Save segmented files as nifti
         if output_log(opt.T1,'seg')
-            for m = 1:2
+            for m = 1:numel(matter)
                 if ~exist(fullfile(output_path,'T1'),'dir');mkdir(fullfile(output_path,'T1'));end
 
                 wk_save_name = fullfile(output_path,'T1',sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m}));
@@ -81,7 +91,7 @@ for f = 1:numel(fn)
 
         % Save smooth T1
         if output_log(opt.T1,'smooth')
-            for m = 1:2
+            for m = 1:numel(matter)
                 if ~exist(fullfile(output_path,'T1'),'dir');mkdir(fullfile(output_path,'T1'));end
                 wk_save_name = fullfile(output_path,'T1',sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},['smooth_',matter{m}]));
                 write_field(wk_ses,['smooth_vbm_',matter{m}],wk_save_name)

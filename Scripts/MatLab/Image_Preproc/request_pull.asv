@@ -32,9 +32,8 @@ processedmats_name = {processedmats.name};
 raw_images = dir(fullfile(image_database,'*','*raw*','*','*'));
 raw_images = raw_images(~cellfun(@(x) contains(x,'.'),{raw_images.name}));
 raw_images_name = {raw_images.name};
-raw_images_name = cellfun(@(x) strrep(x,'_',''),raw_images_name,'UniformOutput',false);
-error = [];
 
+error = [];
 for s = 1:numel(sheets)
 
     wk_sheet = char(sheets(s));
