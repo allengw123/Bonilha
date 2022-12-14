@@ -176,8 +176,8 @@ display_complete(6,'Quality Check',QC_failed)
 %% Auto Remove Failed Subjects
 
 %autoremove(QC_failed,opt)
+autoremoved({'EMOPR0036'}
 
-%np_clear('EMOPR0036',opt,false)
 
 %% Functions
 function [errors] = prep_niiharvest(opt)
