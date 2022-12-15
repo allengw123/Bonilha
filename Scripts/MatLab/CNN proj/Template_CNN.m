@@ -8,25 +8,25 @@ NIFTIFOLDER_PATH='/media/bonilha/Elements/test_data/images';
 XML_PATH = '/media/bonilha/Elements/test_data/labels.xlsx';
 
 % Run option
-set_ratio = [0.6 0.25 0.15];
-model = 3;
-iterations = 1;
+set_ratio = [0.6 0.25 0.15]; % Ratio of Training, Testing, Validation
+model = 3; % Either 2 for 2D or 3 for 3D
+iterations = 1; % Number of repeated models
 
 
 % 2D Parameters
-slices = 28:85;
-param.C2.optimizer = 'adam';
-param.C2.GLR = 0.01;
-param.C2.BS = 128;
-param.C2.EP = 30;
-param.C2.showgraph = 'training-progress';
+slices = 28:85; % Indicies of Coronal slice
+param.C2.optimizer = 'adam'; % Either adam or sgdm
+param.C2.GLR = 0.01; % Global learning rate
+param.C2.BS = 128; % Batch size
+param.C2.EP = 30; % Epochs
+param.C2.showgraph = 'training-progress'; % Either "training-process" or "none"
 
 % 3D Parameters
-param.C3.optimizer = 'adam';
-param.C3.GLR = 0.0001;
-param.C3.BS = 10;
-param.C3.EP = 20;
-param.C3.showgraph = 'training-progress';
+param.C3.optimizer = 'adam'; % Either adam or sgdm
+param.C3.GLR = 0.0001; % Global learning rate
+param.C3.BS = 10; % Global learning rate
+param.C3.EP = 20; % Global learning rate
+param.C3.showgraph = 'training-progress'; % Global learning rate
 
 %% Setup
 

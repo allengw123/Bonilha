@@ -127,7 +127,7 @@ display_complete(1,'Preprocess Format',format_errors)
 
 % Run nii_harvest_parallel
 errors_parallel = nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt);
-% nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'BONPL0137'});
+% nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'BONPL0149'});
 
 % Display Step 2 completion
 display_complete(2,'Harvest Parallel',errors_parallel)
@@ -154,7 +154,8 @@ setup_brainagedir(opt)
 
 % Run BrainAge
 brainageR_errors = run_brainage_parallel(opt);
-%brainageR_errors = run_brainage_parallel(opt,'BONPL0120');
+%%
+brainageR_errors = run_brainage_parallel(opt,'BONPL0120');
 
 % Display Step 5 completion
 display_complete(5,'Brain Age Calculation',brainageR_errors)
@@ -176,8 +177,8 @@ display_complete(6,'Quality Check',QC_failed)
 %% Auto Remove Failed Subjects
 
 %autoremove(QC_failed,opt)
-autoremoved({'EMOPR0036'}
 
+%np_clear('EMOPR0036',opt,false)
 
 %% Functions
 function [errors] = prep_niiharvest(opt)
@@ -844,13 +845,6 @@ function brainageR_errors = run_brainage_parallel(opt,debug_sub)
 
 disp('Running brainageR')
 
-% Define paths
-brainage_folder = opt.paths.brainage_folder;
-harvest_output = opt.paths.harvest_output;
-nii_preproc_database = opt.paths.nii_preproc_database;
-tempbrain_folder = opt.paths.tempbrain_folder;
-brainage_path = opt.paths.brainage_path;
-
 % Create temp brainage folder
 if exist(opt.paths.tempbrain_folder,'dir') && opt.deleteBrainageRTemp
     rmdir(opt.paths.tempbrain_folder,'s')
@@ -877,12 +871,9 @@ end
 
 % Start brainageR or debug mode
 if exist('debug_sub','var')
-    brainageR_errors = start_brainageR_parallel(brainage_folder, ...
-        nii_preproc_database, ...
-        tempbrain_folder, ...
-        brainage_path, ...
-        harvest_output, ...
-        dir(fullfile(opt.paths.processed_output,'**',[debug_sub,'.mat'])));
+    brainageR_errors{1} = start_brainageR_parallel( ...
+        dir(fullfile(opt.paths.processed_output,'**',[debug_sub,'.mat'])), ...
+        opt);
 else
 
     % Reset parallel pool
@@ -894,19 +885,22 @@ else
     % Run brainageR
     brainageR_errors = cell(size(processed_wk_matfiles));
     parfor a = 1:numel(processed_wk_matfiles)
-        brainageR_errors{a} = start_brainageR_parallel(brainage_folder, ...
-            nii_preproc_database, ...
-            tempbrain_folder, ...
-            brainage_path, ...
-            harvest_output, ...
-            processed_wk_matfiles(a));
+        brainageR_errors{a} = start_brainageR_parallel(processed_wk_matfiles(a),opt);
     end
 end
 brainageR_errors(cellfun(@isempty,brainageR_errors)) = [];
 end
 
-function brainageR_error = start_brainageR_parallel(brainage_folder,nii_preproc_database,tempbrain_folder,brainage_path,harvest_output,wk_matfile)
+function brainageR_error = start_brainageR_parallel(wk_matfile,opt)
 brainageR_error = [];
+er = [];
+
+% Define paths
+brainage_folder = opt.paths.brainage_folder;
+nii_preproc_database = opt.paths.nii_preproc_database;
+tempbrain_folder = opt.paths.tempbrain_folder;
+brainage_path = opt.paths.brainage_path;
+harvest_output = opt.paths.harvest_output;
 
 % Supress warnings
 warning('off','all')
@@ -944,53 +938,68 @@ sbj_name = extractBefore(wk_matfile.name,'.mat');
 input = dir(fullfile(nii_preproc_database,sbj_name,'**','T1*'));
 
 for s = 1:numel(input)
-
-    % Define session name
-    [~,ses] = fileparts(input(s).folder);
-
-    % Make subject folder
-    wk_sbj = extractBefore(input(s).name,'.nii');
-    wk_sbj_folder = fullfile(tempbrain_folder,wk_sbj);
-    mkdir(wk_sbj_folder);
-
-    % Copy origin corrected T1 into brainage temp folder
-    oc_T1 = dir(fullfile(harvest_output,sbj_name,ses,'T1*.nii'));
-    if numel(oc_T1) ~= 1; error('more or no oc_T1 found');end
-    s_input = fullfile(wk_sbj_folder,input(s).name);
-    copyfile(fullfile(oc_T1.folder,oc_T1.name),s_input);
-
-    % Define output
-    brainage_output = fullfile(wk_sbj_folder,[wk_sbj,'_brainage.csv']);
-    if ~exist(brainage_output,'file')
-        % Run brainageR
-        cmd = sprintf('%s -f %s -o %s ',fullfile(brainage_path,'brainageR'),s_input,brainage_output);
-        system(cmd,'-echo');
-    end
-
-    if exist(brainage_output,'file')
-
-        % Load processed wk_matfile
-        mat_folder = wk_matfile.folder;
-        wk_mat = load(fullfile(mat_folder,wk_matfile.name));
-
-        % Save brainageR output
-        brain_age_pred = readtable(brainage_output);
-        brain_age_pred_tissue_vols = readtable(fullfile(wk_sbj_folder,[brain_age_pred.File{:},'_tissue_volumes.csv']));
-        wk_mat.(ses).brainage.agePred = brain_age_pred;
-        wk_mat.(ses).brainage.TissueVol = brain_age_pred_tissue_vols;
-
-        slice_dir = dir(fullfile(wk_sbj_folder,['slicesdir_T1_',extractBefore(wk_matfile.name,'.mat'),'.nii'],'*.png'));
-        for p = 1:numel(slice_dir)
-            png = imread(fullfile(slice_dir(p).folder,slice_dir(p).name));
-            t_name = extractBetween(slice_dir(p).name,'__','.png');
-            wk_mat.(ses).brainage.slicedir.(t_name{:}) = png;
+    try
+        % Define session name
+        [~,ses] = fileparts(input(s).folder);
+    
+        % Make subject folder
+        wk_sbj = extractBefore(input(s).name,'.nii');
+        wk_sbj_folder = fullfile(tempbrain_folder,wk_sbj);
+        mkdir(wk_sbj_folder);
+    
+        % Copy origin corrected T1 into brainage temp folder
+        if strcmp(ses,'pos')
+            oc_T1 = dir(fullfile(harvest_output,sbj_name,ses,'eT1*.nii'));
+            if isempty(oc_T1)
+                er='Enantiomorphic pos-T1 not found';
+                error(er)
+            end
+        else
+            oc_T1 = dir(fullfile(harvest_output,sbj_name,ses,'T1*.nii'));
         end
+        if numel(oc_T1) ~= 1; er='more or no oc_T1 found';error(er);end
+        s_input = fullfile(wk_sbj_folder,input(s).name);
+        copyfile(fullfile(oc_T1.folder,oc_T1.name),s_input);
+        
+    
+        % Define output
+        brainage_output = fullfile(wk_sbj_folder,[wk_sbj,'_',ses,'_brainage.csv']);
+        if ~exist(brainage_output,'file')
+            % Run brainageR
+            cmd = sprintf('%s -f %s -o %s ',fullfile(brainage_path,'brainageR'),s_input,brainage_output);
+            system(cmd,'-echo');
+        end
+    
+        if exist(brainage_output,'file')
+    
+            % Load processed wk_matfile
+            mat_folder = wk_matfile.folder;
+            wk_mat = load(fullfile(mat_folder,wk_matfile.name));
+    
+            % Save brainageR output
+            brain_age_pred = readtable(brainage_output);
+            brain_age_pred_tissue_vols = readtable(fullfile(wk_sbj_folder,[brain_age_pred.File{:},'_tissue_volumes.csv']));
+            wk_mat.(ses).brainage.agePred = brain_age_pred;
+            wk_mat.(ses).brainage.TissueVol = brain_age_pred_tissue_vols;
+    
+            slice_dir = dir(fullfile(wk_sbj_folder,['slicesdir_T1_',extractBefore(wk_matfile.name,'.mat'),'.nii'],'*.png'));
+            for p = 1:numel(slice_dir)
+                png = imread(fullfile(slice_dir(p).folder,slice_dir(p).name));
+                t_name = extractBetween(slice_dir(p).name,'__','.png');
+                wk_mat.(ses).brainage.slicedir.(t_name{:}) = png;
+            end
+    
+            % Save completed wk_matfile with brainageR field
+            saveparfor(wk_mat_output,'-struct',wk_mat)
 
-        % Save completed wk_matfile with brainageR field
-        saveparfor(wk_mat_output,'-struct',wk_mat)
-
-    else
-        brainageR_error = wk_matfile.name;
+            % Delete files
+            rmdir(wk_sbj_folder,'s')
+    
+        else
+            brainageR_error = wk_matfile.name;
+        end
+    catch
+        brainageR_error = [wk_matfile.name,' ',er];
     end
 end
 

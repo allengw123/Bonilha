@@ -10,11 +10,11 @@ function matoutput2nifti(input_mat,output_path,opt)
 %       detail) --> if missing field is was just default to false
 %
 %   T1 based options
-%       opt.T1.img = raw output
-%       opt.T1.seg = segmented output
-%       opt.T1.matter = matter output ('gm','wm','both'[default])
-%       opt.T1.lesion = lesion output
-%       opt.T1.smoothed = smoothed output
+%       opt.T1.img = true/false --> raw output
+%       opt.T1.seg = true/false --> segmented output
+%       opt.T1.matter = 'gm'/'wm'/'both'[default] --> matter output
+%       opt.T1.lesion = true/false --> lesion output
+%       opt.T1.smoothed = true/false --> smoothed output
 %   fMRI based options
 %       work in progress
 %   DTI based options
@@ -42,7 +42,7 @@ fn = fieldnames(wk_mat);
 [~,name,~] = fileparts(input_mat);
 wk_sbj_name = name;
 
-for f = 1:numel(fn)
+for f = 1%:numel(fn)
 
     % Skip pipeline info
     if contains(fn{f},'pipelineinfo')
@@ -90,7 +90,7 @@ for f = 1:numel(fn)
         end
 
         % Save smooth T1
-        if output_log(opt.T1,'smooth')
+        if output_log(opt.T1,'smoothed')
             for m = 1:numel(matter)
                 if ~exist(fullfile(output_path,'T1'),'dir');mkdir(fullfile(output_path,'T1'));end
                 wk_save_name = fullfile(output_path,'T1',sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},['smooth_',matter{m}]));
