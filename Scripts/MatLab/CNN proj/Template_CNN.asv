@@ -1,3 +1,4 @@
+%3D CNN MODEL
 clear
 clc
 
@@ -12,9 +13,6 @@ XML_PATH = '/media/bonilha/Elements/test_data/labels.xlsx';
 set_ratio = [0.6 0.25 0.15]; % Ratio of Training, Testing, Validation
 model = 3; % Either 2 for 2D or 3 for 3D
 iterations = 1; % Number of repeated models
-
-% Label XML options
-label_column = 2; % Which column of excel file is labels
 
 % 2D Parameters
 slices = 28:85; % Indicies of Coronal slice
@@ -31,18 +29,12 @@ param.C3.BS = 10; % Global learning rate
 param.C3.EP = 20; % Global learning rate
 param.C3.showgraph = 'training-progress'; % Global learning rate
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%%%% DO NOT ADJUST CODE BELOW %%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%% DO NOT ADJUST CODE BELOW %%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% Setup
+%%
 % Add toolboxes
 cd(GITHUB_PATH)
 allengit_genpath(GITHUB_PATH,'imaging')
@@ -54,7 +46,7 @@ label_xml = readtable(XML_PATH);
 nifti_files = dir(NIFTIFOLDER_PATH);
 
 % Unique labels
-label_types = unique(label_xml{:,label_column});
+label_types = unique(label_xml{:,2});
 
 % Define CNN specific type variables
 switch model
