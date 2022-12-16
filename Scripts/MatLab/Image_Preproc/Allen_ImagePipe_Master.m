@@ -73,7 +73,7 @@ opt.syncBrainageR = true;
 opt.recheckOutput = true;
 opt.CHECK_SESSIONMATCH = true;
 opt.CHECK_AQ = true;
-opt.CHECK_BRAINAGER = false;
+opt.CHECK_BRAINAGER = true;
 opt.DELETEBRAINAGEIFFAIL = false;
 
 % Autoremove options
@@ -154,8 +154,7 @@ setup_brainagedir(opt)
 
 % Run BrainAge
 brainageR_errors = run_brainage_parallel(opt);
-%%
-brainageR_errors = run_brainage_parallel(opt,'BONPL0120');
+%brainageR_errors = run_brainage_parallel(opt,'BONPL0120');
 
 % Display Step 5 completion
 display_complete(5,'Brain Age Calculation',brainageR_errors)
@@ -178,7 +177,6 @@ display_complete(6,'Quality Check',QC_failed)
 
 %autoremove(QC_failed,opt)
 
-%np_clear('EMOPR0036',opt,false)
 
 %% Functions
 function [errors] = prep_niiharvest(opt)

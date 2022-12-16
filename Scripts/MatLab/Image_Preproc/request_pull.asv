@@ -110,7 +110,7 @@ for s = 1:numel(sheets)
                 continue
             elseif numel(r_folder)>1
                 temp = r_folder(contains({r_folder.name},tags));
-                copyfile(fullfile(temp.folder,temp.name),fullfile(save_raw_folder,r_folder.name));
+                copyfile(temp
             else
                 copyfile(fullfile(r_folder.folder,r_folder.name),fullfile(save_raw_folder,r_folder.name))
             end

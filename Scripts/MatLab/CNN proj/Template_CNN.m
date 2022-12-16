@@ -5,8 +5,8 @@ clc
 
 % Enter in Paths
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
-NIFTIFOLDER_PATH='/media/bonilha/Elements/test_data/images';
-XML_PATH = '/media/bonilha/Elements/test_data/labels.xlsx';
+NIFTIFOLDER_PATH='/media/bonilha/Elements/test_data/nifti/T1';
+XML_PATH = '/media/bonilha/Elements/test_data/label.xlsx';
 
 % Run option
 set_ratio = [0.6 0.25 0.15]; % Ratio of Training, Testing, Validation

@@ -73,7 +73,7 @@ opt.syncBrainageR = true;
 opt.recheckOutput = true;
 opt.CHECK_SESSIONMATCH = true;
 opt.CHECK_AQ = true;
-opt.CHECK_BRAINAGER = false;
+opt.CHECK_BRAINAGER = true;
 opt.DELETEBRAINAGEIFFAIL = false;
 
 % Autoremove options
@@ -154,8 +154,7 @@ setup_brainagedir(opt)
 
 % Run BrainAge
 brainageR_errors = run_brainage_parallel(opt);
-%%
-brainageR_errors = run_brainage_parallel(opt,'BONPL0120');
+%brainageR_errors = run_brainage_parallel(opt,'BONPL0120');
 
 % Display Step 5 completion
 display_complete(5,'Brain Age Calculation',brainageR_errors)
@@ -177,8 +176,13 @@ display_complete(6,'Quality Check',QC_failed)
 %% Auto Remove Failed Subjects
 
 %autoremove(QC_failed,opt)
+ EMOPL172, EMOPL179, EMOPR0036, EMOPR0071, EMOPR0073
+np_clear('EMOPL172',opt,false)
+np_clear('EMOPL179',opt,false)
+np_clear('EMOPR0036',opt,false)
+np_clear('EMOPL172',opt,false)
+np_clear('EMOPL172',opt,false)
 
-%np_clear('EMOPR0036',opt,false)
 
 %% Functions
 function [errors] = prep_niiharvest(opt)
@@ -937,6 +941,10 @@ end
 sbj_name = extractBefore(wk_matfile.name,'.mat');
 input = dir(fullfile(nii_preproc_database,sbj_name,'**','T1*'));
 
+% Load processed wk_matfile
+mat_folder = wk_matfile.folder;
+wk_mat = load(fullfile(mat_folder,wk_matfile.name));
+
 for s = 1:numel(input)
     try
         % Define session name
@@ -972,10 +980,6 @@ for s = 1:numel(input)
     
         if exist(brainage_output,'file')
     
-            % Load processed wk_matfile
-            mat_folder = wk_matfile.folder;
-            wk_mat = load(fullfile(mat_folder,wk_matfile.name));
-    
             % Save brainageR output
             brain_age_pred = readtable(brainage_output);
             brain_age_pred_tissue_vols = readtable(fullfile(wk_sbj_folder,[brain_age_pred.File{:},'_tissue_volumes.csv']));
@@ -996,10 +1000,10 @@ for s = 1:numel(input)
             rmdir(wk_sbj_folder,'s')
     
         else
-            brainageR_error = wk_matfile.name;
+            brainageR_error = [brainageR_error;{[wk_matfile.name,' brainageR failed']}];
         end
     catch
-        brainageR_error = [wk_matfile.name,' ',er];
+        brainageR_error = [brainageR_error;{[wk_matfile.name,' ',er]}];
     end
 end
 

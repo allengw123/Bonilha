@@ -42,7 +42,7 @@ fn = fieldnames(wk_mat);
 [~,name,~] = fileparts(input_mat);
 wk_sbj_name = name;
 
-for f = 1%:numel(fn)
+for f = 1:numel(fn)
 
     % Skip pipeline info
     if contains(fn{f},'pipelineinfo')
