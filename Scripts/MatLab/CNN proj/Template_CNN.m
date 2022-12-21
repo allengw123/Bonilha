@@ -10,7 +10,7 @@ XML_PATH = '/media/bonilha/Elements/test_data/label.xlsx';
 
 % Run option
 set_ratio = [0.6 0.25 0.15]; % Ratio of Training, Testing, Validation
-model = 3; % Either 2 for 2D or 3 for 3D
+model = 2; % Either 2 for 2D or 3 for 3D
 iterations = 1; % Number of repeated models
 
 % Label XML options

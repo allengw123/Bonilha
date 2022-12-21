@@ -37,7 +37,7 @@ DISEASE_TAG = 'Patients';
 opt.SESSION_TAG = {'pre','pos','session'};
 
 % Format Options
-opt.SKIP_PROBLEM_TAG = true; %true = don't preprocess subjects with a "problem" string attached at the end
+opt.SKIP_PROBLEM_TAG = false; %true = don't preprocess subjects with a "problem" string attached at the end
 opt.PROBLEM_TAGS = {'problem','MissingT1','MissingLesion','IncorrectLesion'}; % ends with tags that SKIP_PROBLEM_TAG will look for
 opt.SKIP_LESION = true; % Set true to skip Missinglesion and IncorrectLesion based ond PROBLEM_TAGS_LOGIC
 opt.PROBLEM_TAGS_LOGIC = {false,false,true,true}; % Logic for SKIP_LESION option
@@ -70,7 +70,7 @@ opt.deleteBrainageRTemp = true;
 opt.syncBrainageR = true;
 
 % Quality Check Options
-opt.recheckOutput = true;
+opt.recheckOutput = false;
 opt.CHECK_SESSIONMATCH = true;
 opt.CHECK_AQ = true;
 opt.CHECK_BRAINAGER = true;
@@ -136,7 +136,7 @@ display_complete(2,'Harvest Parallel',errors_parallel)
 
 % Run nii_harvest (DTI)
 DTI_errors = nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt);
-% nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'EMOPL0012'});
+%nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'MUSPR0078problem'});
 
 % Display Step 3 completion
 display_complete(3,'DTI processing',DTI_errors)
@@ -154,7 +154,7 @@ setup_brainagedir(opt)
 
 % Run BrainAge
 brainageR_errors = run_brainage_parallel(opt);
-%brainageR_errors = run_brainage_parallel(opt,'BONPL0120');
+%%brainageR_errors = run_brainage_parallel(opt,'EMOPR0036');
 
 % Display Step 5 completion
 display_complete(5,'Brain Age Calculation',brainageR_errors)
@@ -176,6 +176,11 @@ display_complete(6,'Quality Check',QC_failed)
 %% Auto Remove Failed Subjects
 
 %autoremove(QC_failed,opt)
+% np_clear('EMOPL172',opt,false)
+% np_clear('EMOPL179',opt,false)
+% np_clear('EMOPR0036',opt,false)
+% np_clear('EMOPR0071',opt,false)
+% np_clear('EMOPR0073',opt,false)
 
 
 %% Functions
@@ -947,7 +952,9 @@ for s = 1:numel(input)
         % Make subject folder
         wk_sbj = extractBefore(input(s).name,'.nii');
         wk_sbj_folder = fullfile(tempbrain_folder,wk_sbj);
-        mkdir(wk_sbj_folder);
+        if ~exist(wk_sbj_folder,'dir')
+            mkdir(wk_sbj_folder);
+        end
     
         % Copy origin corrected T1 into brainage temp folder
         if strcmp(ses,'pos')
@@ -988,13 +995,14 @@ for s = 1:numel(input)
             end
     
             % Save completed wk_matfile with brainageR field
-            saveparfor(wk_mat_output,'-struct',wk_mat)
+            saveparfor(wk_mat_output,wk_mat)
 
             % Delete files
             rmdir(wk_sbj_folder,'s')
     
         else
             brainageR_error = [brainageR_error;{[wk_matfile.name,' brainageR failed']}];
+            rmdir(wk_sbj_folder,'s')
         end
     catch
         brainageR_error = [brainageR_error;{[wk_matfile.name,' ',er]}];
@@ -1040,7 +1048,13 @@ for s = 1:numel(subjects)
 
     % Load processed wk_matfile
     processed_wk_matfile = fullfile(subject_folder,subjects{s});
-    wk_mat = load(processed_wk_matfile);
+    try
+        wk_mat = load(processed_wk_matfile);
+    catch er
+        errors{s} = er;
+        continue
+    end
+
 
     % Allocated variables
     qc = [];
@@ -1160,7 +1174,7 @@ for s = 1:numel(subjects)
     if cont
         % Add pipeline info
         wk_mat.pipelineinfo = pipelineinfo;
-        saveparfor(save_mat,'-struct',wk_mat)
+        saveparfor(save_mat,wk_mat)
         textprogressbar(1,s/numel(subjects)*100,[wk_sbj,' passed QC'])
     else
         errors{s} = [{wk_sbj} {wk_mat} {extractAfter(msg,[wk_sbj,' '])}];
@@ -1173,8 +1187,8 @@ textprogressbar(2,'QC Complete')
 
 end
 
-function saveparfor(outname,opt1,save_mfile)
-save(outname,opt1,'save_mfile')
+function saveparfor(outname,save_mfile)
+save(outname,'-struct','save_mfile')
 end
 
 function display_complete(stepnum,step,error_num)
@@ -1202,7 +1216,7 @@ end
 
 function autoremove(QC_failed,opt)
 
-disp(['Auto-removing ',num2str(length(QC_failed)),' subjects'])
+disp(['Auto-removing ',num2str(size(QC_failed,1)),' subjects'])
 
 for sbj = 1:size(QC_failed,1)
     wk_sbj = QC_failed{sbj,1};
