@@ -32,14 +32,19 @@
 function header = read_eeglabheader(filename)
 
 if nargin < 1
-  help read_eeglabheader
-  return
+help read_eeglabheader
+return
 end
 
 if ~isstruct(filename)
-  load('-mat', filename, 'EEG');
+    matObj = matfile(filename);
+    if any(strcmp(fieldnames(matObj),'EEG'))
+        load('-mat', filename, 'EEG');
+    else
+        EEG = load('-mat', filename);
+    end
 else
-  EEG = filename;
+EEG = filename;
 end
 
 header.Fs          =  EEG.srate;
@@ -48,23 +53,23 @@ header.nSamples    =  EEG.pnts;
 header.nSamplesPre = -EEG.xmin*EEG.srate;
 header.nTrials     =  EEG.trials;
 try
-  header.label     = { EEG.chanlocs.labels }';
+header.label     = { EEG.chanlocs.labels }';
 catch
-  ft_warning('creating default channel names');
-  for i=1:header.nChans
-    header.label{i} = sprintf('chan%03d', i);
-  end
+ft_warning('creating default channel names');
+for i=1:header.nChans
+header.label{i} = sprintf('chan%03d', i);
+end
 end
 ind = 1;
 for i = 1:length( EEG.chanlocs )
-  if isfield(EEG.chanlocs(i), 'X') && ~isempty(EEG.chanlocs(i).X)
-    header.elec.label{ind, 1} = EEG.chanlocs(i).labels;
-    % this channel has a position
-    header.elec.elecpos(ind,1) = EEG.chanlocs(i).X;
-    header.elec.elecpos(ind,2) = EEG.chanlocs(i).Y;
-    header.elec.elecpos(ind,3) = EEG.chanlocs(i).Z;
-    ind = ind+1;
-  end
+if isfield(EEG.chanlocs(i), 'X') && ~isempty(EEG.chanlocs(i).X)
+header.elec.label{ind, 1} = EEG.chanlocs(i).labels;
+% this channel has a position
+header.elec.elecpos(ind,1) = EEG.chanlocs(i).X;
+header.elec.elecpos(ind,2) = EEG.chanlocs(i).Y;
+header.elec.elecpos(ind,3) = EEG.chanlocs(i).Z;
+ind = ind+1;
+end
 end
 
 % remove data

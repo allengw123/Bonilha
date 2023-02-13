@@ -2,7 +2,7 @@
 clear
 clc
 
-githubpath='C:\Users\allen\Documents\GitHub\Bonilha';
+githubpath='/home/bonilha/Documents/GitHub/Bonilha';
 % githubpath='C:\Users\bonilha\Documents\GitHub\Bonilha';
 
 cd(githubpath)

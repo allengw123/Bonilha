@@ -1,7 +1,7 @@
 clear all
 clc
 
-gitPath='C:\Users\allen\Documents\GitHub\Bonilha';
+gitPath='/home/bonilha/Documents/GitHub/Bonilha';
 % gitPath = 'C:\Users\bonilha\Documents\GitHub\Bonilha';
 
 cd(gitPath)
@@ -251,7 +251,7 @@ for d=1:numel(xmlFiles)
 
 end
 %%
-dataPath='F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\Ip_RELU';
+dataPath='/media/bonilha/AllenProj/CNN_project/CNN output/2D_CNN/MATLAB/disease_pred/AgeRegress/Figures/Ip_RELU';
 aal_regions=readtable('F:\CNN output\2D_CNN\MATLAB\AgeRegress\Figures\aal.xlsx');
 xmlFiles={dir(fullfile(dataPath,'*.xlsx')).name};
 cd(dataPath)

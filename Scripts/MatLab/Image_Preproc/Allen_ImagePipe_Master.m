@@ -24,9 +24,9 @@ clc
 
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
 IMAGE_DATABASE = '/media/bonilha/Elements/Image_database';
-DATABASE_NAME = 'MasterSet_TLE';
+%DATABASE_NAME = 'MasterSet_TLE';
 %DATABASE_NAME = 'UCSD_TLE';
-%DATABASE_NAME = 'ADNI_AD';
+DATABASE_NAME = 'ADNI_AD';
 DISEASE_TAG = 'Patients';
 %DISEASE_TAG = 'Controls';
 
