@@ -62,4 +62,5 @@ switch type
         disp('No specific analysis argument detected. No additional toolboxes will be added')
 end
 
+disp('Genpath function complete')
 end

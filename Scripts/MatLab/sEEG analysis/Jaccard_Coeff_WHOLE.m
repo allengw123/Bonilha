@@ -392,7 +392,10 @@ end
 
 % Divide into resp/nonresp
 resp_mean_base = mean_dat(responsive_idx);
+resp_ind_base = cat(1,wk_dat{responsive_idx,:});
+
 nonresp_mean_base = mean_dat(nonresponsive_idx);
+nonresp_ind_base = cat(1,wk_dat{nonresponsive_idx,:});
 nonresp_score = response(nonresponsive_idx);
 
 % Find statistics of resp/nonresp
@@ -407,11 +410,8 @@ figure('Color','w')
 bar([1 2],[mean_resp_base mean_nonresp_base])
 hold on
 errorbar([mean_resp_base mean_nonresp_base],[sem_resp_base sem_nonresp_base],'vertical','Color',[0 0 0],'Linestyle','none')
-scatter(ones(size(resp_mean_base))+(randn(size(resp_mean_base))*0.01),resp_mean_base)
-scatter(ones(size(nonresp_mean_base))*2+(randn(size(nonresp_mean_base))*0.01),nonresp_mean_base,'x')
-for i = 1:numel(nonresp_score)
-    text(2+(randn(1,1)*0.01),nonresp_mean_base(i),num2str(nonresp_score(i)))
-end
+swarmchart(ones(size(resp_ind_base)),resp_ind_base)
+swarmchart(ones(size(nonresp_ind_base))*2,nonresp_ind_base)
 ylabel('Mean Jaccard Index at Rest')
 xticklabels({'Resp','NonResp'})
 [h,p,ci,stats] = ttest2(resp_mean_base,nonresp_mean_base);

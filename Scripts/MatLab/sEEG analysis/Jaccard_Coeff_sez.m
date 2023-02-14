@@ -381,6 +381,7 @@ end
 
 
 %% Seizure
+TOI = [1 3 4 5];
 
 % Calculate mean
 mean_dat = [];
@@ -390,9 +391,30 @@ for i = 1:size(jac_coeff,1)
     wk_dat = cell2mat(wk_dat');
     mean_dat = [mean_dat; mean(wk_dat,1)];
 end
+% Calculate indiviual
+resp_ind_sez = cat(1,jac_coeff{responsive_idx,:});
+resp_ind_sez = resp_ind_sez(:,TOI);
+nonresp_ind_sez = cat(1,jac_coeff{nonresponsive_idx,:});
+nonresp_ind_sez = nonresp_ind_sez(:,TOI);
 
 % Divide into resp/nonresp
 resp_mean_sez = mean_dat(responsive_idx,:);
-nonresp_mean_sez = mean_dat(nonresponsive_idx,:);
+resp_sem_sez = std(resp_mean_sez,[],1)./(ones(1,size(resp_mean_sez,2))*sqrt(size(resp_mean_sez,1)));
 
-spss_input = [[resp_mean_sez; nonresp_mean_sez] [ones(size(resp_mean_sez,1),1);ones(size(nonresp_mean_sez,1),1)*2]]
+nonresp_mean_sez = mean_dat(nonresponsive_idx,:);
+nonresp_sem_sez = std(nonresp_mean_sez,[],1)./(ones(1,size(nonresp_mean_sez,2))*sqrt(size(nonresp_mean_sez,1)));
+
+spss_input_idv = [[resp_mean_sez; nonresp_mean_sez] [ones(size(resp_mean_sez,1),1);ones(size(nonresp_mean_sez,1),1)*2]];
+
+% Create figure
+figure
+errorbar([mean(resp_mean_sez(:,TOI),1);mean(nonresp_mean_sez(:,TOI),1)]',[resp_sem_sez(:,TOI);nonresp_sem_sez(:,TOI)]')
+xticks(1:4)
+xlim([0 5])
+xticklabels({'Baseline','Early','Mid','Late'})
+hold on
+x_val = repmat(1:4,[size(resp_ind_sez,1) 1]);
+swarmchart(x_val(:),resp_ind_sez(:),'x')
+x_val = repmat(1:4,[size(nonresp_ind_sez,1) 1]);
+swarmchart(x_val(:),nonresp_ind_sez(:),'o')
+ylim([0 1])
