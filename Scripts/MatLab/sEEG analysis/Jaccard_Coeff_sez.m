@@ -67,6 +67,7 @@ plotfig=false;
 
 % Phases
 phases={'Pre-Baseline','Pre-Trans','Post-Trans','Mid-Seiz','Late-Seiz','Early-Post','Late-Post'};
+TOI = [1 3 4 5];
 
 %% Find Jaccard similarity coefficient between functional and structural connectivity
 jac_coeff = [];
@@ -381,7 +382,6 @@ end
 
 
 %% Seizure
-TOI = [1 3 4 5];
 
 % Calculate mean
 mean_dat = [];
@@ -408,13 +408,16 @@ spss_input_idv = [[resp_mean_sez; nonresp_mean_sez] [ones(size(resp_mean_sez,1),
 
 % Create figure
 figure
-errorbar([mean(resp_mean_sez(:,TOI),1);mean(nonresp_mean_sez(:,TOI),1)]',[resp_sem_sez(:,TOI);nonresp_sem_sez(:,TOI)]')
+eb = errorbar([mean(resp_mean_sez(:,TOI),1);mean(nonresp_mean_sez(:,TOI),1)]',[resp_sem_sez(:,TOI);nonresp_sem_sez(:,TOI)]');
+eb(1).Color = 'b';
+eb(2).Color = 'g';
 xticks(1:4)
 xlim([0 5])
 xticklabels({'Baseline','Early','Mid','Late'})
 hold on
 x_val = repmat(1:4,[size(resp_ind_sez,1) 1]);
-swarmchart(x_val(:),resp_ind_sez(:),'x')
+resp_sc = swarmchart(x_val(:),resp_ind_sez(:),'xb');
 x_val = repmat(1:4,[size(nonresp_ind_sez,1) 1]);
-swarmchart(x_val(:),nonresp_ind_sez(:),'o')
+nonresp_sc = swarmchart(x_val(:),nonresp_ind_sez(:),'og');
 ylim([0 1])
+legend([resp_sc nonresp_sc], {'Responsive','NonResponsive'})

@@ -32,6 +32,8 @@ end
 responsive_idx = response==1;
 nonresponsive_idx = response>1;
 
+tab = tab(responsive_idx|nonresponsive_idx,:);
+
 
 % Define electrodes
 master_electrode={'LA','LAH','LAI','LLF','LMF','LPH','LPI','RA','RAH','RAI','RLF','RMF','RPH','RPI'};
@@ -386,17 +388,24 @@ wk_dat = jac_coeff.baseline;
 
 % Calculate mean
 mean_dat = [];
+num_clips = [];
 for i = 1:size(wk_dat,1)
     mean_dat = [mean_dat; mean(cell2mat(wk_dat(i,:)))];
+    num_clips = [num_clips;sum(~cellfun(@isempty,(wk_dat(i,:))))];
 end
 
 % Divide into resp/nonresp
 resp_mean_base = mean_dat(responsive_idx);
 resp_ind_base = cat(1,wk_dat{responsive_idx,:});
+resp_clip_base = num_clips(responsive_idx);
+resp_name = {subjID(responsive_idx).name};
 
 nonresp_mean_base = mean_dat(nonresponsive_idx);
 nonresp_ind_base = cat(1,wk_dat{nonresponsive_idx,:});
+nonresp_clip_base = num_clips(nonresponsive_idx);
 nonresp_score = response(nonresponsive_idx);
+nonresp_name = {subjID(nonresponsive_idx).name};
+
 
 % Find statistics of resp/nonresp
 mean_resp_base = mean(resp_mean_base);
@@ -405,13 +414,28 @@ sem_resp_base = std(resp_mean_base)/sqrt(numel(resp_mean_base));
 mean_nonresp_base = mean(nonresp_mean_base);
 sem_nonresp_base = std(nonresp_mean_base)/sqrt(numel(nonresp_mean_base));
 
+figure
+tiledlayout(2,1)
+nexttile
+bar(resp_clip_base)
+ylim([0 15])
+xticklabels(resp_name)
+ylabel('# of baseline clips')
+title('Responders')
+nexttile
+bar(nonresp_clip_base)
+xticklabels(nonresp_name)
+ylim([0 15])
+ylabel('# of baseline clips')
+title('NonResponders')
 
-figure('Color','w')
+
+figure
 bar([1 2],[mean_resp_base mean_nonresp_base])
 hold on
 errorbar([mean_resp_base mean_nonresp_base],[sem_resp_base sem_nonresp_base],'vertical','Color',[0 0 0],'Linestyle','none')
 swarmchart(ones(size(resp_ind_base)),resp_ind_base)
-swarmchart(ones(size(nonresp_ind_base))*2,nonresp_ind_base)
+swarmchart(ones(size(nonresp_ind_base))*2,nonresp_ind_base,'x')
 ylabel('Mean Jaccard Index at Rest')
 xticklabels({'Resp','NonResp'})
 [h,p,ci,stats] = ttest2(resp_mean_base,nonresp_mean_base);
@@ -424,14 +448,20 @@ ylim([0 1])
 wk_dat = jac_coeff.seizure;
 
 % Calculate mean
+num_clips = [];
 mean_dat = [];
 for i = 1:size(wk_dat,1)
     mean_dat = [mean_dat; mean(cell2mat(wk_dat(i,:)))];
+    num_clips = [num_clips;sum(~cellfun(@isempty,(wk_dat(i,:))))];
+
 end
 
 % Divide into resp/nonresp
 resp_mean_sez = mean_dat(responsive_idx);
+resp_clip_sez = num_clips(responsive_idx);
+
 nonresp_mean_sez = mean_dat(nonresponsive_idx);
+nonresp_clip_sez = num_clips(nonresponsive_idx);
 
 % Find statistics of resp/nonresp
 mean_resp_sez = mean(resp_mean_sez);

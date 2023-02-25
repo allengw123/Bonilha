@@ -54,7 +54,7 @@ if opt.sync_with_formated
     rm_sbjs = output_sbj(~cellfun(@(x) any(strcmp(x,input_sbj)),output_sbj));
 
     if ~isempty(rm_sbjs)
-        disp([num2str(numel(rm_sbjs)),' Subjects detected in output foutDirolder that isnt in input folder'])
+        disp([num2str(numel(rm_sbjs)),' Subjects detected in output folder that isnt in input folder'])
         for i = 1:numel(rm_sbjs)
             rmdir(fullfile(output_dir,rm_sbjs{i}),'s')
             disp(['Removed Subject ',rm_sbjs{i},' from output folder'])
