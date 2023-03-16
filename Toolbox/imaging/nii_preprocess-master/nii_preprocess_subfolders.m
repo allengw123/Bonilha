@@ -14,7 +14,7 @@ f = subFolderSub(pth);
 if isempty(f), error('No folders in parent folder %s', pth); end
 
 % Sync processed with harvest_output folder
-if opt.syncPreprocessed 
+if opt.MATCHDATABASE
 
     harvest_patients = dir(pth);
     harvest_patients(contains({harvest_patients.name},'.')) = [];

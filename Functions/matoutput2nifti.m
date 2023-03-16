@@ -115,6 +115,11 @@ log = false;
 end
 
 function write_field(matfile,field,output_name)
+root = fileparts(output_name);
+if ~exist('root','dir')
+    mkdir(root)
+end
+
 if isfield(matfile,field)
     wk_nifti = matfile.(field);
     hdr = wk_nifti.hdr;

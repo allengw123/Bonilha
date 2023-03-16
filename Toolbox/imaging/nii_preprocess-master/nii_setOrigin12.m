@@ -105,6 +105,7 @@ end
 if ischar(vols)
     vols = cellstr(vols);
 end
+close all
 matlabbatch{1}.spm.spatial.coreg.estimate.ref = {template};
 matlabbatch{1}.spm.spatial.coreg.estimate.source = {[deblank(vols{1}),',1']};%{'/Users/rorden/Desktop/3D.nii,1'};
 if  numel(vols) > 1

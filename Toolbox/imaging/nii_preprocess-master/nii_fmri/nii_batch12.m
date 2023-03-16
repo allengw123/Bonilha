@@ -754,7 +754,12 @@ if exist('guess','var') && ~isempty(guess)
     img = fullfile(pth, [nam, ext]);
     if exist(img,'file') == 2, return; end; %file found - guess folder
 end
-img =  spm_select(1,'image',['Please find image ' nam]);
+global parallel_log
+if parallel_log
+    error(['Unable to find ',nam])
+else
+    img =  spm_select(1,'image',['Please find image ' nam]);
+end
 %end findImg1Sub()
 
 function [tr] =  getTRSub(fmriname, trInput)

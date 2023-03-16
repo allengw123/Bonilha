@@ -391,6 +391,7 @@ for i = 1:size(jac_coeff,1)
     wk_dat = cell2mat(wk_dat');
     mean_dat = [mean_dat; mean(wk_dat,1)];
 end
+
 % Calculate indiviual
 resp_ind_sez = cat(1,jac_coeff{responsive_idx,:});
 resp_ind_sez = resp_ind_sez(:,TOI);

@@ -26,7 +26,12 @@ if nargin < 1 %, error('Please use nii_preprocess_gui to select images');
     imgs = fullfile(p,f);
 end;
 if ~exist('parallel','var')
+    global parallel_log
+    parallel_log = false;
     parallel = false;
+else
+    global parallel_log
+    parallel_log = true;
 end
 
 if isempty(spm_figure('FindWin','Graphics')),

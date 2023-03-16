@@ -21,7 +21,7 @@ if ~isempty(getenv('nii_harvest_reprocessASL'))
     reprocessASL = strcmpi(getenv('nii_harvest_reprocessASL'),'true');
 end
 if ~isempty(getenv('nii_harvest_reprocessDTI'))
-    reprocessDTI = strcmpi(getenv('nii_harvest_reprocessDTI'),'true')
+    reprocessDTI = strcmpi(getenv('nii_harvest_reprocessDTI'),'true');
 end
 if ~isempty(getenv('nii_harvest_reprocessVBM'))
     reprocessVBM = strcmpi(getenv('nii_harvest_reprocessVBM'),'true');
@@ -47,7 +47,10 @@ if ~isempty(getenv('nii_harvest_subjDirs'))
 end
 
 % Sync with format database
-if opt.sync_with_formated
+if opt.MATCHDATABASE
+    disp('Option sync with formated DETECTED.... checking')
+
+    % Removing Subject whole folder
     [input_sbj,~] = subFolderSub(baseDir);
     [output_sbj,output_dir] = subFolderSub(outDir);
 
@@ -60,6 +63,24 @@ if opt.sync_with_formated
             disp(['Removed Subject ',rm_sbjs{i},' from output folder'])
         end
     end
+
+    % Checking subject xper folder
+
+    input_folder = {dir(fullfile(baseDir,'*','*','T1*')).folder};
+    input_folder = extractAfter(input_folder,opt.DISEASE_TAG);
+    output_folder = {dir(fullfile(outDir,'*','*','*limegui.mat')).folder};
+    output_folder = extractAfter(output_folder,opt.DISEASE_TAG);
+
+    rm_sbjs = output_folder(~cellfun(@(x) any(strcmp(x,input_folder)),output_folder));
+
+    if ~isempty(rm_sbjs)
+        disp([num2str(numel(rm_sbjs)),' Subject session subfolder mismatch detected'])
+        for i = 1:numel(rm_sbjs)
+            rmdir(fullfile(output_dir,rm_sbjs{i}(2:end)),'s')
+            disp(['Removed Subject ',rm_sbjs{i}(2:end),' from output folder'])
+        end
+    end
+    disp('Option sync with formated completed')
 end
 
 
@@ -313,7 +334,7 @@ for xper = 1: numel(xperimentKeys)
                 %process the data (save error msg as structure to continue)
                 try
                     if setOrigin
-                        if imgs(s).nii.T1.newImg || imgs(s).nii.Lesion.newImg, setAcpcSubT1(matNameGUI); end
+                        if imgs(s).nii.T1.newImg || imgs(s).nii.Lesion.newImg, setAcpcSubT1(matNameGUI,opt); end
                     end
                     
                     nii_preprocess(mat,[],process1st,true,true);
@@ -325,7 +346,7 @@ for xper = 1: numel(xperimentKeys)
 
                 %process the data (DEBUG)
                 if setOrigin
-                    if imgs(s).nii.T1.newImg || imgs(s).nii.Lesion.newImg, setAcpcSubT1(matNameGUI); end
+                    if imgs(s).nii.T1.newImg || imgs(s).nii.Lesion.newImg, setAcpcSubT1(matNameGUI,opt); end
                 end
                 nii_preprocess(mat,[],process1st,true,true);
 
@@ -416,19 +437,39 @@ end
 %end
 %end findNovelImgs()
 
-function setAcpcSubT1 (matname)
+function setAcpcSubT1 (matname,opt)
 m = load(matname);
-if isfield(m,'T2') && isfield(m,'Lesion') && ~isempty(m.T2) && ~isempty(m.Lesion)
-    nii_setOrigin12({m.T2,m.Lesion}, 2, true); %T2
-    if isfield(m,'T1') && isfield(m,'Lesion')
-        nii_setOrigin12({m.T1}, 1, true); %T1 - crop with lesion
+
+% Check to see if opt.aq_lesiondraw is set up correctly
+if isfield(m,'Lesion') && ~isempty(m.Lesion)
+    if strcmp(opt.aq_lesiondraw,'T1') || strcmp(opt.aq_lesiondraw,'T2')
+    else
+        error('Must set aq_lesiondraw to either T1 or T2 to use lesion module')
     end
-    return;
 end
-if isfield(m,'T1') && isfield(m,'Lesion') && ~isempty(m.T1) && ~isempty(m.Lesion)
-    nii_setOrigin12({m.T1,m.Lesion}, 1, true); %T1 - crop with lesion
-    return;
+
+if isfield(m,'Lesion') && ~isempty(m.Lesion)
+    if isfield(m,'T2') && ~isempty(m.T2) && strcmp(opt.aq_lesiondraw,'T2')
+        nii_setOrigin12({m.T2,m.Lesion}, 2, true); %T2      
+        if isfield(m,'T1') && ~isempty(m.T1)
+            nii_setOrigin12(m.T1, 1, true); %T1 - crop
+        end
+        return
+    elseif isfield(m,'T1') && ~isempty(m.T1) && strcmp(opt.aq_lesiondraw,'T1')
+        nii_setOrigin12({m.T1,m.Lesion}, 1, true); %T1 - crop
+        if isfield(m,'T2') && ~isempty(m.T2)
+            nii_setOrigin12(m.T2, 2, true); %T2
+        end
+        return
+    else
+        error('Proper Aq and opt.aq_lesiondraw must be defined to crop with lesion')
+    end
 end
+
+if isfield(m,'T2') && ~isempty(m.T2)
+    nii_setOrigin12(m.T2, 2, true); %T2
+end
+
 if isfield(m,'T1') && ~isempty(m.T1)
     nii_setOrigin12(m.T1, 1, true); %T1 - crop
 end

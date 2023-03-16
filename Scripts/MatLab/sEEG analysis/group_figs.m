@@ -158,7 +158,7 @@ for m = 1:numel(subjID)
 
     % Store data
     cum_coh = cat(3,cum_coh,coh_matrix);
-    cum_coh_seiz = cat(4,cum_coh_sez,coh_matrix_seizure(:,:,TOI));
+    cum_coh_seiz = cat(4,cum_coh_seiz,coh_matrix_seizure(:,:,TOI));
     cum_fa = cat(3,cum_fa,fa_matrix);
 end
 
@@ -172,11 +172,14 @@ elect_ccm=customcolormap([0 0.5 1],{'#151240','#3d439b','#b9b6db'});
 resp_coh = cum_coh(:,:,responsive_idx);
 resp_coh_mean = mean(resp_coh,3,'omitnan');
 resp_coh_std = std(resp_coh,[],3,'omitnan');
+mean(resp_coh_mean(resp_coh_mean~=0 & ~isnan(resp_coh_mean)))
+std(resp_coh_mean(resp_coh_mean~=0 & ~isnan(resp_coh_mean)))
 
 nonresp_coh = cum_coh(:,:,nonresponsive_idx);
 nonresp_coh_mean = mean(nonresp_coh,3,'omitnan');
 nonresp_coh_std = std(nonresp_coh,[],3,'omitnan');
-
+mean(nonresp_coh_mean(nonresp_coh_mean~=0 & ~isnan(nonresp_coh_mean)))
+std(nonresp_coh_mean(nonresp_coh_mean~=0 & ~isnan(nonresp_coh_mean)))
 
 [~,P,~,STATS] = ttest2(resp_coh,nonresp_coh,'dim',3);
 T = STATS.tstat;
@@ -188,49 +191,49 @@ b_T(P > 0.05/numel(find(~isnan(STATS.tstat)))) = NaN;
 b_T(isinf(b_T)) = NaN;
 b_T = abs(b_T);
 
-% 
-% figure;
-% imagesc(resp_coh_mean,[0 1])
-% title('Responsive Coherence Mean')
-% c=colorbar;
-% ylabel(c,'Beta coherence','fontsize',12);
-% axis('square')
-% colormap(func_ccm)
-%  
-% figure;
-% imagesc(nonresp_coh_mean,[0 1])
-% title('Nonresponsive Coherence Mean')
-% c=colorbar;
-% ylabel(c,'Beta coherence','fontsize',12);
-% axis('square')
-% colormap(func_ccm)
+
+figure;
+imagesc(resp_coh_mean,[0 1])
+title('Responsive Coherence Mean')
+c=colorbar;
+ylabel(c,'Beta coherence','fontsize',12);
+axis('square')
+colormap(func_ccm)
+ 
+figure;
+imagesc(nonresp_coh_mean,[0 1])
+title('Nonresponsive Coherence Mean')
+c=colorbar;
+ylabel(c,'Beta coherence','fontsize',12);
+axis('square')
+colormap(func_ccm)
 
 
 
 figure;
 tiledlayout(3,2)
 nexttile
-imagesc(resp_coh_mean)
+imagesc(resp_coh_mean,[0 1])
 title('Responsive Coherence Mean')
 colorbar
 colormap(func_ccm)
 nexttile
-imagesc(resp_coh_std)
+imagesc(resp_coh_std,[0 0.4])
 title('Responsive Coherence STD')
 colorbar
 colormap(func_ccm)
 nexttile
-imagesc(nonresp_coh_mean)
+imagesc(nonresp_coh_mean,[0 1])
 title('Nonresponsive Coherence Mean')
 colorbar
 colormap(func_ccm)
 nexttile
-imagesc(nonresp_coh_std)
+imagesc(nonresp_coh_std,[0 0.4])
 title('Nonresponsive Coherence STD')
 colorbar
 colormap(func_ccm)
 nexttile([1 2])
-imagesc(b_T)
+imagesc(b_T,[0 1])
 title('Bon corrected T')
 colorbar
 
@@ -251,7 +254,7 @@ xticklabels(master_electrode)
 title('Normalized')
 ylabel('Mean Beta Coherence')
 
-%% Baseline Coherence Group Statistics
+%% Seizure Coherence Group Statistics
 
 resp_coh_seiz = cum_coh_seiz(:,:,:,responsive_idx);
 resp_coh_seiz_mean = mean(resp_coh_seiz,4,'omitnan');
@@ -262,9 +265,17 @@ nonresp_coh_seiz_mean = mean(nonresp_coh_seiz,4,'omitnan');
 nonresp_coh_seiz_std = std(nonresp_coh_seiz,[],4,'omitnan');
 
 for ep = 1:numel(TOI)
-    [~,P,~,STATS] = ttest2(permute(resp_coh_seiz(:,:,ep,:),[1 2 4 3]), ...
-        permute(nonresp_coh_seiz(:,:,ep,:),[1 2 4 3]),'dim',3);
+    wk_resp = permute(resp_coh_seiz(:,:,ep,:),[1 2 4 3]);
+    wk_nonresp = permute(nonresp_coh_seiz(:,:,ep,:),[1 2 4 3]);
+
+    [~,P,~,STATS] = ttest2(wk_resp,wk_nonresp,'dim',3);
     
+    %mean(wk_resp(wk_resp~=0 & ~isnan(wk_resp)))
+    %std(wk_resp(wk_resp~=0 & ~isnan(wk_resp)))
+
+    mean(wk_nonresp(wk_nonresp~=0 & ~isnan(wk_nonresp)))
+    std(wk_nonresp(wk_nonresp~=0 & ~isnan(wk_nonresp)))
+
     T = STATS.tstat;
     b_P = P;
     b_T = T;
@@ -274,39 +285,38 @@ for ep = 1:numel(TOI)
     b_T(isinf(b_T)) = NaN;
     b_T = abs(b_T);
 
-    P_seiz = cat(3,P_seiz,b_P);
-    T_seiz = cat(3,T_seiz,b_T);
 
     figure;
     tiledlayout(3,2)
     nexttile
-    imagesc(resp_coh_seiz_mean(:,:,ep))
+    imagesc(resp_coh_seiz_mean(:,:,ep),[0 1])
     title('Responsive coherence Mean')
     colorbar
     colormap(func_ccm)
     nexttile
-    imagesc(resp_coh_seiz_std(:,:,ep))
+    imagesc(resp_coh_seiz_std(:,:,ep),[0 0.4])
     title('Responsive coherence STD')
     colorbar
     colormap(func_ccm)
     nexttile
-    imagesc(nonresp_coh_seiz_mean(:,:,ep))
+    imagesc(nonresp_coh_seiz_mean(:,:,ep),[0 1])
     title('Nonresponsive coherence Mean')
     colorbar
     colormap(func_ccm)
     nexttile
-    imagesc(nonresp_coh_seiz_std(:,:,ep))
+    imagesc(nonresp_coh_seiz_std(:,:,ep),[0 0.4])
     title('Nonresponsive coherence STD')
     colorbar
     colormap(func_ccm)
     nexttile([1 2])
-    imagesc(b_T)
+    imagesc(b_T,[0 1])
     title('Bon corrected T')
     colorbar
     sgtitle(TOI_labels{ep})
 end
 
 %% FA Group Statistics
+diag_idx = logical(diag(ones(42,1)));
 resp_fa = cum_fa(:,:,responsive_idx);
 resp_fa_mean = mean(resp_fa,3,'omitnan');
 resp_fa_std = std(resp_fa,[],3,'omitnan');
@@ -315,6 +325,11 @@ nonresp_fa = cum_fa(:,:,nonresponsive_idx);
 nonresp_fa_mean = mean(nonresp_fa,3,'omitnan');
 nonresp_fa_std = std(nonresp_fa,[],3,'omitnan');
 
+mean(resp_fa_mean(~diag_idx & ~isnan(resp_fa_mean)))
+std(resp_fa_mean(~diag_idx & ~isnan(resp_fa_mean)))
+
+mean(nonresp_fa_mean(~diag_idx & ~isnan(nonresp_fa_mean)))
+std(nonresp_fa_mean(~diag_idx & ~isnan(nonresp_fa_mean)))
 
 [~,P,~,STATS] = ttest2(resp_fa,nonresp_fa,'dim',3);
 T = STATS.tstat;
@@ -348,22 +363,22 @@ b_T = abs(b_T);
 figure;
 tiledlayout(3,2)
 nexttile
-imagesc(resp_fa_mean)
+imagesc(resp_fa_mean,[0 0.5])
 title('Responsive FA Mean')
 colormap(struct_ccm)
 colorbar
 nexttile
-imagesc(resp_fa_std)
+imagesc(resp_fa_std,[0 0.4])
 title('Responsive FA STD')
 colormap(struct_ccm)
 colorbar
 nexttile
-imagesc(nonresp_fa_mean)
+imagesc(nonresp_fa_mean,[0 0.5])
 title('Nonresponsive FA Mean')
 colormap(struct_ccm)
 colorbar
 nexttile
-imagesc(nonresp_fa_std)
+imagesc(nonresp_fa_std,[0 0.4])
 title('Nonresponsive FA STD')
 colorbar
 colormap(struct_ccm)

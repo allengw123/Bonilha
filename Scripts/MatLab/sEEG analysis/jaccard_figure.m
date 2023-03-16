@@ -23,7 +23,7 @@ resp_sem = std(resp_dat,[],1)/sqrt(size(resp_dat,1));
 nonresp_dat = [nonresp_mean_base nonresp_mean_sez(:,TOI)];
 nonresp_sem = std(nonresp_dat,[],1)/sqrt(size(nonresp_dat,1));
 
-% Create figure
+%% Create figure
 figure
 
 eb = errorbar([mean(resp_dat,1);mean(nonresp_dat,1)]',[resp_sem;nonresp_sem]');

@@ -47,7 +47,7 @@ if ~isempty(getenv('nii_harvest_subjDirs'))
 end
 
 % Sync with format database
-if  opt.sync_with_formated
+if opt.MATCHDATABASE
     [input_sbj,~] = subFolderSub(baseDir);
     [output_sbj,output_dir] = subFolderSub(outDir);
 
@@ -64,7 +64,7 @@ end
 
 
 if nargin<4
-    
+
     %set up parallel loop variables
     numOfGPU = gpuDeviceCount("available");
     if ~isempty(gcp('nocreate'))
@@ -80,7 +80,7 @@ if nargin<4
         c.NumWorkers = numOfGPU;
         pool = c.parpool(numOfGPU);
     end
-    
+
     numLoops = pool.NumWorkers;
     subjDirsSize = length(subjDirs);
     div = floor(subjDirsSize/numLoops);
@@ -104,7 +104,7 @@ if nargin<4
 
             if opt.interweave
                 disp('INTERWEAVE OPTION ACTIVE')
-                
+
                 error_sbjs{i} =startParallelHarvest_DTI(subjDirs(idex{i}),baseDir,outDir,opt,worker_num)
             else
                 fprintf("Process #%d uses subjDirs--> %d:%d \n", i, start, fin);
@@ -124,7 +124,7 @@ end
 if opt.clearpsfile
     disp('Looking and clearing extra .ps file output... this may take awhile')
     psfile = dir(fullfile(opt.paths.database_path,'**','*.ps'));
-    
+
     if ~isempty(psfile)
         for i = 1:length(psfile)
             delete(fullfile(psfile(i).folder,psfile(i).name))
@@ -223,7 +223,7 @@ for xper = 1: numel(xperimentKeys)
     process1st = false; % do not check for updates on the cluster!  DPR 20200205
 
 
-    
+
     t_start=tic;
     for s =  1: nSubj
         anyNewImg = false;
@@ -305,7 +305,7 @@ for xper = 1: numel(xperimentKeys)
             end
         end
 
-        if anyNewImg            
+        if anyNewImg
             matNameGUI = fullfile(subjDir,xperimentKeys{xper}, [subj,'_',xperimentKeys{xper}, '_limegui.mat']);
             fprintf('Creating %s\n',matNameGUI);
             save(matNameGUI,'-struct', 'mat');
@@ -319,7 +319,7 @@ for xper = 1: numel(xperimentKeys)
                         if imgs(s).nii.T1.newImg || imgs(s).nii.Lesion.newImg, setAcpcSubT1(matNameGUI); end
                         if imgs(s).nii.DTI.newImg, setAcpcSubDTI (matNameGUI); end
                     end
-                    
+
                     %process the datanargin
                     nii_preprocess(mat,[],process1st,true,false);
 

@@ -1,10 +1,7 @@
 clear all
 clc
 
-% This code is used to process T1, Lesion, and RestingState MRIs, DTI, and
-% BrainAGE
-%%% Unable to do DTI in parallel --> use nii_harvest to do DTI serially
-%%% Used to process Rebecca's MASTER_EPILEPSY DATABASE
+% This code is used to process T1, Lesion, and RestingState MRIs, DTI, and BrainageR
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% Requirments %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -34,7 +31,12 @@ DISEASE_TAG = 'Patients';
 %%%%%%%%%%%%%%%%%%%%%%%%% ADVANCE OPTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Database options
-opt.SESSION_TAG = {'pre','pos','session'};
+opt.SESSION_TAG = {'pre','pos','pos2','session'};
+opt.REQUIRES_LESION = {false,true,true,false};
+opt.DISEASE_TAG = DISEASE_TAG;
+opt.HYPER_THREAD = false; % Enable hyperthreading
+opt.MATCHDATABASE = true;
+
 
 % Format Options
 opt.SKIP_PROBLEM_TAG = false; %true = don't preprocess subjects with a "problem" string attached at the end
@@ -42,8 +44,6 @@ opt.PROBLEM_TAGS = {'problem','MissingT1','MissingLesion','IncorrectLesion'}; % 
 opt.SKIP_LESION = true; % Set true to skip Missinglesion and IncorrectLesion based ond PROBLEM_TAGS_LOGIC
 opt.PROBLEM_TAGS_LOGIC = {false,false,true,true}; % Logic for SKIP_LESION option
 opt.RECHECK_ALREADY_FORMATED = false; % Rechecks formated subjects
-opt.HYPER_THREAD = true; % Enable hyperthreading
-opt.MATCH_INPUT = true; % Remove subjects found in output and not input
 
 % Preprocess Options
 opt.setOrigin = true; %attempt to crop and set anterior commissure for images
@@ -58,16 +58,14 @@ opt.reprocessVBM = false;
 opt.explicitProcess = false; % <- if true, will only process if the reprocess flag is true
 opt.interweave = true; % Subjects will get dedicated to which parallel worker in an interweave fashion (helps efficiently process new subjects to database)
 opt.clearpsfile = true;
-opt.sync_with_formated = true; % Removes any harvest ouput detected that isn't in the input database
 opt.isMakeModalityTable = false;
+opt.aq_lesiondraw = 'T1'; %'T1' or 'T2'
 
 % Organize Preprocess Data Options
 opt.forcedPull = false;
-opt.syncPreprocessed = true;
 
 % BrainageR Options
 opt.deleteBrainageRTemp = true;
-opt.syncBrainageR = true;
 
 % Quality Check Options
 opt.recheckOutput = false;
@@ -79,14 +77,14 @@ opt.DELETEBRAINAGEIFFAIL = false;
 % Autoremove options
 opt.AR.nii_proc = true;
 opt.AR.harvest_output = true;
-opt.AT.wk_matfile = true;
+opt.AR.wk_matfile = true;
 opt.AR.brainageR = true;
-
+opt.AR.postqc = true;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% DON'T CHANGE CODE BELOW (unless you know what you are doing) %%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DISEASE_TAG = 'Patients';
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%status%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 % Setup correct toolboxes
 cd(GITHUB_PATH)
@@ -127,7 +125,7 @@ display_complete(1,'Preprocess Format',format_errors)
 
 % Run nii_harvest_parallel
 errors_parallel = nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt);
-% nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'BONPL0149'});
+%nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'EMOPR0167'});
 
 % Display Step 2 completion
 display_complete(2,'Harvest Parallel',errors_parallel)
@@ -136,7 +134,7 @@ display_complete(2,'Harvest Parallel',errors_parallel)
 
 % Run nii_harvest (DTI)
 DTI_errors = nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt);
-%nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'MUSPR0078problem'});
+%nii_harvest_parallel_DTI(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'MUSPR0078'});
 
 % Display Step 3 completion
 display_complete(3,'DTI processing',DTI_errors)
@@ -156,7 +154,7 @@ setup_brainagedir(opt)
 brainageR_errors = run_brainage_parallel(opt);
 %%brainageR_errors = run_brainage_parallel(opt,'EMOPR0036');
 
-% Display Step 5 completion
+% Display Step 5 completionfalse
 display_complete(5,'Brain Age Calculation',brainageR_errors)
 %% Perform QC
 
@@ -175,14 +173,8 @@ display_complete(6,'Quality Check',QC_failed)
 
 %% Auto Remove Failed Subjects
 
-%autoremove(QC_failed,opt)
-% np_clear('EMOPL172',opt,false)
-% np_clear('EMOPL179',opt,false)
-% np_clear('EMOPR0036',opt,false)
-% np_clear('EMOPR0071',opt,false)
-% np_clear('EMOPR0073',opt,false)
-
-
+% autoremove(QC_failed,opt)
+%np_clear('MUSPL0042',opt,false)
 %% Functions
 function [errors] = prep_niiharvest(opt)
 
@@ -192,15 +184,14 @@ output_database = opt.paths.nii_preproc_database;
 
 % Define options
 SKIP_PROBLEM_TAG = opt.SKIP_PROBLEM_TAG;
-HYPER_THREAD = opt.HYPER_THREAD;
 RECHECK_ALREADY_FORMATED = opt.RECHECK_ALREADY_FORMATED;
 PROBLEM_TAGS = opt.PROBLEM_TAGS;
-MATCH_INPUT = opt.MATCH_INPUT;
+MATCH_INPUT = opt.MATCHDATABASE;
 
 % Create formated folder
 mkdir(opt.paths.nii_preproc_database)
 
-% Obtain Directories
+% Obtain DirectoriesSESSION_TAG
 sbj_dir = dir(opt.paths.raw_database);
 sbj_dir = sbj_dir(~contains({sbj_dir.name},'.') & [sbj_dir.isdir]);
 output_dir = dir(output_database);
@@ -209,9 +200,10 @@ output_dir = output_dir(~contains({output_dir.name},'.') & [output_dir.isdir]);
 % Remove subject if not found in inputdatabase
 if MATCH_INPUT
     rm_idx = find(~cellfun(@(x) any(strcmp(x,cellfun(@(x) strrep(x,'_',''),{sbj_dir.name},'UniformOutput',false))),{output_dir.name}));
+    disp('Looking for database mismatch, using autoremove opt')
     for i = 1:numel(rm_idx)
         disp(['Subject [',output_dir(rm_idx(i)).name,'] found in output but not in input ..  Removing output subject folder'])
-        rmdir(fullfile(output_dir(rm_idx(i)).folder,output_dir(rm_idx(i)).name),'s')
+        np_clear(output_dir(rm_idx(i)).name,opt,false)
     end
 end
 
@@ -235,18 +227,11 @@ end
 errors = cell(1,numel(sbj_dir));
 sbj_error = cell(1,numel(sbj_dir));
 
-% Enable Hyperthreading
-if HYPER_THREAD
-    setpool(3);
-else
-    setpool(2);
-end
-
 % Count how many with problem tags
 problem_tag_count = cell(size(sbj_dir));
 
-% Parallel Processing REQUIRED
-parfor sbj = 1:numel(sbj_dir)
+for sbj = 1:numel(sbj_dir)
+
     % Turn off unnessary warnings
     warning('off','all')
 
@@ -292,7 +277,7 @@ parfor sbj = 1:numel(sbj_dir)
     % Attempt to format images
     try
         % Find Session Type based on T1 labels
-        s_dir = dir(fullfile(subject_input_folder,subject_name,'*T1*.nii'));
+        s_dir = dir(fullfile(subject_input_folder,subject_name,'*T1*.nii*'));
         t1_names = {s_dir.name};
 
         if isempty(t1_names) % Make sure there is T1 present
@@ -302,14 +287,19 @@ parfor sbj = 1:numel(sbj_dir)
         end
 
         aq = [];
-        if any(contains(t1_names,'pre'))
-            aq = [aq,{'pre'}];
-        end
-        if any(contains(t1_names,'pos'))
-            aq = [aq,{'pos'}];
+        for a = 1:numel(opt.SESSION_TAG)
+            if any(contains(t1_names,['_',opt.SESSION_TAG{a},'_']))
+                aq = [aq,opt.SESSION_TAG(a)];
+            end
         end
         if isempty(aq)
-            aq = [aq,{'session'}];
+            if strcmp(opt.DISEASE_TAG,'Controls')
+                aq = {'session'};
+            else
+                errors{sbj} = 'Session tag not found and not controls';
+                sbj_error{sbj} = sbj_dir(sbj).name;
+                continue
+            end
         end
 
         % Check to see all sessions are accounted for
@@ -320,7 +310,13 @@ parfor sbj = 1:numel(sbj_dir)
             for i = 1:numel(secondary)
                 t1_names(cellfun(@(x) contains(x,secondary{i}),t1_names)) = [];
             end
+            if numel(t1_names) < numel(aq)
+                errors{sbj} = 'T1 file naming error. Automatic secondary T1 removal failed';
+                sbj_error{sbj} = sbj_dir(sbj).name;
+                continue
+            end
         end
+
         if ~(numel(t1_names) == numel(aq))
             new_t1_names = [];
             for a = 1:numel(aq)
@@ -328,6 +324,8 @@ parfor sbj = 1:numel(sbj_dir)
                 if numel(aq_t1_names) > 1
                     % Remove .gz files to see if that fixes the problem
                     new_t1_names = [new_t1_names aq_t1_names(~cellfun(@(x) contains(x,'.gz'),aq_t1_names))];
+                elseif iscell(aq_t1_names{:})
+                    new_t1_names = [new_t1_names aq_t1_names{:}];
                 else
                     new_t1_names = [new_t1_names aq_t1_names{:}];
                 end
@@ -335,7 +333,7 @@ parfor sbj = 1:numel(sbj_dir)
             t1_names = new_t1_names;
 
             if ~(numel(t1_names) == numel(aq))
-                errors{sbj} = 'Number of unique Sessions do not match number of unique T1 (T1 file naming error)';
+                errors{sbj} = ['T1 file naming error. Acceptable T1 tags are ... ',strjoin(opt.SESSION_TAG)];
                 sbj_error{sbj} = sbj_dir(sbj).name;
                 continue
             end
@@ -350,42 +348,39 @@ parfor sbj = 1:numel(sbj_dir)
             for a = 1:numel(aq)
                 aq_type = aq{a};
 
-                T1 = [];
-                T2 = [];
-                RS = [];
-                dti = [];
-                lesion = [];
-                les_dim =[];
-                fn = [];
-                % Detect T1/RS/LS files
+                % Detect T1/T2/RS/DTI/Lesion files
                 if strcmp(aq_type,'session')
                     T1 = dir(fullfile(opt.paths.database_path,subject_name,t1_names{1}));
-                    T2 = dir(fullfile(opt.paths.database_path,subject_name,'*T2*.nii*'));
-                    RS = dir(fullfile(opt.paths.database_path,subject_name,'*rs*.nii*'));
-                    dti = dir(fullfile(opt.paths.database_path,subject_name,'*diff*.nii*'));
-                    lesion = []; %THERE IS NO LESION FOR SESSION
-                elseif strcmp(aq_type,'pre')
-                    T1 = dir(fullfile(opt.paths.database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
-                    T2 = dir(fullfile(opt.paths.database_path,subject_name,['*',aq_type,'*T2*.nii*']));
-                    RS = dir(fullfile(opt.paths.database_path,subject_name,['*',aq_type,'*rs*.nii*']));
-                    lesion = []; %THERE IS NO LESION FOR PRE
-                    dti = dir(fullfile(opt.paths.database_path,subject_name,['*',aq_type,'*diff*.nii*']));
-                elseif strcmp(aq_type,'pos')
-                    if skip_post
-                        continue
-                    end
-                    T1 = dir(fullfile(opt.paths.database_path,subject_name,t1_names{contains(t1_names,aq_type)}));
-                    T2 = []; % Post Surgical Lesions drawn on T1s, don't find T2
-                    RS = dir(fullfile(opt.paths.database_path,subject_name,['*',aq_type,'*rs*.nii*']));
-                    lesion = dir(fullfile(opt.paths.database_path,subject_name,'*les.nii*')); % ONLY LESION FOR POS
-                    dti = dir(fullfile(opt.paths.database_path,subject_name,['*',aq_type,'*diff*.nii*']));
+                else
+                    T1 = dir(fullfile(opt.paths.database_path,subject_name,t1_names{contains(t1_names,['_',aq_type,'_'])}));
+                end
+                T2 = dir(fullfile(opt.paths.database_path,subject_name,['*_',aq_type,'_*T2*.nii*']));
+                RS = dir(fullfile(opt.paths.database_path,subject_name,['*_',aq_type,'_*rs*.nii*']));
+                DTI = dir(fullfile(opt.paths.database_path,subject_name,['*_',aq_type,'_*diff*.nii*']));
+                lesion = [];
+
+                if opt.REQUIRES_LESION{strcmp(opt.SESSION_TAG,aq_type)}
+                    lesion = dir(fullfile(opt.paths.database_path,subject_name,['*_',aq_type,'_*les.nii*']));
                     if isempty(lesion)
-                        errors{sbj} = 'Post Nifti found but missing LESION';
-                        sbj_error{sbj} = sbj_dir(sbj).name;
-                        cont = false;
-                        break
+                        if skip_post
+                            if numel(aq) == 1
+                                errors{sbj} = 'Only has post but missing lesion';
+                                sbj_error{sbj} = sbj_dir(sbj).name;
+                                cont = false;
+                                break
+                            end
+                            continue
+                        else
+                            errors{sbj} = 'Post Nifti found but missing LESION';
+                            sbj_error{sbj} = sbj_dir(sbj).name;
+                            cont = false;
+                            break
+                        end
+                    elseif ~strcmp(opt.aq_lesiondraw,'T2')
+                        T2 = [];
                     end
                 end
+
 
                 % Define Subject Image Folders
                 subject_output_folder = fullfile(output_database,new_subject_name,aq_type);
@@ -409,10 +404,12 @@ parfor sbj = 1:numel(sbj_dir)
                             ~isempty(T2)
                             ~isempty(RS)*2
                             ~isempty(lesion)
-                            ~isempty(dti)*4]);
+                            ~isempty(DTI)*4]);
                         if num_files_detected == num_files
-                            cont = false;
-                            break
+                            if a == numel(aq)
+                                cont = false;
+                            end
+                            continue
                         else
                             rmdir(removal_dir,'s');
                         end
@@ -630,20 +627,20 @@ parfor sbj = 1:numel(sbj_dir)
                 end
 
                 %%%%%%%%%%%%%%%%%%%%%% Transfer DTI
-                if isempty(dti)
+                if isempty(DTI)
                     modality = [modality;{'DTI'}];
                     status = [status;{'DTI not found'}];
                 else
-                    for d = 1:numel(dti)
+                    for d = 1:numel(DTI)
 
                         % Define bval/bvec/json files
-                        bval = fullfile(dti(d).folder,[extractBefore(dti(d).name,'.nii'),'.bval']);
-                        bvec = fullfile(dti(d).folder,[extractBefore(dti(d).name,'.nii'),'.bvec']);
-                        dti_json = fullfile(dti(d).folder,[extractBefore(dti(d).name,'.nii'),'.json']);
+                        bval = fullfile(DTI(d).folder,[extractBefore(DTI(d).name,'.nii'),'.bval']);
+                        bvec = fullfile(DTI(d).folder,[extractBefore(DTI(d).name,'.nii'),'.bvec']);
+                        dti_json = fullfile(DTI(d).folder,[extractBefore(DTI(d).name,'.nii'),'.json']);
 
                         % Check bval files
                         if ~any(exist(bval,'file'))
-                            if d == numel(dti)
+                            if d == numel(DTI)
                                 errors{sbj} = [aq_type,'_DTI.bval files missing'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
                                 rmdir(removal_dir,'s');
@@ -655,7 +652,7 @@ parfor sbj = 1:numel(sbj_dir)
 
                         % Check bvec files
                         if ~any(exist(bvec,'file'))
-                            if d == numel(dti)
+                            if d == numel(DTI)
                                 errors{sbj} = [aq_type,'_DTI.bvec file missing'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
                                 rmdir(removal_dir,'s');
@@ -667,7 +664,7 @@ parfor sbj = 1:numel(sbj_dir)
 
                         % Check json files
                         if ~any(exist(dti_json,'file'))
-                            if d == numel(dti)
+                            if d == numel(DTI)
                                 errors{sbj} = [aq_type,'_DTI.json file missing'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
                                 rmdir(removal_dir,'s');
@@ -683,7 +680,7 @@ parfor sbj = 1:numel(sbj_dir)
                         fclose(fileID);
                         if n < 12
                             % If all scans fail to have >11 then throw error
-                            if d == numel(dti)
+                            if d == numel(DTI)
                                 errors{sbj} = [aq_type,'_DTI.bval values <12'];
                                 sbj_error{sbj} = sbj_dir(sbj).name;
                                 rmdir(removal_dir,'s');
@@ -694,18 +691,18 @@ parfor sbj = 1:numel(sbj_dir)
 
                             % Copy DTI scan
                             dti_new = ['DTI_',new_subject_name,'.nii'];
-                            if contains(dti(d).name,'.gz')
-                                filenames = gunzip(fullfile(dti(d).folder,dti(d).name));
+                            if contains(DTI(d).name,'.gz')
+                                filenames = gunzip(fullfile(DTI(d).folder,DTI(d).name));
                                 movefile(filenames{:},fullfile(subject_output_folder,dti_new));
                             else
-                                copyfile(fullfile(dti(d).folder,dti(d).name),fullfile(subject_output_folder,dti_new))
+                                copyfile(fullfile(DTI(d).folder,DTI(d).name),fullfile(subject_output_folder,dti_new))
                             end
 
                             % Check if DTI volume matches bval
                             copied_dtifile = fullfile(subject_output_folder,dti_new);
                             h = spm_vol(copied_dtifile);
                             if numel(h) ~= n
-                                if d == numel(dti)
+                                if d == numel(DTI)
                                     errors{sbj} = [aq_type,'_DTI.bval values doesnt match DTI'];
                                     sbj_error{sbj} = sbj_dir(sbj).name;
                                     rmdir(removal_dir,'s');
@@ -722,7 +719,7 @@ parfor sbj = 1:numel(sbj_dir)
 
                             % Update DTI Status
                             modality = [modality;{'DTI'}];
-                            status = [status;{fullfile(dti(d).folder,dti(d).name)}];
+                            status = [status;{fullfile(DTI(d).folder,DTI(d).name)}];
 
                             break
                         end
@@ -856,7 +853,7 @@ mkdir(opt.paths.tempbrain_folder)
 mkdir(opt.paths.brainage_folder)
 
 % Sync brainage output with processed
-if opt.syncBrainageR
+if opt.MATCHDATABASE
     processed_brainageR = dir(fullfile(opt.paths.brainage_folder,'*.mat'));
     processed_matfile = dir(fullfile(opt.paths.processed_output,'*','*.mat'));
 
@@ -1025,6 +1022,22 @@ DELETEBRAINAGEIFFAIL = opt.DELETEBRAINAGEIFFAIL;
 % Delete pool
 setpool(0)
 
+% Sync database
+if opt.MATCHDATABASE
+    input= dir(fullfile(opt.paths.brainage_folder,'*.mat'));
+    output = dir(fullfile(opt.paths.post_qc,'*.mat'));
+
+    rm_idx = find(~cellfun(@(x) any(contains({input.name},x)),{output.name}));
+    if ~isempty(rm_idx)
+        disp(['Removing ',num2str(numel(rm_idx)),' subject found in post qc but not in brainageR output'])
+        for r = 1:numel(rm_idx)
+            disp(['Removed ',output(rm_idx(r)).name])
+            delete(fullfile(output(rm_idx(r)).folder,output(rm_idx(r)).name))
+        end
+    end
+end
+
+
 % Find processed wk_matfiles
 subjects = dir(fullfile(opt.paths.brainage_folder,'*.mat'));
 subject_folder = subjects.folder;
@@ -1038,6 +1051,7 @@ for s = 1:numel(subjects)
     % Define Save_mat
     save_mat = fullfile(opt.paths.post_qc,subjects{s});
     if exist(save_mat,'file') && ~opt.recheckOutput
+        textprogressbar(1,s/numel(subjects)*100)
         continue
     end
 
@@ -1081,6 +1095,7 @@ for s = 1:numel(subjects)
 
         in_ses_folder = fullfile(wk_ses.folder,wk_ses.name);
         ses_mat = wk_mat.(wk_ses.name);
+        fn = fieldnames(ses_mat);
 
         % Find Aquistions
         aq = dir(fullfile(in_ses_folder,'*.nii'));
@@ -1091,7 +1106,7 @@ for s = 1:numel(subjects)
             wk_aq = aq(a);
             aq_name = extractBefore(wk_aq.name,'_');
 
-            fn = fieldnames(ses_mat);
+
 
             if CHECK_AQ
                 % Check output of each aquisition
@@ -1255,7 +1270,7 @@ if o
     try
         if opt.AR.brainageR
             % Delete brainageR .wk_matfile
-            mat = dir(fullfile(opt.paths.brainage_folder,['*',wk_sbj,'*.mat']));
+            mat = dir(fullfile(opt.paths.brainage_folder,['*',wk_sbj,'.mat']));
             delete(fullfile(mat.folder,mat.name))
             disp(['Removed ',fullfile(mat.folder,mat.name)])
         end
@@ -1278,9 +1293,12 @@ else
     end
 
     try
-        if opt.AT.wk_matfile
+        if opt.AR.wk_matfile
             % Delete extracted .wk_matfile
-            mat = dir(fullfile(opt.paths.processed_output,'**',['*',wk_sbj,'*.mat']));
+            mat = dir(fullfile(opt.paths.processed_output,'**',['*',wk_sbj,'.mat']));
+            if numel(mat) > 1
+                error('error in autoremove processed matfile... found two')
+            end
             delete(fullfile(mat.folder,mat.name))
             disp(['Removed ',fullfile(mat.folder,mat.name)])
         end
@@ -1289,7 +1307,21 @@ else
     try
         if opt.AR.brainageR
             % Delete brainageR .wk_matfile
-            mat = dir(fullfile(opt.paths.brainage_folder,'**',['*',wk_sbj,'*.mat']));
+            mat = dir(fullfile(opt.paths.brainage_folder,'**',['*',wk_sbj,'.mat']));
+            if numel(mat) > 1
+                error('error in autoremove brainageR... found two')
+            end
+            delete(fullfile(mat.folder,mat.name))
+            disp(['Removed ',fullfile(mat.folder,mat.name)])
+        end
+    end
+    try
+        if opt.AR.postqc
+            % Delete post qc .wk_matfile
+            mat = dir(fullfile(opt.paths.post_qc,'**',['*',wk_sbj,'.mat']));
+            if numel(mat) > 1
+                error('error in autoremove postqc... found two')
+            end
             delete(fullfile(mat.folder,mat.name))
             disp(['Removed ',fullfile(mat.folder,mat.name)])
         end

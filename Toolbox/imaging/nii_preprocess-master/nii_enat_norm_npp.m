@@ -36,13 +36,13 @@ if ~exist('bb','var'), bb = [-78 -112 -70; 78 76 85]; end;
 if ~exist('DeleteIntermediateImages','var'), DeleteIntermediateImages = true; end;
 if ~exist('ssthresh','var'), ssthresh = 0.005; end; %with SPM12, better GM, so threshold of 1%
 if ~exist('autoOrigin','var')
-   %ButtonName = questdlg('Automatic origin detection?','Preferences', 'Yes', 'No', 'No');
-   %autoOrigin = strcmpi(ButtonName,'Yes');
-   autoOrigin = false;
+    %ButtonName = questdlg('Automatic origin detection?','Preferences', 'Yes', 'No', 'No');
+    %autoOrigin = strcmpi(ButtonName,'Yes');
+    autoOrigin = false;
 end
 if ~exist('wideDiploe','var')
     if isempty(T2)
-       wideDiploe = false; 
+        wideDiploe = false;
     else
         wideDiploe = false; %experimental correction for wide diploic spaces
         %wideDiploe = false;
@@ -57,12 +57,12 @@ if autoOrigin
     setOriginSub({T1, T2, lesion}, 1);
 end
 if isempty(lesion) %if no lesion - standard normalization
-   newSegSub(T1,'', UseXTemplate);
-   %2: create 'b' (brain extracted) image without scalp signal
+    newSegSub(T1,'', UseXTemplate);
+    %2: create 'b' (brain extracted) image without scalp signal
     bT1 = extractSub(ssthresh, T1, prefixSub('c2', T1), prefixSub('c1', T1));
     rT1 = newSegWriteSub(T1, bT1, vox); %#ok<NASGU>
     %wT1 = newSegWriteSub(T1, T1, vox, bb); %#ok<NASGU>
-   return;
+    return;
 end
 %1: align lesion/t2 to match T1
 [rT2, rlesion] = coregEstWriteSub(T1,T2,lesion); %#ok<ASGLU>
@@ -142,13 +142,13 @@ if isempty(img), return; end;
 hdr = spm_vol(img);
 im = spm_read_vols(hdr);
 if (spm_type(hdr.dt,'intt')) %integer data
-	mn = min(im(:));
-	range = max(im(:)) - mn;
-	if range < 10 && range > 0
-		im = (im - mn) * 255/range;
-	end
-	hdr.pinfo(1) = 1; %slope
-	hdr.pinfo(2) = 0; %intercept
+    mn = min(im(:));
+    range = max(im(:)) - mn;
+    if range < 10 && range > 0
+        im = (im - mn) * 255/range;
+    end
+    hdr.pinfo(1) = 1; %slope
+    hdr.pinfo(2) = 0; %intercept
 end
 smoothFWHMmm = [FWHM FWHM FWHM];
 VOX = sqrt(sum(hdr.mat(1:3,1:3).^2));
@@ -178,22 +178,22 @@ mmLS = (hdrLS.mat * [0 0 0 1]'); %vox2mm,  [0 0 0 1; 0 0 1 1]'
 mmT1 = (hdrT1.mat * [0 0 0 1]');
 dxT1 = sqrt(sum((mmT1(1:3)-mmLS(1:3)).^2)); %error between T1 and lesion
 if exist('T2','var') && ~isempty(T2)
-   if ~exist(T2,'file'), error('T2 image not found %s', T2); end;
-   hdrT2 = spm_vol(T2);
-   %we compute distance differently for T2/Lesion as these will be resliced...
-   [mnT2, mxT2] = bbSub(hdrT2); %range of T2 bounding box
-   [mnLS, mxLS] = bbSub(hdrLS); %range of Lesion bounding box
-   dxMn = sqrt(sum((mnT2(1:3)-mnLS(1:3)).^2)); %error between T2 and lesion
-   dxMx = sqrt(sum((mxT2(1:3)-mxLS(1:3)).^2)); %error between T2 and lesion
-   if (dxMn > 1) || (dxMx > 1)
+    if ~exist(T2,'file'), error('T2 image not found %s', T2); end;
+    hdrT2 = spm_vol(T2);
+    %we compute distance differently for T2/Lesion as these will be resliced...
+    [mnT2, mxT2] = bbSub(hdrT2); %range of T2 bounding box
+    [mnLS, mxLS] = bbSub(hdrLS); %range of Lesion bounding box
+    dxMn = sqrt(sum((mnT2(1:3)-mnLS(1:3)).^2)); %error between T2 and lesion
+    dxMx = sqrt(sum((mxT2(1:3)-mxLS(1:3)).^2)); %error between T2 and lesion
+    if (dxMn > 1) || (dxMx > 1)
         if (dxT1 < 0.25)
             T2 = '';
             fprintf('WARNING: T2 dimensions do not match lesion - ASSUME lesion drawn on T1');
         else
             fprintf('WARNING: Neither T2 nor T1 aligned to lesion.');
         end
-   end
-   return;
+    end
+    return;
 end %if T2 is present
 if ~all(hdrT1.dim == hdrLS.dim)
     error('WARNING: T1 dimensions do not match lesion %s %s',T1, lesion);
@@ -253,9 +253,9 @@ m = spm_read_vols(mi);
 g = spm_read_vols(gi);
 w = spm_read_vols(wi);
 if nargin > 4 && ~isempty(c3)
-   ci = spm_vol(c3);%CSF map
-   c = spm_read_vols(ci);
-   w = c+w;
+    ci = spm_vol(c3);%CSF map
+    c = spm_read_vols(ci);
+    w = c+w;
 end;
 w = g+w;
 if thresh <= 0
@@ -496,13 +496,13 @@ function [msk, mskLR] = makeMaskSub (nam, mm)
 pth = spm_fileparts(nam);
 msk = fullfile(pth, 'tempmask.nii');
 %blur
-spm_smooth(nam,msk,mm,16); 
+spm_smooth(nam,msk,mm,16);
 %make mask to only include voxels outside image
 thresh = 0.001;
 hdr = spm_vol(msk);
 img = spm_read_vols(hdr);
 img = (img < thresh);
-%hdr.fname = fullfile(pth, 'taco.nii'); 
+%hdr.fname = fullfile(pth, 'taco.nii');
 hdr.dt    =[2,0]; %8-bit
 hdr.pinfo = [1;0;0];
 spm_write_vol(hdr,img);
@@ -519,7 +519,7 @@ mskLR = flipSub (msk);
 % matlabbatch{1}.spm.tools.oldnorm.estwrite.eoptions.template = {T1};
 % mask = makeT1BrainMaskSub(T1);
 % if exist(mask,'file')
-%     matlabbatch{1}.spm.tools.oldnorm.estwrite.eoptions.weight = {mask}; 
+%     matlabbatch{1}.spm.tools.oldnorm.estwrite.eoptions.weight = {mask};
 %     fprintf('Applying brain mask "%s"', mask);
 % else
 %     error('unable to find brainmask "%s"', mask);
@@ -542,7 +542,7 @@ mskLR = flipSub (msk);
 % if ~isempty(lesion), lesion = prefixSub('r',lesion); end;
 % delete(mask);
 % %end coreg12EstWriteSub()
-% 
+%
 % function mask = makeT1BrainMaskSub(T1);
 % %make brain mask aligned to T1, linear fit only (so OK for lesions).
 % %Assumes "T1" is T1-weighted image.
@@ -618,14 +618,14 @@ function coivox = setOriginSub(vols, modality)
 %  setOrigin %use graphical interface
 %Chris Rorden 12/2014 (now supports SPM12)
 if ~exist('vols','var') %no files specified
- vols = spm_select(inf,'image','Reset origin for selected image(s) (estimated from 1st)');
+    vols = spm_select(inf,'image','Reset origin for selected image(s) (estimated from 1st)');
 end
 if ischar(vols)
     vols = cellstr(vols);
 end
 if ~exist('modality','var') %no files specified
- modality = 1;
- fprintf('%s Modality not specified, assuming T1\n', mfilename);
+    modality = 1;
+    fprintf('%s Modality not specified, assuming T1\n', mfilename);
 end
 coivox = ones(4,1);
 %extract filename
@@ -633,8 +633,8 @@ coivox = ones(4,1);
 fname = fullfile(pth,[nam ext]); %strip volume label
 %report if filename does not exist...
 if (exist(fname, 'file') ~= 2)
- 	fprintf('%s error: unable to find image %s.\n',mfilename,fname);
-	return;
+    fprintf('%s error: unable to find image %s.\n',mfilename,fname);
+    return;
 end;
 hdr = spm_vol([fname,',1']); %load header
 img = spm_read_vols(hdr); %load image data
@@ -682,7 +682,7 @@ end %for each volume
 
 function coregEstTemplateSub(vols, modality)
 if modality == 2
-   template = fullfile(spm('Dir'),'canonical','avg152T2.nii');
+    template = fullfile(spm('Dir'),'canonical','avg152T2.nii');
 elseif modality == 3
     template  = fullfile(spm('Dir'),'toolbox','OldNorm','EPI.nii');
 else

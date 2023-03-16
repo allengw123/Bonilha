@@ -5,7 +5,7 @@ clc
 % Input
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
 image_database = '/media/bonilha/Elements/Image_database';
-request_database = '/media/bonilha/Elements/Image_Requests/Rebecca_12.12.22';
+request_database = '/media/bonilha/Elements/Image_Requests/ForZekeBrainAgeGMWM_3.6.23';
 
 % Setup correct toolboxes
 cd(GITHUB_PATH)
@@ -13,6 +13,9 @@ allengit_genpath(GITHUB_PATH,'imaging')
 
 % Tags
 tags =  {'problem','lesion'};
+
+% Options
+pull_raw = false;
 %% Pull code
 
 % Detect request name
@@ -36,8 +39,8 @@ raw_images = dir(fullfile(image_database,'*','*raw*','*','*'));
 raw_images = raw_images(~cellfun(@(x) contains(x,'.'),{raw_images.name}));
 raw_images_name = {raw_images.name};
 raw_images_name = cellfun(@(x) strrep(x,'_',''),raw_images_name,'UniformOutput',false);
-error = [];
 
+error = [];
 for s = 1:numel(sheets)
 
     wk_sheet = char(sheets(s));
@@ -51,48 +54,28 @@ for s = 1:numel(sheets)
     save_processed_folder = fullfile(wk_request_save_path,'processed');
     mkdir(save_processed_folder)
     save_processed_folder_dir = dir(save_processed_folder);
-    
 
-    save_raw_folder = fullfile(wk_request_save_path,'raw_images');
-    mkdir(save_raw_folder)
-    save_raw_folder_dir = dir(save_raw_folder);
+
+    if pull_raw
+        save_raw_folder = fullfile(wk_request_save_path,'raw_images');
+        mkdir(save_raw_folder)
+        save_raw_folder_dir = dir(save_raw_folder);
+    end
 
     request_xlsx = readtable(fullfile(request_xlsx_pth.folder,request_xlsx_pth.name),'Sheet',wk_sheet,'ReadVariableNames',false);
-% 
-%     % Delete nonrequested subjects
-%     requested_subjects = cellfun(@(x) strrep(x,'_',''),request_xlsx{:,1},'UniformOutput',false);
-% 
-%     proccess_subjects = dir(save_processed_folder);
-%     proccess_subjects(strcmp({proccess_subjects.name},'.')|strcmp({proccess_subjects.name},'..')) = [];
-%     rm_processed_subjects = proccess_subjects(~cellfun(@(x) contains(x,requested_subjects),{proccess_subjects.name}));
-%     for i = 1:numel(rm_processed_subjects)
-%         delete(fullfile(rm_processed_subjects(i).folder,rm_processed_subjects(i).name))
-%         disp(['Removing ',rm_processed_subjects(i).name,' from proccessed folder'])
-%     end
-% 
-%     raw_subjects = dir(save_raw_folder);
-%     raw_subjects(strcmp({raw_subjects.name},'.')|strcmp({raw_subjects.name},'..')) = [];
-%     rm_raw_subjects = raw_subjects(~cellfun(@(x) contains(x,requested_subjects),{raw_subjects.name}));
-%     for i = 1:numel(rm_raw_subjects)
-%         rmdir(fullfile(rm_raw_subjects(i).folder,rm_raw_subjects(i).name),'s')
-%         disp(['Removing ',rm_processed_subjects(i).name,' from raw folder'])
-%     end
-
+    
     for r = 1:height(request_xlsx)
 
         % Request subject
         rq_sbj = strrep(request_xlsx{r,1}{:},'_','');
-        
-        if any([contains({save_raw_folder_dir.name},rq_sbj),contains({save_processed_folder_dir.name},rq_sbj)])
+
+        if any(contains({save_processed_folder_dir.name},rq_sbj))
             textprogressbar(1,r/height(request_xlsx)*100,[wk_sheet,' - Subject ',rq_sbj,' pulled']);
             continue
         end
 
         % Find processed mat file idx
         p_idx = find(contains(processedmats_name,rq_sbj));
-
-        % Find raw image idx
-        r_idx = find(contains(raw_images_name,rq_sbj));
 
         if numel(p_idx) == 1
 
@@ -103,20 +86,29 @@ for s = 1:numel(sheets)
             else
                 copyfile(fullfile(rq_mat.folder,rq_mat.name),save_processed_folder)
             end
+            if pull_raw
+                % Find raw image idx
+                r_idx = find(contains(raw_images_name,rq_sbj));
 
-            % Copy raw folder
-            r_folder = raw_images(r_idx);
-            if exist(fullfile(save_raw_folder,r_folder.name),'dir')
-                continue
-            elseif numel(r_folder)>1
-                temp = r_folder(contains({r_folder.name},tags));
-                copyfile(fullfile(temp.folder,temp.name),fullfile(save_raw_folder,r_folder.name));
-            else
-                copyfile(fullfile(r_folder.folder,r_folder.name),fullfile(save_raw_folder,r_folder.name))
+                % Copy raw folder
+                r_folder = raw_images(r_idx);
+                if exist(fullfile(save_raw_folder,r_folder.name),'dir')
+                    continue
+                elseif numel(r_folder)>1
+                    temp = r_folder(contains({r_folder.name},tags));
+                    copyfile(fullfile(temp.folder,temp.name),fullfile(save_raw_folder,r_folder.name));
+                else
+                    copyfile(fullfile(r_folder.folder,r_folder.name),fullfile(save_raw_folder,r_folder.name))
+                end
             end
+
+            % Display progress bar
+            textprogressbar(1,r/height(request_xlsx)*100,[wk_sheet,' - Subject ',rq_sbj,' pulled']);
+
         elseif numel(p_idx)>1
             status = ['multiple copies found ',[processedmats(p_idx).name]];
             error = [error; [{sheets(s)},{rq_sbj},{status}]];
+            textprogressbar(1,r/height(request_xlsx)*100,status);
         else
             % Save errors
             s_idx = find(contains(raw_images_name,rq_sbj));
@@ -127,10 +119,8 @@ for s = 1:numel(sheets)
                 status = [found_name,' found but not processed'];
             end
             error = [error; [{sheets(s)},{rq_sbj},{status}]];
+            textprogressbar(1,r/height(request_xlsx)*100,[rq_sbj,' ',status]);
         end
-
-        % Display progress bar
-        textprogressbar(1,r/height(request_xlsx)*100,[wk_sheet,' - Subject ',rq_sbj,' pulled']);
     end
 end
 
