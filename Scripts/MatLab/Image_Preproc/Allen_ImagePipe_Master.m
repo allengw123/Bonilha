@@ -27,8 +27,12 @@ DATABASE_NAME = 'MasterSet_TLE';
 DISEASE_TAG = 'Patients';
 %DISEASE_TAG = 'Controls';
 
+% IMAGE_DATABASE = '/media/bonilha/Elements/Image_Requests/Claudia_3.23.22';
+% DATABASE_NAME = 'data';
+% DISEASE_TAG = 'Patients';
 
-%%%%%%%%%%%%%%%%%%%%%%%%% ADVANCE OPTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%% ADVANCE OPTIONS %%%%run_brainage_parallel%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Database options
 opt.SESSION_TAG = {'pre','pos','pos2','session'};
@@ -125,7 +129,7 @@ display_complete(1,'Preprocess Format',format_errors)
 
 % Run nii_harvest_parallel
 errors_parallel = nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt);
-%nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'EMOPR0167'});
+%nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'Clad'});
 
 % Display Step 2 completion
 display_complete(2,'Harvest Parallel',errors_parallel)

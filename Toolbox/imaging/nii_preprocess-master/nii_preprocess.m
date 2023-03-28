@@ -384,20 +384,21 @@ targetDir = fullfile(p,'mri');
 %get smooth normalized GM image
 normGM = dir(fullfile(targetDir,'mwp1T1*.nii'));
 if isempty(normGM)
-    normGM = dir(fullfile(targetDir,'mwp1eT1*.nii'));
-end
-if isempty(normGM)
-    error('Unable to find file %s', fullfile(targetDir,'mwp1T1*.nii'));
+    e_normGM = dir(fullfile(targetDir,'mwp1eT1*.nii'));
+    if isempty(e_normGM)
+        error('Unable to find file %s or %s', fullfile(targetDir,'mwp1T1*.nii'),fullfile(targetDir,'mwp1eT1*.nii'));
+    end
 end
 
 %get smoothed normalized WM image
 normWM = dir(fullfile(targetDir,'mwp2T1*.nii'));
 if isempty(normWM)
-    normWM = dir(fullfile(targetDir,'mwp2eT1*.nii'));
+    e_normWM = dir(fullfile(targetDir,'mwp2eT1*.nii'));
+    if isempty(e_normWM)
+        error('Unable to find file %s or %s', fullfile(targetDir,'mwp2T1*.nii'),fullfile(targetDir,'mwp2eT1*.nii'));
+    end
 end
-if isempty(normWM)
-    error('Unable to find file %s', fullfile(targetDir,'mwp2T1*.nii'));
-end
+
 
 %should we save p7eT1*.nii which is white matter hyperintensity map as
 %calculated by cat12???
@@ -411,8 +412,13 @@ rhSURF = dir(fullfile(targetDir,'rh.cent*.gii'));
 try
     nii_nii2mat(fullfile(normGM(1).folder, normGM(1).name), 'vbm_gm' , matName);
     nii_nii2mat(fullfile(normWM(1).folder, normWM(1).name), 'vbm_wm' , matName);
-catch e
-    error('Failed to write VBM results to matfile')
+catch
+    try
+        nii_nii2mat(fullfile(e_normGM(1).folder, e_normGM(1).name), 'vbm_gm_enantimorphic' , matName);
+        nii_nii2mat(fullfile(e_normWM(1).folder, e_normWM(1).name), 'vbm_wm_enantimorphic' , matName);
+    catch
+        error('Failed to write VBM results to matfile')
+    end
 end
 %nii_nii2mat(fullfile(lhSURF.folder, lhSURF.name), 'surf_lh' , matName);
 %nii_nii2mat(fullfile(rhSURF.folder, rhSURF.name), 'surf_rh' , matName);
@@ -446,10 +452,17 @@ else
 end
 
 % Allen's smoothing function
-spm_smooth(fullfile(normGM(1).folder, normGM(1).name),fullfile(normGM(1).folder, 'smoothed_gm.nii'),[10 10 10]);
-spm_smooth(fullfile(normWM(1).folder, normWM(1).name),fullfile(normWM(1).folder, 'smoothed_wm.nii'),[10 10 10]);
-nii_nii2mat(fullfile(normGM(1).folder, 'smoothed_gm.nii'), 'smooth_vbm_gm' , matName);
-nii_nii2mat(fullfile(normWM(1).folder, 'smoothed_wm.nii'), 'smooth_vbm_wm' , matName);
+if ~isempty(normGM) && ~isempty(normWM)
+    spm_smooth(fullfile(normGM(1).folder, normGM(1).name),fullfile(normGM(1).folder, 'smoothed_gm.nii'),[10 10 10]);
+    spm_smooth(fullfile(normWM(1).folder, normWM(1).name),fullfile(normWM(1).folder, 'smoothed_wm.nii'),[10 10 10]);
+    nii_nii2mat(fullfile(normGM(1).folder, 'smoothed_gm.nii'), 'smooth_vbm_gm' , matName);
+    nii_nii2mat(fullfile(normWM(1).folder, 'smoothed_wm.nii'), 'smooth_vbm_wm' , matName);
+elseif ~isempty(e_normGM) && ~isempty(e_normWM)
+    spm_smooth(fullfile(e_normGM(1).folder, e_normGM(1).name),fullfile(normGM(1).folder, 'smoothed_gm_enantimorphic.nii'),[10 10 10]);
+    spm_smooth(fullfile(e_normWM(1).folder, e_normWM(1).name),fullfile(normWM(1).folder, 'smoothed_wm_enantimorphic.nii'),[10 10 10]);
+    nii_nii2mat(fullfile(e_normGM(1).folder, 'smoothed_gm_enantimorphic.nii'), 'smooth_vbm_gm_enantimorphic' , matName);
+    nii_nii2mat(fullfile(e_normWM(1).folder, 'smoothed_wm_enantimorphic.nii'), 'smooth_vbm_wm_enantimorphic' , matName);
+end
 
 %end doVBMSub()
 
