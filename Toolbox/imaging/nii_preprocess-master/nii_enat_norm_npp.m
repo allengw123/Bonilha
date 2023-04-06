@@ -22,7 +22,7 @@ function nii_enat_norm_npp(T1,lesion,T2, UseXTemplate, vox, bb, DeleteIntermedia
 
 %STEP 0: check inputs
 isSPM12orNewerSub;
-if isempty(spm_figure('FindWin','Graphics')), spm fmri; end; %launch SPM if it is not running
+%if isempty(spm_figure('FindWin','Graphics')), spm fmri; end; %launch SPM if it is not running
 T1param = exist('T1','var'); %did the user provide a T1 scan
 if ~T1param, T1 = spm_select(1,'image','Select T1 images'); end;
 if isempty(T1), return; end;
@@ -82,8 +82,12 @@ newSegSub(eT1,'', UseXTemplate);
 %newSegSub(eT1, erT2, UseXTemplate); %for multichannel
 %4: create 'b' (brain extracted) image without scalp signal
 bT1 = extractSub(ssthresh, T1, prefixSub('c2', eT1), prefixSub('c1', eT1));
+beT1 = extractSub(ssthresh, eT1, prefixSub('c2', eT1), prefixSub('c1', eT1));
+
 %5: warp render image to standard space
 rT1 = newSegWriteSub(eT1, bT1, vox); %#ok<NASGU>
+reT1 = newSegWriteSub(eT1, beT1, vox); %#ok<NASGU>
+
 %6: warp lesion to standard space
 wrlesion = newSegWriteSub(eT1, rlesion, vox, bb, true); %#ok<NASGU>
 wT1 = newSegWriteSub(eT1, T1, vox, bb); %#ok<NASGU>

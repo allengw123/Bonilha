@@ -27,7 +27,7 @@ DATABASE_NAME = 'MasterSet_TLE';
 DISEASE_TAG = 'Patients';
 %DISEASE_TAG = 'Controls';
 
-IMAGE_DATABASE = '/media/bonilha/Elements/Image_Requests/Claudia_3.23.23';
+IMAGE_DATABASE = '/media/bonilha/Elements/Image_Requests/Claudia_3.23.22';
 DATABASE_NAME = 'data';
 DISEASE_TAG = 'Patients';
 
@@ -54,11 +54,11 @@ opt.setOrigin = true; %attempt to crop and set anterior commissure for images
 opt.isExitAfterTable = false; % <- if true, only generates table, does not process data
 opt.isPreprocess = true; % <- if true full processing, otherwise just cropping
 opt.isReportDims = true; %if true, report dimensions of raw data
-opt.reprocessVBM = false;
 opt.reprocessRest = false;
 opt.reprocessfMRI = false;
 opt.reprocessASL = false;
 opt.reprocessDTI = false;
+opt.reprocessVBM = false;
 opt.explicitProcess = false; % <- if true, will only process if the reprocess flag is true
 opt.interweave = true; % Subjects will get dedicated to which parallel worker in an interweave fashion (helps efficiently process new subjects to database)
 opt.clearpsfile = true;
@@ -155,8 +155,8 @@ display_complete(4,'wk_matfile Extraction')
 setup_brainagedir(opt)
 
 % Run BrainAge
-brainageR_errors = run_brainage_parallel(opt);
-%brainageR_errors = run_brainage_parallel(opt,'Claud5');
+%brainageR_errors = run_brainage_parallel(opt);
+brainageR_errors = run_brainage_parallel(opt,'Claud5');
 
 % Display Step 5 completionfalse
 display_complete(5,'Brain Age Calculation',brainageR_errors)
@@ -1145,18 +1145,15 @@ for s = 1:numel(subjects)
                             % Reorganize enatomorphic fields
                             enant_fn = fn(contains(fn,'enantimorphic'));
                             for f = 1:numel(enant_fn)
-                                reorg_mat.(wk_ses.name).matter_maps.enantimorphic_repaired.(strrep(enant_fn{f},'vbm_','')) = ses_mat.(enant_fn{f});
+                                save_name = strrep(strrep(enant_fn{f},'vbm_',''),'_enantimorphic'
+                                reorg_mat.(wk_ses.name).matter_maps.enantimorphic_repaired.() = ses_mat.(enant_fn{f});
                             end
 
                             % Reorganize lesion removed
                             les_rem_fn = fn(contains(fn,'_les_'));
                             for f = 1:numel(les_rem_fn)
-                                reorg_mat.(wk_ses.name).matter_maps.lesion_corrected.(strrep(les_rem_fn{f},'vbm_','')) = ses_mat.(les_rem_fn{f});
+                                reorg_mat.(wk_ses.name).matter_maps.lesion_corrected.(les_rem_fn{f}) = ses_mat.(les_rem_fn{f});
                             end
-
-                            % Reorganize enantimorphic T1
-                            reorg_mat.(wk_ses.name).T1.T1_enantimorphic = ses_mat.T1_enantiomorphic;
-
                         else
                             qc.lesions = 'fail';
                             msg = [wk_sbj,' ',wk_ses.name,' Lesion FAIL'];
@@ -1164,9 +1161,9 @@ for s = 1:numel(subjects)
                             cont = false;
                         end
                     case 'T1'
-                        if any(contains(fn,'T1')) && any(contains(fn,'vbm'))
+                        if any(contains(fn,'T1')) && any(contains(fn,'vbm')) && any(contains(fn,'VBM_'))
                             qc.T1 = 'pass';
-                            reorg_mat.(wk_ses.name).T1.T1_normalized = ses_mat.T1;
+                            reorg_mat.(wk_ses.name).T1 = ses_mat.T1;
                         else
                             qc.T1 = 'fail';
                             msg = [wk_sbj,' ',wk_ses.name,' T1 FAIL'];
@@ -1244,7 +1241,7 @@ for s = 1:numel(subjects)
     if cont
         % Add pipeline info
         wk_mat.pipelineinfo = pipelineinfo;
-        saveparfor(save_mat,reorg_mat)
+        saveparfor(save_mat,wk_mat)
         textprogressbar(1,s/numel(subjects)*100,[wk_sbj,' passed QC'])
     else
         errors{s} = [{wk_sbj} {wk_mat} {extractAfter(msg,[wk_sbj,' '])}];

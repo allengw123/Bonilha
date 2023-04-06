@@ -86,6 +86,7 @@ end
 
 if nargin<4
 
+     
     %set up parallel loop variables
     if opt.HYPER_THREAD
         pool = setpool(3);
@@ -95,6 +96,16 @@ if nargin<4
 
     numLoops = pool.NumWorkers;
     subjDirsSize = length(subjDirs);
+
+    if numLoops > subjDirsSize
+        if ~isempty(gcp('nocreate'))
+            pool = gcp('nocreate');
+            delete(pool)
+        end
+        pool = parpool(subjDirsSize);
+        numLoops = pool.NumWorkers;
+    end
+
     div = floor(subjDirsSize/numLoops);
     modRemainder = mod(subjDirsSize,numLoops);
 
@@ -102,6 +113,7 @@ if nargin<4
     for i = 1:numLoops
         idex{i} = i:numLoops:subjDirsSize;
     end
+    
 
     % Run nii_harvest_paralllel
     interweave = opt.interweave;

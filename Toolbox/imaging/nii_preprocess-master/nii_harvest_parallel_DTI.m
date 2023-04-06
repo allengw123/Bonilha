@@ -80,9 +80,19 @@ if nargin<4
         c.NumWorkers = numOfGPU;
         pool = c.parpool(numOfGPU);
     end
-
+    
     numLoops = pool.NumWorkers;
     subjDirsSize = length(subjDirs);
+
+    if numLoops > subjDirsSize
+        if ~isempty(gcp('nocreate'))
+            pool = gcp('nocreate');
+            delete(pool)
+        end
+        pool = parpool(subjDirsSize);
+        numLoops = pool.NumWorkers;
+    end
+
     div = floor(subjDirsSize/numLoops);
     modRemainder = mod(subjDirsSize,numLoops);
 

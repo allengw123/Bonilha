@@ -36,9 +36,9 @@ end
 
 if isempty(spm_figure('FindWin','Graphics')),
     spm fmri;
-    %spm_get_defaults('cmdline',true); %enable command line mode in scripts
+    spm_get_defaults('cmdline',true); %enable command line mode in scripts
 end; %launch SPM if it is not running
-%f = spm_figure('FindWin','Graphics'); clf(f.Number); %clear SPM window
+f = spm_figure('FindWin','Graphics'); clf(f); %clear SPM window
 if ~exist('hideInteractiveGraphs','var') || hideInteractiveGraphs
     fg = spm_figure('FindWin','Interactive');
     if ~isempty(fg), close(fg); end
@@ -376,10 +376,83 @@ if ~isFieldSub(matName,'vbm_gm') || ~isempty(ForceVBM)
     clear catbatch
 end
 
-
 %%CHOOSE files to store in the mat file for later analysis
 [p, n, x] = fileparts(imgs.T1);
 targetDir = fullfile(p,'mri');
+
+% Allen's Function for removal of lesion from gm/wm maps
+if exist(eT1,'file')
+
+    % Create Enatomorphic lesion correction folder
+    el_folder = fullfile(p,'enat_les');
+    mkdir(el_folder)
+
+    % Find files
+    lesion_file = dir(fullfile(p,'wsLesion*.nii'));
+    seg_file = dir(fullfile(targetDir,'p0eT1*.nii'));
+    seg_norm_file = dir(fullfile(targetDir,'mwp1eT1*.nii'));
+    deformation_file = dir(fullfile(targetDir,'iy_eT1*.nii'));
+    deformation_norm_file = dir(fullfile(targetDir,'y_eT1*.nii'));
+    
+    % Copy lesion
+    copyfile(fullfile(lesion_file.folder,lesion_file.name),fullfile(el_folder,lesion_file.name))
+
+    % Warp lesion to cat12 segmented nifti space
+    [bb,vox] = spm_get_bbox(fullfile(seg_file.folder,seg_file.name));
+    defname = fullfile(deformation_file.folder,deformation_file.name);
+    targetname = fullfile(el_folder,lesion_file.name);
+    
+    clear matlabbatch
+    matlabbatch{1}.spm.spatial.normalise.write.subj.def = {defname};
+    matlabbatch{1}.spm.spatial.normalise.write.subj.resample = {targetname};
+    matlabbatch{1}.spm.spatial.normalise.write.woptions.bb = bb;
+    matlabbatch{1}.spm.spatial.normalise.write.woptions.vox = vox;
+    matlabbatch{1}.spm.spatial.normalise.write.woptions.interp = 1; %4; //trilinear avoids ringing
+    spm_jobman('run',matlabbatch);
+
+    % Warp lesion to normalized cat12 segmented nifti space
+    [bb,vox] = spm_get_bbox(fullfile(seg_norm_file.folder,seg_norm_file.name));
+    defname = fullfile(deformation_norm_file.folder,deformation_norm_file.name);
+    targetname = fullfile(el_folder,['w',lesion_file.name]);
+    
+    clear matlabbatch
+    matlabbatch{1}.spm.spatial.normalise.write.subj.def = {defname};
+    matlabbatch{1}.spm.spatial.normalise.write.subj.resample = {targetname};
+    matlabbatch{1}.spm.spatial.normalise.write.woptions.bb = bb;
+    matlabbatch{1}.spm.spatial.normalise.write.woptions.vox = vox;
+    matlabbatch{1}.spm.spatial.normalise.write.woptions.interp = 1; %4; //trilinear avoids ringing
+    spm_jobman('run',matlabbatch);
+
+    % Create lesion subtracted gm/wm matter
+    gm_file = dir(fullfile(targetDir,'mwp1eT1*.nii'));
+    wm_file = dir(fullfile(targetDir,'mwp2eT1*.nii'));
+    les_file = dir(fullfile(el_folder,'www*.nii'));
+
+    gm_hdr = spm_vol(fullfile(gm_file.folder,gm_file.name));
+    gm_map = spm_read_vols(gm_hdr);
+
+    wm_hdr = spm_vol(fullfile(wm_file.folder,wm_file.name));
+    wm_map = spm_read_vols(wm_hdr);
+
+    les_hdr = spm_vol(fullfile(les_file.folder,les_file.name));
+    les_map = spm_read_vols(les_hdr);
+
+    gm_les_map = gm_map;
+    gm_les_map(les_map>0) = 0;
+    gm_les_output = fullfile(el_folder,strrep(gm_file.name,'eT1','T1_les'));
+    gm_hdr.fname = gm_les_output;
+    spm_write_vol(gm_hdr,gm_les_map);
+
+    wm_les_map = wm_map;
+    wm_les_map(les_map>0) = 0;
+    wm_les_output = fullfile(el_folder,strrep(wm_file.name,'eT1','T1_les'));
+    wm_hdr.fname = wm_les_output;
+    spm_write_vol(wm_hdr,wm_les_map);
+
+    % Write lesion subtracted maps to matfile
+    nii_nii2mat(gm_les_output, 'vbm_gm_les' , matName);
+    nii_nii2mat(wm_les_output, 'vbm_wm_les' , matName);
+end
 
 %get smooth normalized GM image
 normGM = dir(fullfile(targetDir,'mwp1T1*.nii'));
@@ -420,49 +493,46 @@ catch
         error('Failed to write VBM results to matfile')
     end
 end
-%nii_nii2mat(fullfile(lhSURF.folder, lhSURF.name), 'surf_lh' , matName);
-%nii_nii2mat(fullfile(rhSURF.folder, rhSURF.name), 'surf_rh' , matName);
 
+% % Allen's smoothing function
+% if ~isempty(normGM) && ~isempty(normWM)
+%     spm_smooth(fullfile(normGM(1).folder, normGM(1).name),fullfile(normGM(1).folder, 'smoothed_gm.nii'),[10 10 10]);
+%     spm_smooth(fullfile(normWM(1).folder, normWM(1).name),fullfile(normWM(1).folder, 'smoothed_wm.nii'),[10 10 10]);
+%     nii_nii2mat(fullfile(normGM(1).folder, 'smoothed_gm.nii'), 'smooth_vbm_gm' , matName);
+%     nii_nii2mat(fullfile(normWM(1).folder, 'smoothed_wm.nii'), 'smooth_vbm_wm' , matName);
+% elseif ~isempty(e_normGM) && ~isempty(e_normWM)
+%     spm_smooth(fullfile(e_normGM(1).folder, e_normGM(1).name),fullfile(e_normGM(1).folder, 'smoothed_gm_enantimorphic.nii'),[10 10 10]);
+%     spm_smooth(fullfile(e_normWM(1).folder, e_normWM(1).name),fullfile(e_normWM(1).folder, 'smoothed_wm_enantimorphic.nii'),[10 10 10]);
+%     nii_nii2mat(fullfile(e_normGM(1).folder, 'smoothed_gm_enantimorphic.nii'), 'smooth_vbm_gm_enantimorphic' , matName);
+%     nii_nii2mat(fullfile(e_normWM(1).folder, 'smoothed_wm_enantimorphic.nii'), 'smooth_vbm_wm_enantimorphic' , matName);
+% end
 
 %estimate TIV, GM, WM and WM-hyperintensity volumes and save to mat file
 %field
-[p, n, x] = fileparts(imgs.T1);
-targetDir = fullfile(p,'report');
-cat12xmlfile  = dir(fullfile(targetDir,'*.xml'));
-if ~exist(fullfile(p, 'report',cat12xmlfile.name),'file')
-    error('Failed to find participant''s xml file at: %s',fullfile(p, 'report',cat12xmlfile.name));
-end
-
-tivbatch{1}.spm.tools.cat.tools.calcvol.data_xml = {fullfile(p, 'report',cat12xmlfile.name)};
-tivbatch{1}.spm.tools.cat.tools.calcvol.calcvol_TIV = 0;
-tivbatch{1}.spm.tools.cat.tools.calcvol.calcvol_name = fullfile(p,'TIV.txt');
-spm_jobman('run',tivbatch);
-
-pause(10);
-if exist(fullfile(p,'TIV.txt'),'file')
-    TIVdata = textread(fullfile(p,'TIV.txt')); %Volume values =  Total,GM,WM,CSF,WMH
-    m = matfile(matName,'Writable',true);
-    m.VBM_volume_Total = TIVdata(1);
-    m.VBM_volume_GM  = TIVdata(2);
-    m.VBM_volume_WM  = TIVdata(3);
-    m.VBM_volume_CSF = TIVdata(4);
-    m.VBM_volume_WMH = TIVdata(5);
-else
-    warning('Could not find %s ',fullfile(p,'TIV.txt'));
-end
-
-% Allen's smoothing function
-if ~isempty(normGM) && ~isempty(normWM)
-    spm_smooth(fullfile(normGM(1).folder, normGM(1).name),fullfile(normGM(1).folder, 'smoothed_gm.nii'),[10 10 10]);
-    spm_smooth(fullfile(normWM(1).folder, normWM(1).name),fullfile(normWM(1).folder, 'smoothed_wm.nii'),[10 10 10]);
-    nii_nii2mat(fullfile(normGM(1).folder, 'smoothed_gm.nii'), 'smooth_vbm_gm' , matName);
-    nii_nii2mat(fullfile(normWM(1).folder, 'smoothed_wm.nii'), 'smooth_vbm_wm' , matName);
-elseif ~isempty(e_normGM) && ~isempty(e_normWM)
-    spm_smooth(fullfile(e_normGM(1).folder, e_normGM(1).name),fullfile(normGM(1).folder, 'smoothed_gm_enantimorphic.nii'),[10 10 10]);
-    spm_smooth(fullfile(e_normWM(1).folder, e_normWM(1).name),fullfile(normWM(1).folder, 'smoothed_wm_enantimorphic.nii'),[10 10 10]);
-    nii_nii2mat(fullfile(e_normGM(1).folder, 'smoothed_gm_enantimorphic.nii'), 'smooth_vbm_gm_enantimorphic' , matName);
-    nii_nii2mat(fullfile(e_normWM(1).folder, 'smoothed_wm_enantimorphic.nii'), 'smooth_vbm_wm_enantimorphic' , matName);
-end
+% [p, n, x] = fileparts(imgs.T1);
+% targetDir = fullfile(p,'report');
+% cat12xmlfile  = dir(fullfile(targetDir,'*.xml'));
+% if ~exist(fullfile(p, 'report',cat12xmlfile.name),'file')
+%     error('Failed to find participant''s xml file at: %s',fullfile(p, 'report',cat12xmlfile.name));
+% end
+% 
+% tivbatch{1}.spm.tools.cat.tools.calcvol.data_xml = {fullfile(p, 'report',cat12xmlfile.name)};
+% tivbatch{1}.spm.tools.cat.tools.calcvol.calcvol_TIV = 0;
+% tivbatch{1}.spm.tools.cat.tools.calcvol.calcvol_name = fullfile(p,'TIV.txt');
+% spm_jobman('run',tivbatch);
+% 
+% pause(10);
+% if exist(fullfile(p,'TIV.txt'),'file')
+%     TIVdata = textread(fullfile(p,'TIV.txt')); %Volume values =  Total,GM,WM,CSF,WMH
+%     m = matfile(matName,'Writable',true);
+%     m.VBM_volume_Total = TIVdata(1);
+%     m.VBM_volume_GM  = TIVdata(2);
+%     m.VBM_volume_WM  = TIVdata(3);
+%     m.VBM_volume_CSF = TIVdata(4);
+%     m.VBM_volume_WMH = TIVdata(5);
+% else
+%     warning('Could not find %s ',fullfile(p,'TIV.txt'));
+% end
 
 %end doVBMSub()
 
@@ -1755,6 +1825,9 @@ nii_enat_norm_npp(imgs.T1,imgs.Lesion,imgs.T2);
 if ~isFieldSub(matName, 'T1')
     bT1 = prefixSub('wb',imgs.T1);
     vox2mat(bT1,'T1',matName);
+    
+    beT1 = prefixSub('wbe',imgs.T1);
+    vox2mat(beT1,'T1_enantiomorphic',matName);
     %nii_nii2mat(bT1,'T1',matName);
 end
 if isempty(imgs.Lesion), return; end;
@@ -2199,6 +2272,8 @@ Xu = X./Dx;
 % %if half-sphere than the "center of mass" for vectors is biased
 % isFullSphere = (meanLength < 0.25);
 % %end isFullSphereSub()
+
+
 
 
 
