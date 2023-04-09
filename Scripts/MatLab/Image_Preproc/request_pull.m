@@ -5,7 +5,7 @@ clc
 % Input
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
 image_database = '/media/bonilha/Elements/Image_database';
-request_database = '/media/bonilha/Elements/Image_Requests/ForZekeBrainAgeGMWM_3.6.23';
+request_database = '/media/bonilha/Elements/Image_Requests/forZeke_BNT_4.7.23';
 
 % Setup correct toolboxes
 cd(GITHUB_PATH)
@@ -15,7 +15,7 @@ allengit_genpath(GITHUB_PATH,'imaging')
 tags =  {'problem','lesion'};
 
 % Options
-pull_raw = false;
+pull_raw = true;
 %% Pull code
 
 % Detect request name

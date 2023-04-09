@@ -27,9 +27,9 @@ DATABASE_NAME = 'MasterSet_TLE';
 DISEASE_TAG = 'Patients';
 %DISEASE_TAG = 'Controls';
 
-IMAGE_DATABASE = '/media/bonilha/Elements/Image_Requests/Claudia_3.23.23';
-DATABASE_NAME = 'data';
-DISEASE_TAG = 'Patients';
+% IMAGE_DATABASE = '/media/bonilha/Elements/Image_Requests/Claudia_3.23.23';
+% DATABASE_NAME = 'data';
+% DISEASE_TAG = 'Patients';
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%% ADVANCE OPTIONS %%%%run_brainage_parallel%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -50,20 +50,20 @@ opt.PROBLEM_TAGS_LOGIC = {false,false,true,true}; % Logic for SKIP_LESION option
 opt.RECHECK_ALREADY_FORMATED = false; % Rechecks formated subjects
 
 % Preprocess Options
-opt.setOrigin = true; %attempt to crop and set anterior commissure for images
-opt.isExitAfterTable = false; % <- if true, only generates table, does not process data
-opt.isPreprocess = true; % <- if true full processing, otherwise just cropping
-opt.isReportDims = true; %if true, report dimensions of raw data
 opt.reprocessVBM = false;
 opt.reprocessRest = false;
 opt.reprocessfMRI = false;
 opt.reprocessASL = false;
 opt.reprocessDTI = false;
-opt.explicitProcess = false; % <- if true, will only process if the reprocess flag is true
 opt.interweave = true; % Subjects will get dedicated to which parallel worker in an interweave fashion (helps efficiently process new subjects to database)
 opt.clearpsfile = true;
-opt.isMakeModalityTable = false;
 opt.aq_lesiondraw = 'T1'; %'T1' or 'T2'
+opt.setOrigin = true; %attempt to crop and set anterior commissure for images
+opt.explicitProcess = false; % <- if true, will only process if the reprocess flag is true
+opt.isMakeModalityTable = false;
+opt.isExitAfterTable = false; % <- if true, only generates table, does not process data
+opt.isPreprocess = true; % <- if true full processing, otherwise just cropping
+opt.isReportDims = true; %if true, report dimensions of raw data
 
 % Organize Preprocess Data Options
 opt.forcedPull = false;
@@ -127,7 +127,7 @@ format_errors = prep_niiharvest(opt);
 display_complete(1,'Preprocess Format',format_errors)
 %% Harvest Paralllel
 
-% Run nii_harvest_parallel
+% Run nii_harvest_parallelx`
 errors_parallel = nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt);
 %nii_harvest_parallel(opt.paths.nii_preproc_database,opt.paths.harvest_output,opt,{'Claud5'});
 
