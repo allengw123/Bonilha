@@ -14,7 +14,6 @@ function matoutput2nifti(input_mat,output_path,opt)
 %       opt.T1.seg = true/false --> segmented output
 %       opt.T1.matter = 'gm'/'wm'/'both'[default] --> matter output
 %       opt.T1.lesion = true/false --> lesion output
-%       opt.T1.smoothed = true/false --> smoothed output
 %   fMRI based options
 %       work in progress
 %   DTI based options
@@ -69,7 +68,7 @@ for f = 1:numel(fn)
         if output_log(opt.T1,'img')
             if ~exist(fullfile(output_path,'T1'),'dir');mkdir(fullfile(output_path,'T1'));end
             wk_save_name = fullfile(output_path,'T1',sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},'T1'));
-            write_field(wk_ses,'T1',wk_save_name)
+            write_field(wk_ses.T1,'T1_normalized',wk_save_name)
         end
 
         % Save segmented files as nifti
@@ -78,7 +77,11 @@ for f = 1:numel(fn)
                 if ~exist(fullfile(output_path,'T1'),'dir');mkdir(fullfile(output_path,'T1'));end
 
                 wk_save_name = fullfile(output_path,'T1',sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},matter{m}));
-                write_field(wk_ses,['vbm_',matter{m}],wk_save_name)
+            if any(contains(fieldnames(wk_ses.matter_maps),'enantimorphic'))
+                writefield(wk_ses.matter_maps.lesion_corrected,[matter{m},'_les'],wk_save_name)
+            else
+                write_field(wk_ses.matter_maps.(matter{m}),['vbm_',matter{m}],wk_save_name)
+            end
             end
         end
 
@@ -86,15 +89,8 @@ for f = 1:numel(fn)
         if output_log(opt.T1,'lesion')
             if ~exist(fullfile(output_path,'T1'),'dir');mkdir(fullfile(output_path,'T1'));end
             wk_save_name = fullfile(output_path,'T1',sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},'lesion'));
-            write_field(wk_ses,'lesion',wk_save_name)
-        end
-
-        % Save smooth T1
-        if output_log(opt.T1,'smoothed')
-            for m = 1:numel(matter)
-                if ~exist(fullfile(output_path,'T1'),'dir');mkdir(fullfile(output_path,'T1'));end
-                wk_save_name = fullfile(output_path,'T1',sprintf('%s_%s_%s.nii',wk_sbj_name,fn{f},['smooth_',matter{m}]));
-                write_field(wk_ses,['smooth_vbm_',matter{m}],wk_save_name)
+            if any(contains(fieldnames(wk_ses),'lesion'))
+            write_field(wk_ses.lesion,'lesion',wk_save_name)
             end
         end
     end

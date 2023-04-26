@@ -21,9 +21,9 @@ clc
 
 GITHUB_PATH = '/home/bonilha/Documents/GitHub/Bonilha';
 IMAGE_DATABASE = '/media/bonilha/Elements/Image_database';
-%DATABASE_NAME = 'MasterSet_TLE';
+DATABASE_NAME = 'MasterSet_TLE';
 %DATABASE_NAME = 'UCSD_TLE';
-DATABASE_NAME = 'ADNI_AD';
+%DATABASE_NAME = 'ADNI_AD';
 DISEASE_TAG = 'Patients';
 %DISEASE_TAG = 'Controls';
 
@@ -1067,7 +1067,7 @@ subjects = {subjects.name};
 
 errors = cell(size(subjects));
 textprogressbar(0,'Running Quality Check');
-for s = 1:numel(subjects)
+for s = 405%1:numel(subjects)
     fn = [];
 
     % Define Save_mat
@@ -1149,7 +1149,7 @@ for s = 1:numel(subjects)
                             end
 
                             % Reorganize lesion removed
-                            les_rem_fn = fn(contains(fn,'_les'));
+                            les_rem_fn = fn(contains(fn,'_les_'));
                             for f = 1:numel(les_rem_fn)
                                 reorg_mat.(wk_ses.name).matter_maps.lesion_corrected.(strrep(les_rem_fn{f},'vbm_','')) = ses_mat.(les_rem_fn{f});
                             end
@@ -1167,7 +1167,7 @@ for s = 1:numel(subjects)
                         if any(contains(fn,'T1')) && any(contains(fn,'vbm'))
                             qc.T1 = 'pass';
                             reorg_mat.(wk_ses.name).T1.T1_normalized = ses_mat.T1;
-                            if ~any(contains(extractBefore({aq.name},'_'),'Lesion'))
+                            if ~any(strcmp({aq.name},'Lesion*.nii'))
                                 wm_field = fn(contains(fn,'wm'));
                                 for i = 1:numel(wm_field)
                                     reorg_mat.(wk_ses.name).matter_maps.wm.(wm_field{i}) = ses_mat.(wm_field{i});
